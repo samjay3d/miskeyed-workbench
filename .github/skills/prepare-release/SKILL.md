@@ -1,14 +1,15 @@
 ---
 name: prepare-release
 description: 'Prepare a miskeyed-workbench release (cut a version). Use when asked to "prepare a release", "cut a release", "bump the version", "release X.Y.Z", or "stamp the changelog". Bumps the version in pyproject.toml + CMakeLists.txt, dates the CHANGELOG [Unreleased] section, rebuilds, runs the headless tests, and commits — without tagging or pushing.'
-argument-hint: 'the version to cut, e.g. 0.2.0'
+argument-hint: "the version to cut, e.g. 0.2.0"
 ---
 
 # Prepare Release
 
 Cuts a new version of **miskeyed-workbench** by applying the mechanical release edits,
-verifying the build, and committing. It deliberately stops before tagging/pushing so a
-human merges and triggers publishing.
+verifying the build, and committing. It deliberately stops before tagging/pushing: once the
+bump merges to `main`, `release.yml` auto-detects the new version, publishes to PyPI, and
+records the `vX.Y.Z` tag + GitHub Release itself.
 
 ## When to Use
 
@@ -17,8 +18,9 @@ human merges and triggers publishing.
 
 ## Do NOT
 
-- Do NOT `git tag`, `git push`, or trigger the publish workflow. Publishing happens after
-  the human merges to `main` (the `release.yml` tag trigger does the PyPI upload).
+- Do NOT `git tag`, `git push` a tag, or trigger the publish workflow. Once the bump lands
+  on `main`, `release.yml` sees the pyproject version isn't on PyPI yet, publishes, and
+  records the tag + Release automatically — no manual tag needed.
 - Do NOT invent a version. If the user didn't give one, pick it from semver + the
   `[Unreleased]` entries (new feature → minor, fixes only → patch) and confirm.
 
@@ -73,18 +75,17 @@ Note: `CMakeLists.txt` `project(... VERSION ...)` may already be ahead of
    git commit -m "release: prepare X.Y.Z (version bump + changelog)"
    ```
 
-5. **Hand off.** Tell the user it's ready to merge, and give the post-merge publish
-   commands (do not run them):
-
-   ```pwsh
-   git tag vX.Y.Z; git push origin vX.Y.Z
-   ```
+5. **Hand off.** Tell the user it's ready to merge. Merging this bump to `main` triggers
+   `release.yml`, which publishes to PyPI and creates the `vX.Y.Z` tag + GitHub Release on
+   its own — nothing else to run. (Pushing a `v*` tag by hand still works as a manual
+   re-release path if ever needed.)
 
 ## Gotchas
 
 - Always use `.\.venv\Scripts\python.exe`; the system `python` is Python 2.7.
 - `uv`/isolated builds fail — `shiboken6-generator` is only on Qt's index. Build with
   `--no-build-isolation` in the `.venv`.
-- If a tag was already pushed but hasn't published, cancel the in-flight run first
-  (`gh run cancel <id>`), then move the tag: `git tag -d vX.Y.Z; git push origin :refs/tags/vX.Y.Z; git tag vX.Y.Z; git push origin vX.Y.Z`.
+- If a publish run fails midway, fix the cause and re-run it; the version detection is
+  idempotent (it skips once the version is on PyPI). To force a manual re-release, push the
+  tag by hand: `git tag vX.Y.Z; git push origin vX.Y.Z`.
 - Confirm the published result at `https://pypi.org/pypi/miskeyed-workbench/X.Y.Z/json`.
