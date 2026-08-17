@@ -106,6 +106,18 @@ jobs:
                   # interpreter in place makes each job produce its correct cp3xx wheel.
                   setup-python: false
 
+            - name: Set up MSVC environment (x64)
+              # Ninja (below) needs cl.exe on PATH; the VS generator finds MSVC on its own
+              # but ignores compiler launchers, so we switch to Ninja to enable sccache.
+              uses: ilammy/msvc-dev-cmd@v1
+              with:
+                  arch: x64
+
+            - name: Set up sccache
+              # Content-addressed compiler cache backed by the GitHub Actions cache; the
+              # shared slang_qrhi_core TUs compile once and later runs get cache hits.
+              uses: mozilla-actions/sccache-action@v0.0.6
+
             - name: Cache Slang SDK
               id: slang-cache
               uses: actions/cache@v4
@@ -142,16 +154,23 @@ jobs:
                     --extra-index-url https://pypi.org/simple `
                     "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" `
                     "scikit-build-core==1.0.3"
+                  python -m pip install ninja
 
             - name: Build wheel
               shell: pwsh
               env:
                   CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
+                  # Ninja honors the compiler launcher; the VS generator does not.
+                  CMAKE_GENERATOR: Ninja
+                  SCCACHE_GHA_ENABLED: "true"
               run: |
                   # Build isolation is off because shiboken6-generator is not on PyPI;
                   # the build deps installed above are used directly. CMake finds Qt via
                   # CMAKE_PREFIX_PATH and Slang via SLANG_ROOT (see cmake/FindSlang.cmake).
-                  python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v
+                  python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v `
+                    --config-settings=cmake.define.CMAKE_C_COMPILER_LAUNCHER=sccache `
+                    --config-settings=cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=sccache
+                  sccache --show-stats
 
             - name: Verify fresh wheel is not corrupt
               shell: pwsh
