@@ -1,0 +1,92 @@
+# shiboken6-generator is a BUILD-ONLY tool (it lives on Qt's index, not PyPI); it is
+# intentionally absent from [project.dependencies], which are the runtime requirements.
+[build-system]
+requires = [
+  "scikit-build-core>=1.0",
+  "PySide6>=6.8,<6.9",
+  "shiboken6>=6.8,<6.9",
+  "shiboken6-generator",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "miskeyed-workbench"
+version = "0.1.0"
+description = "Workbench — a native Qt 6.8 / QRhi Slang shader workbench."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Sam Jay" }]
+dependencies = ["PySide6>=6.8,<6.9", "shiboken6>=6.8,<6.9"]
+keywords = [
+  "slang",
+  "shader",
+  "qt",
+  "pyside6",
+  "qrhi",
+  "vfx",
+  "games",
+  "viewport",
+  "shiboken",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: X11 Applications :: Qt",
+  "Intended Audience :: Developers",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics :: 3D Rendering",
+]
+
+# Replace samjay3d once the repository is published on GitHub.
+[project.urls]
+Homepage = "https://github.com/samjay3d/miskeyed-workbench"
+Repository = "https://github.com/samjay3d/miskeyed-workbench"
+Issues = "https://github.com/samjay3d/miskeyed-workbench/issues"
+Changelog = "https://github.com/samjay3d/miskeyed-workbench/blob/main/CHANGELOG.md"
+
+[project.scripts]
+workbench = "miskeyed.workbench.__main__:main"
+
+[tool.scikit-build]
+# Inherit the floor from build-system.requires (>=1.0) so future default changes
+# never silently alter this package's build.
+minimum-version = "build-system.requires"
+cmake.version = ">=3.24"
+cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["python/miskeyed"]
+# The SDist respects .gitignore; these belt-and-suspenders excludes keep any
+# stray in-tree build artifacts or vendored SDKs out of the source distribution.
+sdist.exclude = [
+  "/.github",
+  "/.venv",
+  "/6.8.3",
+  "/.qt",
+  "/build",
+  "/Debug",
+  "/Release",
+  "/x64",
+  "/CMakeFiles",
+  "/shiboken",
+  "/build-bindings",
+  "**/*.vcxproj",
+  "**/*.vcxproj.filters",
+  "**/*.sln",
+  "**/*.dir",
+  "**/CMakeCache.txt",
+  "**/cmake_install.cmake",
+  "**/*_autogen",
+  "*.log",
+  "uv.lock",
+]
+
+[tool.scikit-build.cmake.define]
+SLANG_QRHI_BUILD_PYTHON = "ON"
+# The native standalone executable is not part of the importable wheel.
+SLANG_QRHI_BUILD_APP = "OFF"

@@ -1,0 +1,57 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Virtual environments / lockfiles ----
+.venv/
+venv/
+env/
+uv.lock
+
+# ---- Build output ----
+build/
+dist/
+wheelhouse/
+_skbuild/
+
+# ---- scikit-build-core / CMake ----
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+*_autogen/
+**/*.dir/
+
+# ---- Generated Shiboken bindings ----
+/shiboken/
+/build-bindings/
+
+# ---- Visual Studio / MSBuild (CMake-generated project files) ----
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+Debug/
+Release/
+MinSizeRel/
+RelWithDebInfo/
+x64/
+.vs/
+
+# ---- Vendored SDKs (provisioned locally / in CI, never committed) ----
+# Qt runtime/dev SDK unpacked into the tree by aqtinstall.
+/6.8.3/
+.qt/
+aqtinstall.log
+# Slang SDK lives outside the repo (../../app/slang) or is provisioned in CI.
+
+# ---- Editor / OS noise ----
+.idea/
+.DS_Store
+Thumbs.db

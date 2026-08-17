@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img"
+    aria-label="Workbench">
+    <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2b3a4d" />
+            <stop offset="1" stop-color="#1b2531" />
+        </linearGradient>
+        <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e0a962" />
+            <stop offset="1" stop-color="#c07f39" />
+        </linearGradient>
+        <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4a5766" />
+            <stop offset="1" stop-color="#333e4b" />
+        </linearGradient>
+        <linearGradient id="drawer" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5a6875" />
+            <stop offset="1" stop-color="#44515e" />
+        </linearGradient>
+        <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffe08a" stop-opacity="0.85" />
+            <stop offset="1" stop-color="#ffe08a" stop-opacity="0" />
+        </linearGradient>
+    </defs>
+
+    <!-- app background -->
+    <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)" />
+
+    <!-- back panel (pegboard) -->
+    <rect x="66" y="52" width="124" height="70" rx="6" fill="#cfd8e2" />
+    <g fill="#9aa7b5">
+        <circle cx="82" cy="70" r="2.4" />
+        <circle cx="100" cy="70" r="2.4" />
+        <circle cx="118" cy="70" r="2.4" />
+        <circle cx="138" cy="70" r="2.4" />
+        <circle cx="156" cy="70" r="2.4" />
+        <circle cx="174" cy="70" r="2.4" />
+        <circle cx="82" cy="88" r="2.4" />
+        <circle cx="100" cy="88" r="2.4" />
+        <circle cx="118" cy="88" r="2.4" />
+        <circle cx="138" cy="88" r="2.4" />
+        <circle cx="156" cy="88" r="2.4" />
+        <circle cx="174" cy="88" r="2.4" />
+    </g>
+
+    <!-- power outlets -->
+    <g fill="#f4f7fa" stroke="#8f9daa" stroke-width="1.5">
+        <rect x="150" y="100" width="12" height="16" rx="2" />
+        <rect x="168" y="100" width="12" height="16" rx="2" />
+    </g>
+
+    <!-- overhead light + glow -->
+    <path d="M74 66 L182 66 L168 108 L88 108 Z" fill="url(#glow)" />
+    <rect x="64" y="40" width="128" height="16" rx="6" fill="url(#steel)" />
+    <rect x="76" y="45" width="104" height="6" rx="3" fill="#ffe89c" />
+
+    <!-- legs -->
+    <rect x="72" y="150" width="14" height="70" rx="3" fill="url(#steel)" />
+    <rect x="170" y="150" width="14" height="70" rx="3" fill="url(#steel)" />
+
+    <!-- drawer cabinet -->
+    <rect x="66" y="128" width="124" height="62" rx="6" fill="url(#steel)" />
+    <rect x="74" y="134" width="108" height="24" rx="4" fill="url(#drawer)" />
+    <rect x="74" y="162" width="108" height="24" rx="4" fill="url(#drawer)" />
+    <rect x="112" y="143" width="32" height="6" rx="3" fill="#c7d0da" />
+    <rect x="112" y="171" width="32" height="6" rx="3" fill="#c7d0da" />
+
+    <!-- wooden worktop -->
+    <rect x="54" y="110" width="148" height="20" rx="5" fill="url(#wood)" />
+    <rect x="54" y="123" width="148" height="7" rx="3" fill="#a86e30" />
+</svg>
