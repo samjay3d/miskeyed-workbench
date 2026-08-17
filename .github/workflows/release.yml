@@ -51,6 +51,11 @@ jobs:
                   host: windows
                   target: desktop
                   arch: win64_msvc2022_64
+                  # Must be false: the default installs its OWN Python 3.12 for aqtinstall
+                  # and prepends it to PATH, so every matrix job would build a cp312 wheel
+                  # (they then overwrite each other on publish). Leaving our setup-python
+                  # interpreter in place makes each job produce its correct cp3xx wheel.
+                  setup-python: false
 
             - name: Provision Slang SDK
               shell: pwsh
@@ -90,12 +95,18 @@ jobs:
 
             - name: Verify fresh wheel is not corrupt
               shell: pwsh
-              # FATAL on purpose: validates every member's CRC-32 on the just-built wheel
-              # BEFORE transport. Confirmed clean here while the publish job saw bad CRCs,
-              # which proved the corruption came from upload/download-artifact handling the
-              # wheel (itself a ZIP) as a loose file. Hence the tar bundling below.
+              # FATAL on purpose: (1) the wheel's ABI tag must match this matrix Python,
+              # else the wrong interpreter built it and the tars would collide on publish;
+              # (2) validate every member's CRC-32 before transport (corruption was proven
+              # to come from upload/download-artifact, hence the tar bundling below).
               run: |
+                  $expected = "cp" + "${{ matrix.python-version }}".Replace(".", "")
                   $whls = (Get-ChildItem wheelhouse\*.whl).FullName
+                  foreach ($w in $whls) {
+                      if ((Split-Path $w -Leaf) -notmatch $expected) {
+                          throw "Wheel '$(Split-Path $w -Leaf)' is not tagged '$expected' - wrong interpreter built it."
+                      }
+                  }
                   python ci\wheelzip.py inspect $whls
 
             - name: Bundle wheel for transport

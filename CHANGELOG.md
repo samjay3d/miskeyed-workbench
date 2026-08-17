@@ -1,6 +1,22 @@
 # Changelog
 
-## Unreleased — packaging
+All notable changes to this project are documented here. The format is based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
+to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.1] — 2026-08-16
+
+### Fixed
+
+- Release now ships wheels for **all** supported Pythons. `install-qt-action`
+  was hijacking the interpreter with its own Python 3.12, so every matrix job
+  built a `cp312` wheel and only one survived on publish; disabled its
+  `setup-python` so each job builds its correct `cp311` / `cp312` / `cp313` wheel.
+- CI now asserts each freshly built wheel's ABI tag matches its matrix Python,
+  so a wrong-interpreter build fails loudly instead of silently shipping one tag.
+- README hero image uses an absolute raw-GitHub URL so it renders on PyPI.
+
+## [0.1.0] — 2026-08-16
 
 - Rebranded to **Workbench**, distributed as `miskeyed-workbench` / imported as
   `miskeyed.workbench` (PEP 420 namespace).
