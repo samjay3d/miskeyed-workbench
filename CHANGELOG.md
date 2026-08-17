@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-17
+
 ### Added
 
 - Shader-driven UI metadata. Uniforms can be annotated with `[UIName]`,
@@ -28,6 +30,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Dependabot config for GitHub Actions, and a `build.cmd` that builds in the
   project `.venv` with build isolation off (the reliable path — `uv`/isolated
   builds can't see the Qt-only `shiboken6-generator`).
+- CI now caches the Qt SDK, the Slang SDK, and pip downloads, so the Windows
+  build/test jobs reuse them across runs instead of re-downloading every time.
 
 ## [0.1.1] — 2026-08-16
 
