@@ -28,7 +28,11 @@ env:
 jobs:
     build-wheels:
         name: Wheel (py${{ matrix.python-version }})
-        runs-on: windows-latest
+        # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
+        # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
+        # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
+        # Qt's win64_msvc2022_64 ABI, so it's the correct toolchain regardless.
+        runs-on: windows-2022
         strategy:
             fail-fast: false
             matrix:
