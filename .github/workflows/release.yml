@@ -97,10 +97,13 @@ jobs:
                   python-version: "3.12"
             - name: Build sdist
               run: |
-                  python -m pip install build scikit-build-core
-                  # No isolation: an isolated env would try to install the Qt-index-only
-                  # shiboken6-generator from PyPI. Packaging the sdist only needs the backend.
-                  python -m build --sdist --no-isolation
+                  python -m pip install scikit-build-core
+                  mkdir -p dist
+                  # Call the sdist backend directly. `python -m build` (even with
+                  # --no-isolation) refuses to run unless every build-system.requires is
+                  # installed, but the Qt-only PySide6/shiboken6/shiboken6-generator are
+                  # irrelevant to packaging source — scikit-build-core just collects files.
+                  python -c "import scikit_build_core.build as b; print(b.build_sdist('dist'))"
             - uses: actions/upload-artifact@v4
               with:
                   name: dist-sdist
