@@ -44,6 +44,14 @@ jobs:
               with:
                   python-version: ${{ matrix.python-version }}
 
+            - name: Cache pip downloads
+              uses: actions/cache@v4
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('.github/workflows/release.yml') }}
+                  restore-keys: |
+                      pip-${{ runner.os }}-py${{ matrix.python-version }}-
+
             - name: Install Qt ${{ env.QT_VERSION }} dev SDK
               uses: jurplel/install-qt-action@v4
               with:
@@ -51,23 +59,36 @@ jobs:
                   host: windows
                   target: desktop
                   arch: win64_msvc2022_64
+                  # Cache the (large) Qt install between runs, keyed on version/arch.
+                  cache: true
                   # Must be false: the default installs its OWN Python 3.12 for aqtinstall
                   # and prepends it to PATH, so every matrix job would build a cp312 wheel
                   # (they then overwrite each other on publish). Leaving our setup-python
                   # interpreter in place makes each job produce its correct cp3xx wheel.
                   setup-python: false
 
+            - name: Cache Slang SDK
+              id: slang-cache
+              uses: actions/cache@v4
+              with:
+                  path: ${{ runner.temp }}\slang
+                  key: slang-${{ runner.os }}-${{ env.SLANG_VERSION }}
+
             - name: Provision Slang SDK
               shell: pwsh
               run: |
                   $ErrorActionPreference = "Stop"
                   $ver = "${{ env.SLANG_VERSION }}"
-                  $zip = "$env:RUNNER_TEMP\slang.zip"
-                  $url = "https://github.com/shader-slang/slang/releases/download/v$ver/slang-$ver-windows-x86_64.zip"
-                  Write-Host "Downloading $url"
-                  Invoke-WebRequest -Uri $url -OutFile $zip
                   $dest = "$env:RUNNER_TEMP\slang"
-                  Expand-Archive -Path $zip -DestinationPath $dest -Force
+                  if (-not (Test-Path "$dest\bin\slang.dll")) {
+                      $zip = "$env:RUNNER_TEMP\slang.zip"
+                      $url = "https://github.com/shader-slang/slang/releases/download/v$ver/slang-$ver-windows-x86_64.zip"
+                      Write-Host "Downloading $url"
+                      Invoke-WebRequest -Uri $url -OutFile $zip
+                      Expand-Archive -Path $zip -DestinationPath $dest -Force
+                  } else {
+                      Write-Host "Using cached Slang SDK at $dest"
+                  }
                   "SLANG_ROOT=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
 
             - name: Install build dependencies (Qt index)
