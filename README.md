@@ -2,7 +2,7 @@
 
 **Edit a shader on the left, see it render on the right — instantly.**
 
-![Workbench: live Slang editing with a rendered viewport and the compiled HLSL side-by-side](docs/images/workbench.png)
+![Workbench: live Slang editing with a rendered viewport and the compiled HLSL side-by-side](https://raw.githubusercontent.com/samjay3d/miskeyed-workbench/main/docs/images/workbench.png)
 
 Workbench is a small desktop tool for **writing shaders and watching them update in
 real time**. You type shader code, and the picture on screen recompiles as you go —
