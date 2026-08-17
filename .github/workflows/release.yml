@@ -97,7 +97,7 @@ jobs:
               # if corruption is from the build tool or from upload/download-artifact.
               run: |
                   $whls = (Get-ChildItem wheelhouse\*.whl).FullName
-                  python ci\wheelzip.py inspect @whls
+                  python ci\wheelzip.py inspect $whls
 
             - uses: actions/upload-artifact@v4
               with:
