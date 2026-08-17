@@ -26,12 +26,12 @@ enum class NodeKind : quint8 {
 Q_ENUM_NS(NodeKind)
 
 enum DirtyFlag : quint32 {
-    Clean         = 0,
-    UiDirty       = 1u << 0,
-    UniformDirty  = 1u << 1,
+    Clean = 0,
+    UiDirty = 1u << 0,
+    UniformDirty = 1u << 1,
     ResourceDirty = 1u << 2,
-    BindingDirty  = 1u << 3,
-    ShaderDirty   = 1u << 4,
+    BindingDirty = 1u << 3,
+    ShaderDirty = 1u << 4,
     PipelineDirty = 1u << 5,
 };
 Q_DECLARE_FLAGS(DirtyFlags, DirtyFlag)
@@ -51,8 +51,7 @@ struct GraphNode {
     DirtyFlags dirty;
 };
 
-class SLANG_QRHI_EXPORT DependencyGraph final : public QObject
-{
+class SLANG_QRHI_EXPORT DependencyGraph final : public QObject {
     Q_OBJECT
     Q_PROPERTY(int nodeCount READ nodeCount NOTIFY graphChanged)
 
@@ -70,7 +69,9 @@ public:
 
     bool setPayload(NodeId id, QByteArray payload);
     bool setDependencies(NodeId id, const QList<NodeId>& deps);
-    void markClean(NodeId id, DirtyFlags flags = DirtyFlags(UiDirty | UniformDirty | ResourceDirty | BindingDirty | ShaderDirty | PipelineDirty));
+    void markClean(NodeId id,
+        DirtyFlags flags = DirtyFlags(
+            UiDirty | UniformDirty | ResourceDirty | BindingDirty | ShaderDirty | PipelineDirty));
     void markAllClean();
 
 signals:

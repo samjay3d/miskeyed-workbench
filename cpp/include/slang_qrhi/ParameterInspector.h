@@ -8,8 +8,7 @@ class QVBoxLayout;
 
 namespace slang_qrhi {
 
-class SLANG_QRHI_EXPORT ParameterInspector final : public QWidget
-{
+class SLANG_QRHI_EXPORT ParameterInspector final : public QWidget {
     Q_OBJECT
     Q_PROPERTY(ShaderParameterModel* model READ model WRITE setModel NOTIFY modelChanged)
 public:

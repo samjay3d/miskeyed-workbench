@@ -13,8 +13,7 @@ namespace slang_qrhi {
 
 class SlangRhiWidgetPrivate;
 
-class SLANG_QRHI_EXPORT SlangRhiWidget final : public QRhiWidget
-{
+class SLANG_QRHI_EXPORT SlangRhiWidget final : public QRhiWidget {
     Q_OBJECT
     Q_PROPERTY(ShaderDocument* document READ document WRITE setDocument NOTIFY documentChanged)
     Q_PROPERTY(float exposure READ exposure WRITE setExposure NOTIFY exposureChanged)

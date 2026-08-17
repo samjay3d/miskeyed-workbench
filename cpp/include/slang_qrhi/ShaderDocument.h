@@ -11,8 +11,7 @@
 
 namespace slang_qrhi {
 
-class SLANG_QRHI_EXPORT ShaderDocument final : public QObject
-{
+class SLANG_QRHI_EXPORT ShaderDocument final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QUrl fileUrl READ fileUrl WRITE setFileUrl NOTIFY fileUrlChanged)
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)

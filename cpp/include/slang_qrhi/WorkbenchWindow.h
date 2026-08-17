@@ -19,8 +19,7 @@ class SlangRhiWidget;
 class CodeEditor;
 class LspClient;
 
-class SLANG_QRHI_EXPORT WorkbenchWindow final : public QMainWindow
-{
+class SLANG_QRHI_EXPORT WorkbenchWindow final : public QMainWindow {
     Q_OBJECT
 public:
     explicit WorkbenchWindow(QWidget* parent = nullptr);
@@ -54,22 +53,22 @@ private:
     void recountDiagnostics();
     void jumpToFirstError();
 
-    ShaderDocument* m_document = nullptr;       // post-process pass
-    ShaderDocument* m_sceneDocument = nullptr;  // scene / camera pass
-    SlangRhiWidget* m_viewport = nullptr;       // post-process view
-    SlangRhiWidget* m_sceneViewport = nullptr;  // scene view
+    ShaderDocument* m_document = nullptr; // post-process pass
+    ShaderDocument* m_sceneDocument = nullptr; // scene / camera pass
+    SlangRhiWidget* m_viewport = nullptr; // post-process view
+    SlangRhiWidget* m_sceneViewport = nullptr; // scene view
     CodeEditor* m_editor = nullptr;
-    CodeEditor* m_generatedView = nullptr;      // read-only compiled-output viewer
+    CodeEditor* m_generatedView = nullptr; // read-only compiled-output viewer
     QPlainTextEdit* m_diagnostics = nullptr;
     QComboBox* m_editorTarget = nullptr;
-    QComboBox* m_generatedTarget = nullptr;     // HLSL / GLSL / SPIR-V / Metal selector
-    ShaderDocument* m_editorDoc = nullptr;       // document currently shown in the editor
-    bool m_syncing = false;                      // guards camera mirroring re-entrancy
-    LspClient* m_lsp = nullptr;                   // Slang language server (slangd)
-    QHash<QString, QList<LspDiagnostic>> m_diagnosticsByUri;  // last diagnostics per document
+    QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
+    ShaderDocument* m_editorDoc = nullptr; // document currently shown in the editor
+    bool m_syncing = false; // guards camera mirroring re-entrancy
+    LspClient* m_lsp = nullptr; // Slang language server (slangd)
+    QHash<QString, QList<LspDiagnostic>> m_diagnosticsByUri; // last diagnostics per document
 
-    QPushButton* m_compileStatus = nullptr;      // persistent compile-state pill
-    QTabWidget* m_tabs = nullptr;                // Camera / Post-Process / Diagnostics
+    QPushButton* m_compileStatus = nullptr; // persistent compile-state pill
+    QTabWidget* m_tabs = nullptr; // Camera / Post-Process / Diagnostics
     int m_diagTabIndex = -1;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;
