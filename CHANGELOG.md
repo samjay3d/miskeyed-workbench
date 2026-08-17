@@ -14,6 +14,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   labelled controls, with bounded floats getting a synced slider + spin box
   (`"slider"` / `"angle"` widgets). All built-in shaders and the Volumetric
   Clouds, Bloom, and CRT samples now ship annotated.
+  The `UI*` attribute types are declared by a private "system prelude" the
+  compiler injects ahead of every compile, so shaders annotate uniforms without
+  pasting any boilerplate. Diagnostics stay mapped to the user's own line numbers
+  via a `#line` reset, and the prelude is the seam for future plugin/sidecar
+  metadata definitions.
 - A pull-request CI workflow (`.github/workflows/ci.yml`) that builds the
   extension and runs the headless pytest suite across Python 3.11–3.13.
 - Headless reflection tests (`tests/test_ui_metadata.py`).
