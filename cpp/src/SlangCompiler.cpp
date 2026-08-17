@@ -11,6 +11,22 @@
 namespace slang_qrhi {
 namespace {
 
+// The default "system prelude": the attribute types the Workbench understands. It is
+// prepended to every compile (see compileFullscreen) so shaders can annotate uniforms
+// with [UIName("..")], [UIRange(lo,hi)], etc. WITHOUT the user pasting these declarations
+// into their own source. Slang only reflects an attribute whose type is declared, so
+// these must be in scope at compile time. Long term this is the seam where user
+// plugins/sidecars register additional definitions.
+constexpr const char* kDefaultSystemPrelude = R"SLANG(
+[__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIWidgetAttribute  { string kind; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIGroupAttribute   { string group; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UITooltipAttribute { string text; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIUnitsAttribute   { string units; }
+)SLANG";
+
 QString blobText(slang::IBlob* blob)
 {
     if (!blob || !blob->getBufferPointer() || blob->getBufferSize() == 0) return {};
@@ -173,6 +189,7 @@ class SlangCompilerPrivate {
 public:
     Slang::ComPtr<slang::IGlobalSession> global;
     QStringList searchPaths;
+    QString systemPrelude = QString::fromUtf8(kDefaultSystemPrelude);
 
     SlangCompilerPrivate() { slang::createGlobalSession(global.writeRef()); }
 };
@@ -181,6 +198,8 @@ SlangCompiler::SlangCompiler(QObject* parent) : QObject(parent), d(std::make_uni
 SlangCompiler::~SlangCompiler() = default;
 void SlangCompiler::setSearchPaths(QStringList paths) { d->searchPaths = std::move(paths); }
 QStringList SlangCompiler::searchPaths() const { return d->searchPaths; }
+void SlangCompiler::setSystemPrelude(const QString& source) { d->systemPrelude = source; }
+QString SlangCompiler::systemPrelude() const { return d->systemPrelude; }
 
 CompileResult SlangCompiler::compileFullscreen(const QString& source, const QString& virtualPath,
                                                const QString& vertexEntry, const QString& fragmentEntry)
@@ -222,8 +241,27 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     const auto path = virtualPath.toUtf8();
     const auto revision = Digest::hash(src).hex().left(16).toUtf8();
     const QByteArray moduleName = QByteArray("sqr_user_") + revision;
+
+    // Prepend the private system prelude, then reset #line so every diagnostic still
+    // reports the user's own line numbers (not offset by the injected declarations).
+    QByteArray effectiveSrc;
+    if (!d->systemPrelude.isEmpty()) {
+        QByteArray lineName = path;
+        lineName.replace('\\', '/');
+        const QByteArray prelude = d->systemPrelude.toUtf8();
+        effectiveSrc.reserve(prelude.size() + src.size() + lineName.size() + 16);
+        effectiveSrc += prelude;
+        if (!effectiveSrc.endsWith('\n')) effectiveSrc += '\n';
+        effectiveSrc += "#line 1 \"";
+        effectiveSrc += lineName;
+        effectiveSrc += "\"\n";
+        effectiveSrc += src;
+    } else {
+        effectiveSrc = src;
+    }
+
     Slang::ComPtr<slang::IBlob> diagnostics;
-    auto* module = session->loadModuleFromSourceString(moduleName.constData(), path.constData(), src.constData(), diagnostics.writeRef());
+    auto* module = session->loadModuleFromSourceString(moduleName.constData(), path.constData(), effectiveSrc.constData(), diagnostics.writeRef());
     result.diagnostics += blobText(diagnostics);
     if (!module) return result;
 

@@ -8,6 +8,7 @@ the Slang runtime (SLANG_ROOT) to be importable.
 from __future__ import annotations
 
 import os
+import re
 
 import pytest
 
@@ -17,20 +18,11 @@ import miskeyed.workbench as workbench  # noqa: E402
 from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-# The attribute types the Workbench understands, declared once so shaders can use them.
-UI_META_PRELUDE = """
-[__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIWidgetAttribute  { string kind; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIGroupAttribute   { string group; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UITooltipAttribute { string text; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIUnitsAttribute   { string units; }
-"""
-
-SHADER = (
-    UI_META_PRELUDE
-    + """
+# NOTE: the shader below deliberately does NOT declare the UI* attribute types. The
+# compiler injects them as a private "system prelude", so user shaders can annotate
+# uniforms with [UIName], [UIRange], ... without pasting any boilerplate. These tests
+# therefore also prove that injection: if it regressed, reflection would come back empty.
+SHADER = """
 [UIGroup("Camera")] [UIName("Field of View")] [UIWidget("slider")]
 [UIRange(10.0, 120.0)] [UIStep(1.0)] [UITooltip("Vertical FOV")] [UIUnits("deg")]
 uniform float camFov;
@@ -52,7 +44,6 @@ VSOut vsMain(uint vid : SV_VertexID)
 [shader("fragment")]
 float4 psMain(VSOut i) : SV_Target0 { return float4(i.uv, camFov + plain, 1.0); }
 """
-)
 
 
 @pytest.fixture(scope="module")
@@ -107,3 +98,18 @@ def test_uniform_without_metadata_uses_defaults(app):
 def test_app_icon_available(app):
     # Cheap smoke check that the package resources ship with the wheel.
     assert not workbench.app_icon().isNull()
+
+
+def test_diagnostics_map_to_user_source_line(app):
+    # An undefined identifier on line 1 of the user's source. The compiler injects a
+    # multi-line system prelude ahead of it; a #line reset must make the error report
+    # line 1, not a number shifted by the prelude length.
+    doc = ShaderDocument()
+    doc.setSource("float4 psMain() : SV_Target0 { return nope_undefined; }\n")
+    doc.compile()
+
+    diag = doc.diagnostics()
+    assert diag, "expected a compile error message"
+    lines = [int(m) for m in re.findall(r"\.slang:(\d+):", diag)]
+    assert lines, f"no line number in diagnostics: {diag!r}"
+    assert min(lines) <= 2, f"diagnostics not mapped to user source: {diag!r}"

@@ -41,6 +41,14 @@ public:
     void setSearchPaths(QStringList paths);
     [[nodiscard]] QStringList searchPaths() const;
 
+    // The "system prelude" is a private chunk of Slang prepended to every compile,
+    // invisible to the user's document. Workbench uses it to declare the UI-metadata
+    // attribute types so shaders can annotate uniforms without pasting boilerplate;
+    // diagnostics still point at the user's text via a #line reset. Defaults to the
+    // built-in UI-metadata declarations. This is the seam for future plugins/sidecars.
+    void setSystemPrelude(const QString& source);
+    [[nodiscard]] QString systemPrelude() const;
+
     CompileResult compileFullscreen(
         const QString& source,
         const QString& virtualPath = QStringLiteral("user_shader.slang"),

@@ -53,19 +53,6 @@ QFont monospaceFont(int pt = 11)
     return f;
 }
 
-// UI metadata attribute declarations understood by the parameter inspector. Prepended
-// to every built-in shader so its uniforms drive labelled sliders instead of bare spin
-// boxes. Slang only reflects a `[Foo(...)]` attribute whose type is declared like this.
-constexpr const char* kUiMeta = R"SLANG(
-[__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIWidgetAttribute  { string kind; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIGroupAttribute   { string group; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UITooltipAttribute { string text; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIUnitsAttribute   { string units; }
-)SLANG";
-
 // Scene body for the scene pass: a few raymarched SDF primitives (sphere, box, torus)
 // on a checker ground with soft shadows and ambient occlusion, framed by an orbit
 // camera. Camera uniforms are additive offsets from a sensible base so the default
@@ -228,8 +215,7 @@ float3 renderScene(float2 uv, float aspect)
 
 QByteArray sceneShaderSource()
 {
-    QByteArray s = kUiMeta;
-    s += "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
+    QByteArray s = "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
     s += kSceneBody;
     s += R"SLANG(
 [shader("fragment")]
@@ -250,7 +236,7 @@ QByteArray postShaderSource()
     // into an offscreen color texture (the G-buffer); this shader samples that texture
     // and grades it. `uSceneColor`/`uSceneSampler` map to HLSL t1/s1 (SRB slot 1); the
     // globals constant buffer stays at b0, matching QRhi's D3D11 binding fallback.
-    return QByteArray(kUiMeta) + R"SLANG(
+    return R"SLANG(
 // slang-qt post-process pass. Samples the scene G-buffer produced by the scene pass
 // and grades it — this is the second stage that runs on top of the first.
 // The vk::binding annotations only affect SPIR-V; the D3D11 path uses the t1/s1
@@ -307,7 +293,7 @@ float4 psMain(VSOut input) : SV_Target0
 // Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
 QByteArray volumeCloudsSample()
 {
-    return QByteArray(kUiMeta) + R"SLANG(
+    return R"SLANG(
 // Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
 // Drag in either viewport to fly the camera (orbit / pan / zoom).
 [UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
@@ -455,7 +441,7 @@ float4 psMain(VSOut input) : SV_Target0
 // scene G-buffer at t1/s1 (SRB slot 1) exactly like the built-in post pass.
 QByteArray bloomSample()
 {
-    return QByteArray(kUiMeta) + R"SLANG(
+    return R"SLANG(
 // Sample: Bloom + chromatic aberration post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
@@ -538,7 +524,7 @@ float4 psMain(VSOut input) : SV_Target0
 // Post: retro CRT — barrel distortion, scanlines, aperture-grille mask, vignette.
 QByteArray crtSample()
 {
-    return QByteArray(kUiMeta) + R"SLANG(
+    return R"SLANG(
 // Sample: CRT / scanline post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
