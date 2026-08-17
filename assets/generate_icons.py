@@ -1,6 +1,8 @@
 """One-off icon exporter: copies the source SVG into the package and renders
 PNG sizes + a multi-size .ico into assets/. Safe to re-run."""
+
 from __future__ import annotations
+
 import shutil
 from pathlib import Path
 

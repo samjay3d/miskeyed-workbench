@@ -3,6 +3,7 @@
 The C++ objects are the public API and are re-exported at the top level, e.g.
 ``from miskeyed.workbench import WorkbenchWindow``.
 """
+
 from __future__ import annotations
 
 import os
@@ -35,9 +36,7 @@ def _register_dll_directories() -> None:
     # Slang loads its downstream compilers (slang-glslang, spirv-opt) by name via
     # the standard search order, which add_dll_directory does not cover; PATH does.
     if path_prepend:
-        os.environ["PATH"] = os.pathsep.join(
-            path_prepend + [os.environ.get("PATH", "")]
-        )
+        os.environ["PATH"] = os.pathsep.join(path_prepend + [os.environ.get("PATH", "")])
 
 
 def _preload_runtime() -> None:
@@ -73,4 +72,3 @@ __all__ = [name for name in dir(_ns) if not name.startswith("_")]
 for _name in __all__:
     globals()[_name] = getattr(_ns, _name)
 del _name, _ns
-

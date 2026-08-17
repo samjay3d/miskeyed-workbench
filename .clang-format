@@ -1,0 +1,13 @@
+# Formatting for the hand-written C++ (cpp/, app/, bindings/). Based on WebKit, which
+# already matches the project's Qt-ish layout: 4-space indent, opening brace on its own
+# line for functions/classes but same line for control statements, left-aligned pointers.
+# Generated shiboken wrappers and *_autogen files are never formatted (see the hook glob).
+BasedOnStyle: WebKit
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+PointerAlignment: Left
+Standard: c++20
+SortIncludes: false
+AllowShortFunctionsOnASingleLine: Inline

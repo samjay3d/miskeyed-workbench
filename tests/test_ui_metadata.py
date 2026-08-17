@@ -13,11 +13,9 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
-
 import miskeyed.workbench as workbench  # noqa: E402
 from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E402
-
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
 # The attribute types the Workbench understands, declared once so shaders can use them.
 UI_META_PRELUDE = """

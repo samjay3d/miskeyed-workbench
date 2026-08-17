@@ -11,6 +11,7 @@ Normalize copies every member's bytes verbatim (so RECORD hashes stay valid) int
 fresh archive with clean ZipInfo — no data descriptors, no extra fields, one central
 directory, no trailing data.
 """
+
 from __future__ import annotations
 
 import os
@@ -35,10 +36,14 @@ def inspect(path: str) -> bool:
     with zipfile.ZipFile(path) as zf:
         infos = zf.infolist()
         dd = [i.filename for i in infos if i.flag_bits & 0x08]
-        z64 = [i.filename for i in infos if i.compress_size >= 0xFFFFFFFF or i.file_size >= 0xFFFFFFFF]
+        z64 = [
+            i.filename for i in infos if i.compress_size >= 0xFFFFFFFF or i.file_size >= 0xFFFFFFFF
+        ]
         names = [i.filename for i in infos]
         dupes = sorted({n for n in names if names.count(n) > 1})
-        print(f"          entries={len(infos)} data_descriptor={len(dd)} zip64={len(z64)} duplicates={len(dupes)}")
+        print(
+            f"          entries={len(infos)} data_descriptor={len(dd)} zip64={len(z64)} duplicates={len(dupes)}"
+        )
         if dd:
             ok = False
             print(f"          !! data-descriptor entries: {dd[:5]}")
@@ -59,7 +64,9 @@ def inspect(path: str) -> bool:
         sig = struct.unpack_from("<I", data, off)[0]
         if sig == SIG_LOCAL:
             n += 1
-            (_, _, flags, _, _, _, _, csize, _, nlen, elen) = struct.unpack_from("<IHHHHHIIIHH", data, off)
+            (_, _, flags, _, _, _, _, csize, _, nlen, elen) = struct.unpack_from(
+                "<IHHHHHIIIHH", data, off
+            )
             off += 30 + nlen + elen
             if flags & 0x08:
                 p = data.find(struct.pack("<I", SIG_DATADESC), off)
@@ -72,7 +79,9 @@ def inspect(path: str) -> bool:
         elif sig in (SIG_CENTRAL, SIG_ZIP64_EOCD, SIG_ZIP64_LOC, SIG_EOCD):
             break
         else:
-            print(f"          !! UNKNOWN RECORD SIGNATURE 0x{sig:08X} at offset {off} (after {n} locals)")
+            print(
+                f"          !! UNKNOWN RECORD SIGNATURE 0x{sig:08X} at offset {off} (after {n} locals)"
+            )
             print(f"             context: {data[off:off+16].hex()}")
             return False
     print(f"          raw scan: {'OK' if ok else 'ISSUES ABOVE'} ({n} local records)")
