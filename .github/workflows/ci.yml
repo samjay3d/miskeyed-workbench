@@ -14,6 +14,9 @@ on:
         branches-ignore: [main]
     workflow_dispatch:
 
+permissions:
+    contents: read
+
 concurrency:
     # Key on the head branch (same for the push and pull_request events) so a push to a
     # branch with an open PR collapses to a single run instead of building the matrix twice.
