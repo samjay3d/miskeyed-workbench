@@ -51,7 +51,10 @@ Issues = "https://github.com/samjay3d/miskeyed-workbench/issues"
 Changelog = "https://github.com/samjay3d/miskeyed-workbench/blob/main/CHANGELOG.md"
 
 [project.scripts]
+# `workbench` is the short form; `miskeyed-workbench` matches the dist name so
+# `uvx miskeyed-workbench` resolves without needing `--from`.
 workbench = "miskeyed.workbench.__main__:main"
+miskeyed-workbench = "miskeyed.workbench.__main__:main"
 
 [tool.scikit-build]
 # Inherit the floor from build-system.requires (>=1.0) so future default changes
