@@ -88,13 +88,12 @@ jobs:
                   # CMAKE_PREFIX_PATH and Slang via SLANG_ROOT (see cmake/FindSlang.cmake).
                   python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v
 
-            - name: Inspect wheel ZIP (diagnostic)
+            - name: Verify fresh wheel is not corrupt
               shell: pwsh
-              continue-on-error: true
-              # Non-fatal: reports whether the freshly built wheel already has a
-              # non-compliant ZIP record (data descriptor / trailing data / unknown
-              # signature) BEFORE it goes through the artifact round-trip, so we can tell
-              # if corruption is from the build tool or from upload/download-artifact.
+              # FATAL on purpose: validates every member's CRC-32 on the just-built wheel,
+              # BEFORE the artifact round-trip. If this passes but the publish job later
+              # sees a bad CRC, the corruption is introduced by upload/download-artifact,
+              # not the build. If it fails here, the build itself produced a bad wheel.
               run: |
                   $whls = (Get-ChildItem wheelhouse\*.whl).FullName
                   python ci\wheelzip.py inspect $whls
@@ -103,6 +102,9 @@ jobs:
               with:
                   name: dist-wheels-${{ matrix.python-version }}
                   path: ./wheelhouse/*.whl
+                  # Store, don't deflate: rules out artifact-side compression as a source
+                  # of the bundled-DLL corruption seen on download.
+                  compression-level: 0
 
     build-sdist:
         name: Source distribution
@@ -147,11 +149,9 @@ jobs:
                   path: dist
                   merge-multiple: true
             - name: Normalize wheel ZIPs for PyPI
-              # PyPI's upload validator rejects ZIPs with uncommon features. Rewrite each
-              # wheel as a canonical, seekable archive (member bytes unchanged, so RECORD
-              # stays valid) right before upload. This is the last mile, so it fixes bad
-              # records no matter whether they came from the build tool or the artifact
-              # round-trip. Verified locally that the normalized wheel still pip-installs.
+              # Rewrites each wheel as a canonical, seekable archive (member bytes verbatim,
+              # so RECORD stays valid). Also revalidates CRCs, so it fails loudly if the
+              # downloaded artifact is corrupt rather than uploading a bad file.
               run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
               with:

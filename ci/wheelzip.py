@@ -45,6 +45,12 @@ def inspect(path: str) -> bool:
         if dupes:
             ok = False
             print(f"          !! duplicate names: {dupes[:5]}")
+        # Decompress every member and validate its CRC-32 — catches real bit-corruption
+        # (e.g. a mangled bundled DLL) that a structure-only scan would miss.
+        bad = zf.testzip()
+        if bad is not None:
+            ok = False
+            print(f"          !! BAD CRC-32 (corrupt member data): {bad}")
 
     # Sequential raw scan: PyPI walks records this way and rejects on the first
     # unrecognized signature or leftover bytes before the central directory.
