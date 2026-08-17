@@ -37,28 +37,29 @@ namespace slang_qrhi {
 
 namespace {
 
-// A good fixed-width coding font if available, falling back to the platform default.
-QFont monospaceFont(int pt = 11)
-{
-    for (const QString& family : {QStringLiteral("Cascadia Code"), QStringLiteral("JetBrains Mono"),
-                                  QStringLiteral("Consolas"), QStringLiteral("Menlo")}) {
-        if (QFontDatabase::families().contains(family)) {
-            QFont f(family, pt);
-            f.setStyleHint(QFont::Monospace);
-            return f;
+    // A good fixed-width coding font if available, falling back to the platform default.
+    QFont monospaceFont(int pt = 11)
+    {
+        for (const QString& family :
+            { QStringLiteral("Cascadia Code"), QStringLiteral("JetBrains Mono"),
+                QStringLiteral("Consolas"), QStringLiteral("Menlo") }) {
+            if (QFontDatabase::families().contains(family)) {
+                QFont f(family, pt);
+                f.setStyleHint(QFont::Monospace);
+                return f;
+            }
         }
+        QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+        f.setPointSize(pt);
+        return f;
     }
-    QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    f.setPointSize(pt);
-    return f;
-}
 
-// Scene body for the scene pass: a few raymarched SDF primitives (sphere, box, torus)
-// on a checker ground with soft shadows and ambient occlusion, framed by an orbit
-// camera. Camera uniforms are additive offsets from a sensible base so the default
-// (all-zero) values already produce a nicely framed image. The scene pass renders this
-// into an offscreen texture (the G-buffer) that the post-process pass then samples.
-constexpr const char* kSceneBody = R"SLANG(
+    // Scene body for the scene pass: a few raymarched SDF primitives (sphere, box, torus)
+    // on a checker ground with soft shadows and ambient occlusion, framed by an orbit
+    // camera. Camera uniforms are additive offsets from a sensible base so the default
+    // (all-zero) values already produce a nicely framed image. The scene pass renders this
+    // into an offscreen texture (the G-buffer) that the post-process pass then samples.
+    constexpr const char* kSceneBody = R"SLANG(
 [UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
 uniform float camYaw;
 [UIGroup("Camera")] [UIName("Pitch")]    [UIWidget("angle")]  [UIRange(-1.5, 1.5)]         [UIStep(0.01)] [UIUnits("rad")]
@@ -213,11 +214,12 @@ float3 renderScene(float2 uv, float aspect)
 }
 )SLANG";
 
-QByteArray sceneShaderSource()
-{
-    QByteArray s = "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
-    s += kSceneBody;
-    s += R"SLANG(
+    QByteArray sceneShaderSource()
+    {
+        QByteArray s
+            = "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
+        s += kSceneBody;
+        s += R"SLANG(
 [shader("fragment")]
 float4 psMain(VSOut input) : SV_Target0
 {
@@ -227,16 +229,16 @@ float4 psMain(VSOut input) : SV_Target0
     return float4(col, 1.0);
 }
 )SLANG";
-    return s;
-}
+        return s;
+    }
 
-QByteArray postShaderSource()
-{
-    // A real post-process pass: it does NOT re-render the scene. The scene pass renders
-    // into an offscreen color texture (the G-buffer); this shader samples that texture
-    // and grades it. `uSceneColor`/`uSceneSampler` map to HLSL t1/s1 (SRB slot 1); the
-    // globals constant buffer stays at b0, matching QRhi's D3D11 binding fallback.
-    return R"SLANG(
+    QByteArray postShaderSource()
+    {
+        // A real post-process pass: it does NOT re-render the scene. The scene pass renders
+        // into an offscreen color texture (the G-buffer); this shader samples that texture
+        // and grades it. `uSceneColor`/`uSceneSampler` map to HLSL t1/s1 (SRB slot 1); the
+        // globals constant buffer stays at b0, matching QRhi's D3D11 binding fallback.
+        return R"SLANG(
 // slang-qt post-process pass. Samples the scene G-buffer produced by the scene pass
 // and grades it — this is the second stage that runs on top of the first.
 // The vk::binding annotations only affect SPIR-V; the D3D11 path uses the t1/s1
@@ -278,22 +280,22 @@ float4 psMain(VSOut input) : SV_Target0
     return float4(c * vig, 1.0);
 }
 )SLANG";
-}
+    }
 
-// ---------------------------------------------------------------------------
-// Sample shader library. These are ready-to-run drop-ins the user can load from
-// the "Samples" toolbar menu to get a feel for what the workbench can do. Slang
-// (like every rasterizer) can't run the hardware ray-tracing pipeline through
-// QRhi, so the "ray tracing" flavour here is software raymarching in a fragment
-// shader — the same technique the built-in scene uses, extended to volumes.
+    // ---------------------------------------------------------------------------
+    // Sample shader library. These are ready-to-run drop-ins the user can load from
+    // the "Samples" toolbar menu to get a feel for what the workbench can do. Slang
+    // (like every rasterizer) can't run the hardware ray-tracing pipeline through
+    // QRhi, so the "ray tracing" flavour here is software raymarching in a fragment
+    // shader — the same technique the built-in scene uses, extended to volumes.
 
-// Volume raymarch (scene pass): each pixel marches a ray through an animated fbm
-// density field, integrating extinction (Beer-Lambert) with a short sun-march for
-// single-scatter lighting. Shares the cam* uniforms so the Camera panel and the
-// Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
-QByteArray volumeCloudsSample()
-{
-    return R"SLANG(
+    // Volume raymarch (scene pass): each pixel marches a ray through an animated fbm
+    // density field, integrating extinction (Beer-Lambert) with a short sun-march for
+    // single-scatter lighting. Shares the cam* uniforms so the Camera panel and the
+    // Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
+    QByteArray volumeCloudsSample()
+    {
+        return R"SLANG(
 // Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
 // Drag in either viewport to fly the camera (orbit / pan / zoom).
 [UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
@@ -435,13 +437,13 @@ float4 psMain(VSOut input) : SV_Target0
     return float4(col, 1.0);
 }
 )SLANG";
-}
+    }
 
-// Post: threshold bloom + radial chromatic aberration + ACES tonemap. Samples the
-// scene G-buffer at t1/s1 (SRB slot 1) exactly like the built-in post pass.
-QByteArray bloomSample()
-{
-    return R"SLANG(
+    // Post: threshold bloom + radial chromatic aberration + ACES tonemap. Samples the
+    // scene G-buffer at t1/s1 (SRB slot 1) exactly like the built-in post pass.
+    QByteArray bloomSample()
+    {
+        return R"SLANG(
 // Sample: Bloom + chromatic aberration post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
@@ -519,12 +521,12 @@ float4 psMain(VSOut input) : SV_Target0
     return float4(col * vig, 1.0);
 }
 )SLANG";
-}
+    }
 
-// Post: retro CRT — barrel distortion, scanlines, aperture-grille mask, vignette.
-QByteArray crtSample()
-{
-    return R"SLANG(
+    // Post: retro CRT — barrel distortion, scanlines, aperture-grille mask, vignette.
+    QByteArray crtSample()
+    {
+        return R"SLANG(
 // Sample: CRT / scanline post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
@@ -590,25 +592,31 @@ float4 psMain(VSOut input) : SV_Target0
     return float4(saturate(col), 1.0);
 }
 )SLANG";
-}
+    }
 
-// One entry per sample; `target` picks the editor slot (0 = scene, 1 = post).
-struct SampleShader { const char* name; int target; QByteArray (*source)(); };
-
-QVector<SampleShader> sampleShaders()
-{
-    return {
-        { "Volume — Raymarched Clouds (scene)", 0, &volumeCloudsSample },
-        { "Post — Bloom + Chromatic Aberration", 1, &bloomSample },
-        { "Post — CRT / Scanlines", 1, &crtSample },
+    // One entry per sample; `target` picks the editor slot (0 = scene, 1 = post).
+    struct SampleShader {
+        const char* name;
+        int target;
+        QByteArray (*source)();
     };
-}
+
+    QVector<SampleShader> sampleShaders()
+    {
+        return {
+            { "Volume — Raymarched Clouds (scene)", 0, &volumeCloudsSample },
+            { "Post — Bloom + Chromatic Aberration", 1, &bloomSample },
+            { "Post — CRT / Scanlines", 1, &crtSample },
+        };
+    }
 
 } // namespace
 
-WorkbenchWindow::WorkbenchWindow(QWidget* parent) : QMainWindow(parent)
+WorkbenchWindow::WorkbenchWindow(QWidget* parent)
+    : QMainWindow(parent)
 {
-    buildUi(); connectUi();
+    buildUi();
+    connectUi();
     // Load built-in shaders so both viewports render immediately instead of blank.
     m_sceneDocument->setSource(QString::fromUtf8(sceneShaderSource()));
     m_document->setSource(QString::fromUtf8(postShaderSource()));
@@ -617,45 +625,62 @@ WorkbenchWindow::WorkbenchWindow(QWidget* parent) : QMainWindow(parent)
     m_sceneDocument->compile();
     m_document->compile();
 }
-WorkbenchWindow::WorkbenchWindow(const QString& shaderPath, QWidget* parent) : WorkbenchWindow(parent)
+WorkbenchWindow::WorkbenchWindow(const QString& shaderPath, QWidget* parent)
+    : WorkbenchWindow(parent)
 {
-    if (!shaderPath.isEmpty()) openShader(shaderPath);
+    if (!shaderPath.isEmpty())
+        openShader(shaderPath);
 }
 
 void WorkbenchWindow::buildUi()
 {
-    setWindowTitle(QStringLiteral("Workbench")); resize(1600, 950);
+    setWindowTitle(QStringLiteral("Workbench"));
+    resize(1600, 950);
     m_sceneDocument = new ShaderDocument(this);
     m_document = new ShaderDocument(this);
 
-    m_sceneViewport = new SlangRhiWidget(this); m_sceneViewport->setDocument(m_sceneDocument);
-    m_viewport = new SlangRhiWidget(this); m_viewport->setDocument(m_document);
+    m_sceneViewport = new SlangRhiWidget(this);
+    m_sceneViewport->setDocument(m_sceneDocument);
+    m_viewport = new SlangRhiWidget(this);
+    m_viewport->setDocument(m_document);
     // The post viewport runs a real two-pass pipeline: it renders the scene document into
     // an offscreen texture (G-buffer), then its own document grades that texture on top.
     m_viewport->setScenePass(m_sceneDocument);
-    m_editor = new CodeEditor(this); m_editor->setTabStopDistance(32);
+    m_editor = new CodeEditor(this);
+    m_editor->setTabStopDistance(32);
     m_editor->setFont(monospaceFont());
     new ShaderHighlighter(m_editor->document());
 
-    auto* cameraInspector = new ParameterInspector(this); cameraInspector->setModel(m_sceneDocument->parameters());
-    auto* postInspector = new ParameterInspector(this); postInspector->setModel(m_document->parameters());
-    m_diagnostics = new QPlainTextEdit(this); m_diagnostics->setReadOnly(true);
+    auto* cameraInspector = new ParameterInspector(this);
+    cameraInspector->setModel(m_sceneDocument->parameters());
+    auto* postInspector = new ParameterInspector(this);
+    postInspector->setModel(m_document->parameters());
+    m_diagnostics = new QPlainTextEdit(this);
+    m_diagnostics->setReadOnly(true);
     m_diagnostics->setFont(monospaceFont(10));
     m_diagnostics->setPlaceholderText(QStringLiteral("No diagnostics — shader compiled cleanly."));
 
     auto labelled = [this](const QString& title, QWidget* w) {
         auto* box = new QWidget(this);
-        auto* v = new QVBoxLayout(box); v->setContentsMargins(0, 0, 0, 0); v->setSpacing(0);
+        auto* v = new QVBoxLayout(box);
+        v->setContentsMargins(0, 0, 0, 0);
+        v->setSpacing(0);
         auto* lbl = new QLabel(title, box);
         lbl->setObjectName(QStringLiteral("PanelHeader"));
-        v->addWidget(lbl); v->addWidget(w, 1);
+        v->addWidget(lbl);
+        v->addWidget(w, 1);
         return box;
     };
 
     auto* views = new QSplitter(Qt::Horizontal, this);
-    views->addWidget(labelled(QStringLiteral("1 · Scene  —  renders into the G-buffer   (drag: orbit · middle: pan · right/wheel: zoom)"), m_sceneViewport));
-    views->addWidget(labelled(QStringLiteral("2 · Post-Process  —  samples the scene texture and grades it on top"), m_viewport));
-    views->setStretchFactor(0, 1); views->setStretchFactor(1, 1);
+    views->addWidget(labelled(QStringLiteral("1 · Scene  —  renders into the G-buffer   (drag: "
+                                             "orbit · middle: pan · right/wheel: zoom)"),
+        m_sceneViewport));
+    views->addWidget(labelled(
+        QStringLiteral("2 · Post-Process  —  samples the scene texture and grades it on top"),
+        m_viewport));
+    views->setStretchFactor(0, 1);
+    views->setStretchFactor(1, 1);
     m_sceneViewport->setToolTip(QStringLiteral(
         "Scene pass. Rendered into an offscreen color texture (the G-buffer) that the\n"
         "post-process pass reads. Drag to move the camera (Houdini nav):\n"
@@ -676,16 +701,22 @@ void WorkbenchWindow::buildUi()
     m_tabs = tabs;
 
     auto* upper = new QSplitter(Qt::Horizontal, this);
-    upper->addWidget(views); upper->addWidget(tabs);
-    upper->setStretchFactor(0, 4); upper->setStretchFactor(1, 1);
+    upper->addWidget(views);
+    upper->addWidget(tabs);
+    upper->setStretchFactor(0, 4);
+    upper->setStretchFactor(1, 1);
 
     auto* editorBox = new QWidget(this);
-    auto* ev = new QVBoxLayout(editorBox); ev->setContentsMargins(0, 0, 0, 0); ev->setSpacing(2);
+    auto* ev = new QVBoxLayout(editorBox);
+    ev->setContentsMargins(0, 0, 0, 0);
+    ev->setSpacing(2);
     auto* editorBar = new QWidget(editorBox);
-    auto* eh = new QHBoxLayout(editorBar); eh->setContentsMargins(6, 2, 6, 2);
+    auto* eh = new QHBoxLayout(editorBar);
+    eh->setContentsMargins(6, 2, 6, 2);
     eh->addWidget(new QLabel(QStringLiteral("Editing:"), editorBar));
     m_editorTarget = new QComboBox(editorBar);
-    m_editorTarget->addItems({QStringLiteral("Scene shader"), QStringLiteral("Post-process shader")});
+    m_editorTarget->addItems(
+        { QStringLiteral("Scene shader"), QStringLiteral("Post-process shader") });
     m_editorTarget->setCurrentIndex(1);
     m_editorTarget->setToolTip(QStringLiteral(
         "Which shader the code editor below edits. The Scene and Post-process passes are\n"
@@ -703,27 +734,37 @@ void WorkbenchWindow::buildUi()
     eh->addSpacing(6);
     eh->addWidget(m_compileStatus);
 
-    auto* navHint = new QLabel(QStringLiteral("Camera: drag = orbit · middle = pan · right/wheel = zoom  (Houdini)"), editorBar);
+    auto* navHint = new QLabel(
+        QStringLiteral("Camera: drag = orbit · middle = pan · right/wheel = zoom  (Houdini)"),
+        editorBar);
     navHint->setObjectName(QStringLiteral("HintLabel"));
-    eh->addWidget(navHint); eh->addStretch(1);
+    eh->addWidget(navHint);
+    eh->addStretch(1);
 
     // Left: the editable Slang source. Right: the compiled output for a chosen backend.
     auto* sourceSide = new QWidget(editorBox);
-    auto* sv = new QVBoxLayout(sourceSide); sv->setContentsMargins(0, 0, 0, 0); sv->setSpacing(0);
+    auto* sv = new QVBoxLayout(sourceSide);
+    sv->setContentsMargins(0, 0, 0, 0);
+    sv->setSpacing(0);
     auto* sourceHeader = new QLabel(QStringLiteral("Slang source"), sourceSide);
     sourceHeader->setObjectName(QStringLiteral("PanelHeader"));
-    sv->addWidget(sourceHeader); sv->addWidget(m_editor, 1);
+    sv->addWidget(sourceHeader);
+    sv->addWidget(m_editor, 1);
 
     m_generatedView = new CodeEditor(editorBox);
     m_generatedView->setReadOnly(true);
     m_generatedView->setFont(monospaceFont());
-    m_generatedView->setPlaceholderText(QStringLiteral("Compile the shader to see generated code."));
+    m_generatedView->setPlaceholderText(
+        QStringLiteral("Compile the shader to see generated code."));
     new ShaderHighlighter(m_generatedView->document());
 
     auto* genSide = new QWidget(editorBox);
-    auto* gv = new QVBoxLayout(genSide); gv->setContentsMargins(0, 0, 0, 0); gv->setSpacing(0);
+    auto* gv = new QVBoxLayout(genSide);
+    gv->setContentsMargins(0, 0, 0, 0);
+    gv->setSpacing(0);
     auto* genBar = new QWidget(genSide);
-    auto* gh = new QHBoxLayout(genBar); gh->setContentsMargins(8, 3, 8, 3);
+    auto* gh = new QHBoxLayout(genBar);
+    gh->setContentsMargins(8, 3, 8, 3);
     auto* genTitle = new QLabel(QStringLiteral("Compiled output"), genBar);
     genTitle->setObjectName(QStringLiteral("PanelHeaderInline"));
     gh->addWidget(genTitle);
@@ -731,66 +772,108 @@ void WorkbenchWindow::buildUi()
     m_generatedTarget->setToolTip(QStringLiteral(
         "Backend to disassemble the current shader to: HLSL, GLSL, SPIR-V or Metal.\n"
         "Slang cross-compiles your Slang source to each of these."));
-    gh->addWidget(m_generatedTarget); gh->addStretch(1);
+    gh->addWidget(m_generatedTarget);
+    gh->addStretch(1);
     auto* copyBtn = new QPushButton(QStringLiteral("Copy"), genBar);
     copyBtn->setToolTip(QStringLiteral("Copy the generated code to the clipboard."));
     gh->addWidget(copyBtn);
     genBar->setObjectName(QStringLiteral("PanelHeader"));
-    gv->addWidget(genBar); gv->addWidget(m_generatedView, 1);
-    connect(copyBtn, &QPushButton::clicked, this, [this]{
-        if (m_generatedView) QGuiApplication::clipboard()->setText(m_generatedView->toPlainText());
+    gv->addWidget(genBar);
+    gv->addWidget(m_generatedView, 1);
+    connect(copyBtn, &QPushButton::clicked, this, [this] {
+        if (m_generatedView)
+            QGuiApplication::clipboard()->setText(m_generatedView->toPlainText());
         statusBar()->showMessage(QStringLiteral("Copied generated code"), 1200);
     });
 
     auto* editorSplit = new QSplitter(Qt::Horizontal, editorBox);
-    editorSplit->addWidget(sourceSide); editorSplit->addWidget(genSide);
-    editorSplit->setStretchFactor(0, 3); editorSplit->setStretchFactor(1, 2);
-    ev->addWidget(editorBar); ev->addWidget(editorSplit, 1);
+    editorSplit->addWidget(sourceSide);
+    editorSplit->addWidget(genSide);
+    editorSplit->setStretchFactor(0, 3);
+    editorSplit->setStretchFactor(1, 2);
+    ev->addWidget(editorBar);
+    ev->addWidget(editorSplit, 1);
 
     auto* root = new QSplitter(Qt::Vertical, this);
-    root->addWidget(upper); root->addWidget(editorBox);
-    root->setStretchFactor(0, 3); root->setStretchFactor(1, 2); setCentralWidget(root);
+    root->addWidget(upper);
+    root->addWidget(editorBox);
+    root->setStretchFactor(0, 3);
+    root->setStretchFactor(1, 2);
+    setCentralWidget(root);
     setStatusBar(new QStatusBar(this));
 
-    auto* tb = addToolBar(QStringLiteral("Shader")); tb->setMovable(false);
-    auto* open = tb->addAction(QStringLiteral("Open")); open->setShortcut(QKeySequence::Open);
-    auto* save = tb->addAction(QStringLiteral("Save")); save->setShortcut(QKeySequence::Save);
-    auto* compile = tb->addAction(QStringLiteral("Compile")); compile->setShortcut(QKeySequence(QStringLiteral("Ctrl+Return")));
-    auto* live = tb->addAction(QStringLiteral("Live")); live->setCheckable(true); live->setChecked(true);
+    auto* tb = addToolBar(QStringLiteral("Shader"));
+    tb->setMovable(false);
+    auto* open = tb->addAction(QStringLiteral("Open"));
+    open->setShortcut(QKeySequence::Open);
+    auto* save = tb->addAction(QStringLiteral("Save"));
+    save->setShortcut(QKeySequence::Save);
+    auto* compile = tb->addAction(QStringLiteral("Compile"));
+    compile->setShortcut(QKeySequence(QStringLiteral("Ctrl+Return")));
+    auto* live = tb->addAction(QStringLiteral("Live"));
+    live->setCheckable(true);
+    live->setChecked(true);
     tb->addSeparator();
     auto* exportOut = tb->addAction(QStringLiteral("Export output…"));
-    exportOut->setToolTip(QStringLiteral("Save the currently shown compiled output (HLSL/GLSL/SPIR-V/Metal) to a file."));
+    exportOut->setToolTip(QStringLiteral(
+        "Save the currently shown compiled output (HLSL/GLSL/SPIR-V/Metal) to a file."));
 
     tb->addSeparator();
     auto* samplesBtn = new QToolButton(tb);
     samplesBtn->setText(QStringLiteral("Samples"));
     samplesBtn->setPopupMode(QToolButton::InstantPopup);
-    samplesBtn->setToolTip(QStringLiteral("Load a ready-made sample: a camera-driven volume raymarch or a post-process effect."));
+    samplesBtn->setToolTip(QStringLiteral(
+        "Load a ready-made sample: a camera-driven volume raymarch or a post-process effect."));
     auto* samplesMenu = new QMenu(samplesBtn);
     for (const SampleShader& s : sampleShaders()) {
         QAction* a = samplesMenu->addAction(QString::fromUtf8(s.name));
         const int target = s.target;
         auto* fn = s.source;
-        connect(a, &QAction::triggered, this, [this, target, fn]{ loadSample(target, fn()); });
+        connect(a, &QAction::triggered, this, [this, target, fn] { loadSample(target, fn()); });
     }
     samplesBtn->setMenu(samplesMenu);
     tb->addWidget(samplesBtn);
 
-    connect(open, &QAction::triggered, this, [this]{ const auto p=QFileDialog::getOpenFileName(this,QStringLiteral("Open Slang shader"),{},QStringLiteral("Slang (*.slang)")); if(!p.isEmpty()) openShader(p); });
-    connect(save, &QAction::triggered, this, [this]{ if (m_editorDoc) { m_editorDoc->setSource(m_editor->toPlainText()); m_editorDoc->save(); } });
-    connect(compile, &QAction::triggered, this, [this]{ if (m_editorDoc) { m_editorDoc->setSource(m_editor->toPlainText()); m_editorDoc->compile(); } });
-    connect(live, &QAction::toggled, this, [this](bool on){ m_sceneDocument->setLive(on); m_document->setLive(on); });
-    connect(exportOut, &QAction::triggered, this, [this]{
-        if (!m_generatedView || m_generatedView->toPlainText().isEmpty()) {
-            statusBar()->showMessage(QStringLiteral("Nothing to export — compile first"), 1800); return;
+    connect(open, &QAction::triggered, this, [this] {
+        const auto p = QFileDialog::getOpenFileName(
+            this, QStringLiteral("Open Slang shader"), {}, QStringLiteral("Slang (*.slang)"));
+        if (!p.isEmpty())
+            openShader(p);
+    });
+    connect(save, &QAction::triggered, this, [this] {
+        if (m_editorDoc) {
+            m_editorDoc->setSource(m_editor->toPlainText());
+            m_editorDoc->save();
         }
-        const QString target = m_generatedTarget ? m_generatedTarget->currentText() : QStringLiteral("output");
-        static const QMap<QString, QString> ext = {
-            {QStringLiteral("HLSL"), QStringLiteral("hlsl")}, {QStringLiteral("GLSL"), QStringLiteral("glsl")},
-            {QStringLiteral("SPIR-V"), QStringLiteral("spvasm")}, {QStringLiteral("Metal"), QStringLiteral("metal")}};
-        const QString suggested = QStringLiteral("shader.%1").arg(ext.value(target, QStringLiteral("txt")));
-        const QString p = QFileDialog::getSaveFileName(this, QStringLiteral("Export compiled %1").arg(target), suggested);
-        if (p.isEmpty()) return;
+    });
+    connect(compile, &QAction::triggered, this, [this] {
+        if (m_editorDoc) {
+            m_editorDoc->setSource(m_editor->toPlainText());
+            m_editorDoc->compile();
+        }
+    });
+    connect(live, &QAction::toggled, this, [this](bool on) {
+        m_sceneDocument->setLive(on);
+        m_document->setLive(on);
+    });
+    connect(exportOut, &QAction::triggered, this, [this] {
+        if (!m_generatedView || m_generatedView->toPlainText().isEmpty()) {
+            statusBar()->showMessage(QStringLiteral("Nothing to export — compile first"), 1800);
+            return;
+        }
+        const QString target
+            = m_generatedTarget ? m_generatedTarget->currentText() : QStringLiteral("output");
+        static const QMap<QString, QString> ext
+            = { { QStringLiteral("HLSL"), QStringLiteral("hlsl") },
+                  { QStringLiteral("GLSL"), QStringLiteral("glsl") },
+                  { QStringLiteral("SPIR-V"), QStringLiteral("spvasm") },
+                  { QStringLiteral("Metal"), QStringLiteral("metal") } };
+        const QString suggested
+            = QStringLiteral("shader.%1").arg(ext.value(target, QStringLiteral("txt")));
+        const QString p = QFileDialog::getSaveFileName(
+            this, QStringLiteral("Export compiled %1").arg(target), suggested);
+        if (p.isEmpty())
+            return;
         QFile f(p);
         if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
             f.write(m_generatedView->toPlainText().toUtf8());
@@ -803,42 +886,52 @@ void WorkbenchWindow::buildUi()
 
 void WorkbenchWindow::connectUi()
 {
-    connect(m_editor, &QPlainTextEdit::textChanged, this, [this]{
-        if (!m_editorDoc) return;
-        if (m_editorDoc->live()) m_editorDoc->setSource(m_editor->toPlainText());
+    connect(m_editor, &QPlainTextEdit::textChanged, this, [this] {
+        if (!m_editorDoc)
+            return;
+        if (m_editorDoc->live())
+            m_editorDoc->setSource(m_editor->toPlainText());
         setCompileState(CompileState::Dirty);
     });
 
-    connect(m_compileStatus, &QPushButton::clicked, this, [this]{
+    connect(m_compileStatus, &QPushButton::clicked, this, [this] {
         if (m_editorErrors > 0 || (!m_lastCompileOk && m_compileState == CompileState::Error))
             jumpToFirstError();
-        else if (m_editorDoc) { m_editorDoc->setSource(m_editor->toPlainText()); m_editorDoc->compile(); }
+        else if (m_editorDoc) {
+            m_editorDoc->setSource(m_editor->toPlainText());
+            m_editorDoc->compile();
+        }
     });
 
     const auto hookDocument = [this](ShaderDocument* doc) {
-        connect(doc, &ShaderDocument::sourceChanged, this, [this, doc]{
+        connect(doc, &ShaderDocument::sourceChanged, this, [this, doc] {
             if (doc == m_editorDoc && m_editor->toPlainText() != doc->source()) {
-                m_editor->blockSignals(true); m_editor->setPlainText(doc->source()); m_editor->blockSignals(false);
+                m_editor->blockSignals(true);
+                m_editor->setPlainText(doc->source());
+                m_editor->blockSignals(false);
             }
         });
-        connect(doc, &ShaderDocument::diagnosticsChanged, this, [this, doc]{
-            if (doc == m_editorDoc) m_diagnostics->setPlainText(doc->diagnostics());
+        connect(doc, &ShaderDocument::diagnosticsChanged, this, [this, doc] {
+            if (doc == m_editorDoc)
+                m_diagnostics->setPlainText(doc->diagnostics());
         });
-        connect(doc, &ShaderDocument::compilingChanged, this, [this, doc]{
+        connect(doc, &ShaderDocument::compilingChanged, this, [this, doc] {
             if (doc == m_editorDoc && doc->compiling()) {
                 setCompileState(CompileState::Compiling);
-                m_compileStatus->repaint();   // paint before the (synchronous) compile blocks the UI
+                m_compileStatus->repaint(); // paint before the (synchronous) compile blocks the UI
             }
         });
-        connect(doc, &ShaderDocument::compiled, this, [this, doc]{
-            if (doc != m_editorDoc) return;
+        connect(doc, &ShaderDocument::compiled, this, [this, doc] {
+            if (doc != m_editorDoc)
+                return;
             m_lastCompileOk = true;
             recountDiagnostics();
             setCompileState(m_editorWarnings > 0 ? CompileState::Warn : CompileState::Ok);
             reloadGeneratedTargets();
         });
-        connect(doc, &ShaderDocument::compileFailed, this, [this, doc](const QString&){
-            if (doc != m_editorDoc) return;
+        connect(doc, &ShaderDocument::compileFailed, this, [this, doc](const QString&) {
+            if (doc != m_editorDoc)
+                return;
             m_lastCompileOk = false;
             recountDiagnostics();
             setCompileState(CompileState::Error);
@@ -847,19 +940,27 @@ void WorkbenchWindow::connectUi()
     hookDocument(m_sceneDocument);
     hookDocument(m_document);
 
-    connect(m_sceneViewport, &SlangRhiWidget::gpuError, this, [this](const QString& e){ m_diagnostics->appendPlainText(e); });
-    connect(m_viewport, &SlangRhiWidget::gpuError, this, [this](const QString& e){ m_diagnostics->appendPlainText(e); });
+    connect(m_sceneViewport, &SlangRhiWidget::gpuError, this,
+        [this](const QString& e) { m_diagnostics->appendPlainText(e); });
+    connect(m_viewport, &SlangRhiWidget::gpuError, this,
+        [this](const QString& e) { m_diagnostics->appendPlainText(e); });
 
-    connect(m_editorTarget, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &WorkbenchWindow::setEditorTarget);
-    connect(m_generatedTarget, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]{ refreshGeneratedView(); });
+    connect(m_editorTarget, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+        &WorkbenchWindow::setEditorTarget);
+    connect(m_generatedTarget, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+        [this] { refreshGeneratedView(); });
 
     // Camera uniforms are shared: mirror `cam*` values between the two passes so the
     // Qt editor is the single source of truth for the camera regardless of which panel
     // is used to edit it.
     connect(m_sceneDocument->parameters(), &ShaderParameterModel::parameterChanged, this,
-            [this](const QString& name, const QVariant& value, int, int){ mirrorParameter(m_document, name, value); });
+        [this](const QString& name, const QVariant& value, int, int) {
+            mirrorParameter(m_document, name, value);
+        });
     connect(m_document->parameters(), &ShaderParameterModel::parameterChanged, this,
-            [this](const QString& name, const QVariant& value, int, int){ mirrorParameter(m_sceneDocument, name, value); });
+        [this](const QString& name, const QVariant& value, int, int) {
+            mirrorParameter(m_sceneDocument, name, value);
+        });
 }
 
 void WorkbenchWindow::setEditorTarget(int index)
@@ -904,10 +1005,13 @@ void WorkbenchWindow::recountDiagnostics()
 {
     m_editorErrors = 0;
     m_editorWarnings = 0;
-    if (!m_editorDoc) return;
+    if (!m_editorDoc)
+        return;
     for (const LspDiagnostic& d : m_diagnosticsByUri.value(documentUri(m_editorDoc))) {
-        if (d.severity == 1) ++m_editorErrors;
-        else if (d.severity == 2) ++m_editorWarnings;
+        if (d.severity == 1)
+            ++m_editorErrors;
+        else if (d.severity == 2)
+            ++m_editorWarnings;
     }
 }
 
@@ -919,35 +1023,45 @@ void WorkbenchWindow::setCompileState(CompileState state)
 
 void WorkbenchWindow::updateCompileStatus()
 {
-    if (!m_compileStatus) return;
+    if (!m_compileStatus)
+        return;
 
     QString text;
-    QString state;    // drives the [state=...] stylesheet selector
+    QString state; // drives the [state=...] stylesheet selector
     QString tip;
     switch (m_compileState) {
     case CompileState::Compiling:
-        text = QStringLiteral("Compiling…");   state = QStringLiteral("compiling");
+        text = QStringLiteral("Compiling…");
+        state = QStringLiteral("compiling");
         tip = QStringLiteral("Compiling the shader…");
         break;
     case CompileState::Dirty:
-        text = QStringLiteral("● Modified");    state = QStringLiteral("dirty");
+        text = QStringLiteral("● Modified");
+        state = QStringLiteral("dirty");
         tip = QStringLiteral("Unsaved edits — compiling shortly. Click to compile now.");
         break;
     default: {
         const int ms = m_editorDoc ? m_editorDoc->lastCompileMs() : -1;
         if (!m_lastCompileOk || m_editorErrors > 0) {
             const int n = qMax(1, m_editorErrors);
-            text = QStringLiteral("✕  %1 error%2").arg(n).arg(n == 1 ? QString() : QStringLiteral("s"));
+            text = QStringLiteral("✕  %1 error%2")
+                       .arg(n)
+                       .arg(n == 1 ? QString() : QStringLiteral("s"));
             if (m_editorWarnings > 0)
-                text += QStringLiteral(", %1 warning%2").arg(m_editorWarnings).arg(m_editorWarnings == 1 ? QString() : QStringLiteral("s"));
+                text += QStringLiteral(", %1 warning%2")
+                            .arg(m_editorWarnings)
+                            .arg(m_editorWarnings == 1 ? QString() : QStringLiteral("s"));
             state = QStringLiteral("error");
             tip = QStringLiteral("Compile failed. Click to jump to the first error.");
         } else if (m_editorWarnings > 0) {
-            text = QStringLiteral("✓  Compiled · %1 warning%2").arg(m_editorWarnings).arg(m_editorWarnings == 1 ? QString() : QStringLiteral("s"));
+            text = QStringLiteral("✓  Compiled · %1 warning%2")
+                       .arg(m_editorWarnings)
+                       .arg(m_editorWarnings == 1 ? QString() : QStringLiteral("s"));
             state = QStringLiteral("warn");
             tip = QStringLiteral("Compiled with warnings. Click to jump to the first one.");
         } else {
-            text = ms >= 0 ? QStringLiteral("✓  Compiled · %1 ms").arg(ms) : QStringLiteral("✓  Compiled");
+            text = ms >= 0 ? QStringLiteral("✓  Compiled · %1 ms").arg(ms)
+                           : QStringLiteral("✓  Compiled");
             state = QStringLiteral("ok");
             tip = QStringLiteral("Shader is up to date. Click to recompile (Ctrl+Enter).");
         }
@@ -964,33 +1078,39 @@ void WorkbenchWindow::updateCompileStatus()
     }
 
     if (m_tabs && m_diagTabIndex >= 0) {
-        m_tabs->setTabText(m_diagTabIndex, m_editorErrors > 0
-            ? QStringLiteral("Diagnostics (%1)").arg(m_editorErrors)
-            : QStringLiteral("Diagnostics"));
+        m_tabs->setTabText(m_diagTabIndex,
+            m_editorErrors > 0 ? QStringLiteral("Diagnostics (%1)").arg(m_editorErrors)
+                               : QStringLiteral("Diagnostics"));
     }
 }
 
 void WorkbenchWindow::jumpToFirstError()
 {
-    if (!m_editorDoc) return;
+    if (!m_editorDoc)
+        return;
     const QList<LspDiagnostic> diags = m_diagnosticsByUri.value(documentUri(m_editorDoc));
 
     // Prefer the earliest error; if there are none, fall back to the earliest warning.
     auto earliest = [&diags](int severity) -> const LspDiagnostic* {
         const LspDiagnostic* best = nullptr;
         for (const LspDiagnostic& d : diags) {
-            if (d.severity != severity) continue;
-            if (!best || d.range.startLine < best->range.startLine ||
-                (d.range.startLine == best->range.startLine && d.range.startChar < best->range.startChar))
+            if (d.severity != severity)
+                continue;
+            if (!best || d.range.startLine < best->range.startLine
+                || (d.range.startLine == best->range.startLine
+                    && d.range.startChar < best->range.startChar))
                 best = &d;
         }
         return best;
     };
     const LspDiagnostic* target = earliest(1);
-    if (!target) target = earliest(2);
+    if (!target)
+        target = earliest(2);
 
-    if (m_tabs && m_diagTabIndex >= 0) m_tabs->setCurrentIndex(m_diagTabIndex);
-    if (target) m_editor->goToPosition(target->range.startLine, target->range.startChar);
+    if (m_tabs && m_diagTabIndex >= 0)
+        m_tabs->setCurrentIndex(m_diagTabIndex);
+    if (target)
+        m_editor->goToPosition(target->range.startLine, target->range.startChar);
 }
 
 void WorkbenchWindow::setupLanguageServer()
@@ -1005,27 +1125,31 @@ void WorkbenchWindow::setupLanguageServer()
             candidates << slangRoot + QStringLiteral("/bin/slangd.exe");
         candidates << QCoreApplication::applicationDirPath() + QStringLiteral("/slangd.exe");
         for (const QString& candidate : candidates) {
-            if (QFileInfo::exists(candidate)) { exe = candidate; break; }
+            if (QFileInfo::exists(candidate)) {
+                exe = candidate;
+                break;
+            }
         }
     }
     if (exe.isEmpty()) {
-        statusBar()->showMessage(QStringLiteral("Slang language server (slangd) not found — IDE features disabled"), 4000);
+        statusBar()->showMessage(
+            QStringLiteral("Slang language server (slangd) not found — IDE features disabled"),
+            4000);
         return;
     }
 
     m_lsp = new LspClient(this);
     connect(m_lsp, &LspClient::diagnosticsReceived, this,
-            [this](const QString& uri, const QList<LspDiagnostic>& diagnostics) {
-                m_diagnosticsByUri.insert(uri, diagnostics);
-                if (m_editorDoc && documentUri(m_editorDoc) == uri) {
-                    m_editor->setDiagnostics(diagnostics);
-                    recountDiagnostics();
-                    updateCompileStatus();
-                }
-            });
-    connect(m_lsp, &LspClient::ready, this, [this] {
-        statusBar()->showMessage(QStringLiteral("Slang language server ready"), 2000);
-    });
+        [this](const QString& uri, const QList<LspDiagnostic>& diagnostics) {
+            m_diagnosticsByUri.insert(uri, diagnostics);
+            if (m_editorDoc && documentUri(m_editorDoc) == uri) {
+                m_editor->setDiagnostics(diagnostics);
+                recountDiagnostics();
+                updateCompileStatus();
+            }
+        });
+    connect(m_lsp, &LspClient::ready, this,
+        [this] { statusBar()->showMessage(QStringLiteral("Slang language server ready"), 2000); });
     m_lsp->start(exe);
     m_lsp->openDocument(documentUri(m_sceneDocument), m_sceneDocument->source());
     m_lsp->openDocument(documentUri(m_document), m_document->source());
@@ -1033,21 +1157,24 @@ void WorkbenchWindow::setupLanguageServer()
 
 void WorkbenchWindow::reloadGeneratedTargets()
 {
-    if (!m_generatedTarget || !m_editorDoc) return;
+    if (!m_generatedTarget || !m_editorDoc)
+        return;
     const QString current = m_generatedTarget->currentText();
     const QStringList targets = m_editorDoc->generatedTargets();
     QSignalBlocker block(m_generatedTarget);
     m_generatedTarget->clear();
     m_generatedTarget->addItems(targets);
     const int idx = targets.indexOf(current);
-    if (idx >= 0) m_generatedTarget->setCurrentIndex(idx);
+    if (idx >= 0)
+        m_generatedTarget->setCurrentIndex(idx);
     block.unblock();
     refreshGeneratedView();
 }
 
 void WorkbenchWindow::refreshGeneratedView()
 {
-    if (!m_generatedView) return;
+    if (!m_generatedView)
+        return;
     const QString target = m_generatedTarget ? m_generatedTarget->currentText() : QString();
     m_generatedView->setPlainText(m_editorDoc ? m_editorDoc->generatedCode(target) : QString());
 }
@@ -1125,9 +1252,11 @@ void WorkbenchWindow::applyTheme()
     )"));
 }
 
-void WorkbenchWindow::mirrorParameter(ShaderDocument* target, const QString& name, const QVariant& value)
+void WorkbenchWindow::mirrorParameter(
+    ShaderDocument* target, const QString& name, const QVariant& value)
 {
-    if (m_syncing || !target || !name.startsWith(QLatin1String("cam"))) return;
+    if (m_syncing || !target || !name.startsWith(QLatin1String("cam")))
+        return;
     m_syncing = true;
     target->parameters()->setValue(name, value);
     m_syncing = false;
@@ -1136,10 +1265,14 @@ void WorkbenchWindow::mirrorParameter(ShaderDocument* target, const QString& nam
 void WorkbenchWindow::openShader(const QString& path)
 {
     const QFileInfo info(path);
-    if (!info.exists()) return;
+    if (!info.exists())
+        return;
     ShaderDocument* doc = m_editorDoc ? m_editorDoc : m_document;
     doc->setFileUrl(QUrl::fromLocalFile(info.absoluteFilePath()));
-    if (doc->load()) { m_editor->setPlainText(doc->source()); doc->compile(); }
+    if (doc->load()) {
+        m_editor->setPlainText(doc->source());
+        doc->compile();
+    }
 }
 
 } // namespace slang_qrhi

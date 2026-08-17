@@ -16,20 +16,26 @@
 namespace slang_qrhi {
 
 namespace {
-// Gutter widget: forwards its paint/width to the owning editor.
-class LineNumberArea final : public QWidget
-{
-public:
-    explicit LineNumberArea(CodeEditor* editor) : QWidget(editor), m_editor(editor) {}
-    QSize sizeHint() const override { return QSize(m_editor->lineNumberAreaWidth(), 0); }
-protected:
-    void paintEvent(QPaintEvent* event) override { m_editor->lineNumberAreaPaintEvent(event); }
-private:
-    CodeEditor* m_editor;
-};
+    // Gutter widget: forwards its paint/width to the owning editor.
+    class LineNumberArea final : public QWidget {
+    public:
+        explicit LineNumberArea(CodeEditor* editor)
+            : QWidget(editor)
+            , m_editor(editor)
+        {
+        }
+        QSize sizeHint() const override { return QSize(m_editor->lineNumberAreaWidth(), 0); }
+
+    protected:
+        void paintEvent(QPaintEvent* event) override { m_editor->lineNumberAreaPaintEvent(event); }
+
+    private:
+        CodeEditor* m_editor;
+    };
 } // namespace
 
-CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent)
+CodeEditor::CodeEditor(QWidget* parent)
+    : QPlainTextEdit(parent)
 {
     m_lineNumberArea = new LineNumberArea(this);
     setLineWrapMode(QPlainTextEdit::NoWrap);
@@ -47,7 +53,10 @@ int CodeEditor::lineNumberAreaWidth() const
 {
     int digits = 1;
     int max = qMax(1, blockCount());
-    while (max >= 10) { max /= 10; ++digits; }
+    while (max >= 10) {
+        max /= 10;
+        ++digits;
+    }
     return 16 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
 }
 
@@ -91,9 +100,10 @@ void CodeEditor::rebuildExtraSelections()
     }
     for (const LspDiagnostic& d : m_diagnostics) {
         QTextCursor cursor = cursorForRange(d.range);
-        if (cursor.isNull() || !cursor.hasSelection()) continue;
+        if (cursor.isNull() || !cursor.hasSelection())
+            continue;
         const QColor color = d.severity == 1 ? QColor(0xf7, 0x76, 0x8e)
-                           : d.severity == 2 ? QColor(0xe0, 0xaf, 0x68)
+            : d.severity == 2                ? QColor(0xe0, 0xaf, 0x68)
                                              : QColor(0x7a, 0xa2, 0xf7);
         QTextEdit::ExtraSelection selection;
         selection.format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
@@ -120,7 +130,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent* event)
             const bool current = (blockNumber == curLine);
             painter.setPen(current ? QColor(0xc0, 0xca, 0xf5) : QColor(0x54, 0x5a, 0x75));
             painter.drawText(0, top, m_lineNumberArea->width() - 8, fontMetrics().height(),
-                             Qt::AlignRight, QString::number(blockNumber + 1));
+                Qt::AlignRight, QString::number(blockNumber + 1));
         }
         block = block.next();
         top = bottom;
@@ -137,7 +147,8 @@ void CodeEditor::setLanguageClient(LspClient* client, const QString& uri)
 {
     m_lsp = client;
     m_uri = uri;
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
 
     if (!m_completer) {
         m_completionModel = new QStringListModel(this);
@@ -147,28 +158,37 @@ void CodeEditor::setLanguageClient(LspClient* client, const QString& uri)
         m_completer->setCompletionMode(QCompleter::PopupCompletion);
         m_completer->setCaseSensitivity(Qt::CaseInsensitive);
         m_completer->setModelSorting(QCompleter::CaseInsensitivelySortedModel);
-        connect(m_completer, QOverload<const QString&>::of(&QCompleter::activated),
-                this, &CodeEditor::insertCompletion);
+        connect(m_completer, QOverload<const QString&>::of(&QCompleter::activated), this,
+            &CodeEditor::insertCompletion);
     }
     if (!m_changeTimer) {
         m_changeTimer = new QTimer(this);
         m_changeTimer->setSingleShot(true);
         m_changeTimer->setInterval(250);
         connect(m_changeTimer, &QTimer::timeout, this, [this] {
-            if (m_lsp && !m_uri.isEmpty()) m_lsp->updateDocument(m_uri, toPlainText());
+            if (m_lsp && !m_uri.isEmpty())
+                m_lsp->updateDocument(m_uri, toPlainText());
         });
-        connect(this, &QPlainTextEdit::textChanged, this, [this] { if (m_changeTimer) m_changeTimer->start(); });
+        connect(this, &QPlainTextEdit::textChanged, this, [this] {
+            if (m_changeTimer)
+                m_changeTimer->start();
+        });
     }
     if (!m_autoCompleteTimer) {
         m_autoCompleteTimer = new QTimer(this);
         m_autoCompleteTimer->setSingleShot(true);
         m_autoCompleteTimer->setInterval(300);
         connect(m_autoCompleteTimer, &QTimer::timeout, this, [this] {
-            if (!m_lsp || m_uri.isEmpty()) return;
-            if (m_completer && m_completer->popup()->isVisible()) return;   // already open; live-filter handles it
-            if (completionPrefix().isEmpty()) return;                       // nothing to match yet
-            if (m_changeTimer) m_changeTimer->stop();
-            m_lsp->updateDocument(m_uri, toPlainText());   // make sure the server sees the latest text first
+            if (!m_lsp || m_uri.isEmpty())
+                return;
+            if (m_completer && m_completer->popup()->isVisible())
+                return; // already open; live-filter handles it
+            if (completionPrefix().isEmpty())
+                return; // nothing to match yet
+            if (m_changeTimer)
+                m_changeTimer->stop();
+            m_lsp->updateDocument(
+                m_uri, toPlainText()); // make sure the server sees the latest text first
             triggerCompletion();
         });
     }
@@ -190,7 +210,8 @@ void CodeEditor::setDiagnostics(const QList<LspDiagnostic>& diagnostics)
 void CodeEditor::goToPosition(int line, int character)
 {
     const QTextBlock block = document()->findBlockByNumber(line);
-    if (!block.isValid()) return;
+    if (!block.isValid())
+        return;
     QTextCursor cursor(document());
     cursor.setPosition(block.position() + qBound(0, character, block.length() - 1));
     setTextCursor(cursor);
@@ -201,13 +222,15 @@ void CodeEditor::goToPosition(int line, int character)
 QTextCursor CodeEditor::cursorForRange(const LspRange& range) const
 {
     const QTextBlock startBlock = document()->findBlockByNumber(range.startLine);
-    if (!startBlock.isValid()) return QTextCursor();
+    if (!startBlock.isValid())
+        return QTextCursor();
     const QTextBlock endBlock = document()->findBlockByNumber(range.endLine);
     const int start = startBlock.position() + qBound(0, range.startChar, startBlock.length() - 1);
     int end = start;
     if (endBlock.isValid())
         end = endBlock.position() + qBound(0, range.endChar, endBlock.length() - 1);
-    if (end <= start) end = start + 1;   // keep at least one character underlined
+    if (end <= start)
+        end = start + 1; // keep at least one character underlined
     QTextCursor cursor(document());
     cursor.setPosition(start);
     cursor.setPosition(qMin(end, document()->characterCount() - 1), QTextCursor::KeepAnchor);
@@ -216,9 +239,12 @@ QTextCursor CodeEditor::cursorForRange(const LspRange& range) const
 
 bool CodeEditor::rangeContains(const LspRange& range, int line, int character)
 {
-    if (line < range.startLine || line > range.endLine) return false;
-    if (line == range.startLine && character < range.startChar) return false;
-    if (line == range.endLine && character > range.endChar) return false;
+    if (line < range.startLine || line > range.endLine)
+        return false;
+    if (line == range.startLine && character < range.startChar)
+        return false;
+    if (line == range.endLine && character > range.endChar)
+        return false;
     return true;
 }
 
@@ -234,12 +260,14 @@ QString CodeEditor::completionPrefix() const
 
 void CodeEditor::triggerCompletion()
 {
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
     const QTextCursor cursor = textCursor();
     const int serial = ++m_completionSerial;
     m_lsp->requestCompletion(m_uri, cursor.blockNumber(), cursor.positionInBlock(),
         [this, serial](const QJsonObject& response) {
-            if (serial != m_completionSerial) return;   // a newer request superseded this one
+            if (serial != m_completionSerial)
+                return; // a newer request superseded this one
             showCompletions(response);
         });
 }
@@ -248,9 +276,15 @@ void CodeEditor::showCompletions(const QJsonObject& response)
 {
     QJsonValue result = response.value(QStringLiteral("result"));
     QJsonArray items;
-    if (result.isArray()) items = result.toArray();
-    else if (result.isObject()) items = result.toObject().value(QStringLiteral("items")).toArray();
-    if (items.isEmpty()) { if (m_completer) m_completer->popup()->hide(); return; }
+    if (result.isArray())
+        items = result.toArray();
+    else if (result.isObject())
+        items = result.toObject().value(QStringLiteral("items")).toArray();
+    if (items.isEmpty()) {
+        if (m_completer)
+            m_completer->popup()->hide();
+        return;
+    }
 
     QStringList labels;
     labels.reserve(items.size());
@@ -258,9 +292,11 @@ void CodeEditor::showCompletions(const QJsonObject& response)
     for (const QJsonValue& v : items) {
         const QJsonObject item = v.toObject();
         const QString label = item.value(QStringLiteral("label")).toString().trimmed();
-        if (label.isEmpty()) continue;
+        if (label.isEmpty())
+            continue;
         QString insert = item.value(QStringLiteral("insertText")).toString();
-        if (insert.isEmpty()) insert = label;
+        if (insert.isEmpty())
+            insert = label;
         labels.append(label);
         m_completionInsert.insert(label, insert);
     }
@@ -269,11 +305,14 @@ void CodeEditor::showCompletions(const QJsonObject& response)
     m_completionModel->setStringList(labels);
 
     m_completer->setCompletionPrefix(completionPrefix());
-    if (m_completer->completionCount() == 0) { m_completer->popup()->hide(); return; }
+    if (m_completer->completionCount() == 0) {
+        m_completer->popup()->hide();
+        return;
+    }
 
     QRect rect = cursorRect();
     rect.setWidth(m_completer->popup()->sizeHintForColumn(0)
-                  + m_completer->popup()->verticalScrollBar()->sizeHint().width() + 24);
+        + m_completer->popup()->verticalScrollBar()->sizeHint().width() + 24);
     m_completer->complete(rect);
 }
 
@@ -289,23 +328,29 @@ void CodeEditor::insertCompletion(const QString& completion)
 
 void CodeEditor::showSignatureHelp()
 {
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
     const QTextCursor cursor = textCursor();
-    m_lsp->requestSignatureHelp(m_uri, cursor.blockNumber(), cursor.positionInBlock(),
-        [this](const QJsonObject& response) {
+    m_lsp->requestSignatureHelp(
+        m_uri, cursor.blockNumber(), cursor.positionInBlock(), [this](const QJsonObject& response) {
             const QJsonObject result = response.value(QStringLiteral("result")).toObject();
             const QJsonArray signatures = result.value(QStringLiteral("signatures")).toArray();
-            if (signatures.isEmpty()) return;
-            const int active = qBound(0, result.value(QStringLiteral("activeSignature")).toInt(), signatures.size() - 1);
-            const QString label = signatures[active].toObject().value(QStringLiteral("label")).toString();
-            if (label.isEmpty()) return;
+            if (signatures.isEmpty())
+                return;
+            const int active = qBound(
+                0, result.value(QStringLiteral("activeSignature")).toInt(), signatures.size() - 1);
+            const QString label
+                = signatures[active].toObject().value(QStringLiteral("label")).toString();
+            if (label.isEmpty())
+                return;
             QToolTip::showText(mapToGlobal(cursorRect().bottomLeft()), label, this);
         });
 }
 
 void CodeEditor::requestHoverAtCursor()
 {
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
     const QTextCursor cursor = cursorForPosition(m_hoverPos);
     const int line = cursor.blockNumber();
     const int character = cursor.positionInBlock();
@@ -322,22 +367,28 @@ void CodeEditor::requestHoverAtCursor()
         const QJsonObject result = response.value(QStringLiteral("result")).toObject();
         const QJsonValue contents = result.value(QStringLiteral("contents"));
         QString text;
-        if (contents.isString()) text = contents.toString();
-        else if (contents.isObject()) text = contents.toObject().value(QStringLiteral("value")).toString();
+        if (contents.isString())
+            text = contents.toString();
+        else if (contents.isObject())
+            text = contents.toObject().value(QStringLiteral("value")).toString();
         else if (contents.isArray()) {
             for (const QJsonValue& v : contents.toArray()) {
-                if (v.isString()) text += v.toString();
-                else if (v.isObject()) text += v.toObject().value(QStringLiteral("value")).toString();
+                if (v.isString())
+                    text += v.toString();
+                else if (v.isObject())
+                    text += v.toObject().value(QStringLiteral("value")).toString();
                 text += QLatin1Char('\n');
             }
         }
         text = text.trimmed();
-        if (text.isEmpty()) return;
+        if (text.isEmpty())
+            return;
         // slangd returns markdown (code fences, ---, backticks); render it as rich text
         // so signatures and doc strings read cleanly instead of showing raw markup.
         QTextDocument md;
         md.setMarkdown(text);
-        const QString html = QStringLiteral("<div style='max-width:520px'>%1</div>").arg(md.toHtml());
+        const QString html
+            = QStringLiteral("<div style='max-width:520px'>%1</div>").arg(md.toHtml());
         QToolTip::showText(mapToGlobal(at), html, this);
     });
 }
@@ -352,21 +403,26 @@ void CodeEditor::keyPressEvent(QKeyEvent* event)
         case Qt::Key_Backtab:
         case Qt::Key_Escape:
             event->ignore();
-            return;   // let the popup consume it
+            return; // let the popup consume it
         default:
             break;
         }
     }
 
-    const bool triggerCompletionShortcut =
-        (event->key() == Qt::Key_Space) && (event->modifiers() & Qt::ControlModifier);
-    if (triggerCompletionShortcut) { triggerCompletion(); return; }
+    const bool triggerCompletionShortcut
+        = (event->key() == Qt::Key_Space) && (event->modifiers() & Qt::ControlModifier);
+    if (triggerCompletionShortcut) {
+        triggerCompletion();
+        return;
+    }
 
     QPlainTextEdit::keyPressEvent(event);
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
 
     const QString typed = event->text();
-    if (typed.isEmpty()) return;
+    if (typed.isEmpty())
+        return;
     const QChar ch = typed.at(0);
     if (ch == QLatin1Char('.')) {
         triggerCompletion();
@@ -379,17 +435,20 @@ void CodeEditor::keyPressEvent(QKeyEvent* event)
         else
             m_completer->popup()->setCurrentIndex(m_completer->completionModel()->index(0, 0));
     } else if ((ch.isLetterOrNumber() || ch == QLatin1Char('_')) && m_autoCompleteTimer) {
-        m_autoCompleteTimer->start();   // pause-to-complete: open the popup at the caret once typing stops
+        m_autoCompleteTimer
+            ->start(); // pause-to-complete: open the popup at the caret once typing stops
     }
 }
 
 void CodeEditor::mouseMoveEvent(QMouseEvent* event)
 {
     QPlainTextEdit::mouseMoveEvent(event);
-    if (!m_lsp) return;
+    if (!m_lsp)
+        return;
     m_hoverPos = event->pos();
     QToolTip::hideText();
-    if (m_hoverTimer) m_hoverTimer->start();
+    if (m_hoverTimer)
+        m_hoverTimer->start();
 }
 
 void CodeEditor::mousePressEvent(QMouseEvent* event)
@@ -400,17 +459,26 @@ void CodeEditor::mousePressEvent(QMouseEvent* event)
             [this](const QJsonObject& response) {
                 QJsonValue result = response.value(QStringLiteral("result"));
                 QJsonObject location;
-                if (result.isArray() && !result.toArray().isEmpty()) location = result.toArray().first().toObject();
-                else if (result.isObject()) location = result.toObject();
-                if (location.isEmpty()) return;
-                if (location.value(QStringLiteral("uri")).toString() != m_uri) return;   // same-document jumps only
-                const QJsonObject start = location.value(QStringLiteral("range")).toObject()
-                                              .value(QStringLiteral("start")).toObject();
-                const QTextBlock block = document()->findBlockByNumber(start.value(QStringLiteral("line")).toInt());
-                if (!block.isValid()) return;
+                if (result.isArray() && !result.toArray().isEmpty())
+                    location = result.toArray().first().toObject();
+                else if (result.isObject())
+                    location = result.toObject();
+                if (location.isEmpty())
+                    return;
+                if (location.value(QStringLiteral("uri")).toString() != m_uri)
+                    return; // same-document jumps only
+                const QJsonObject start = location.value(QStringLiteral("range"))
+                                              .toObject()
+                                              .value(QStringLiteral("start"))
+                                              .toObject();
+                const QTextBlock block
+                    = document()->findBlockByNumber(start.value(QStringLiteral("line")).toInt());
+                if (!block.isValid())
+                    return;
                 QTextCursor target(document());
-                target.setPosition(block.position() + qBound(0, start.value(QStringLiteral("character")).toInt(),
-                                                             block.length() - 1));
+                target.setPosition(block.position()
+                    + qBound(
+                        0, start.value(QStringLiteral("character")).toInt(), block.length() - 1));
                 setTextCursor(target);
                 centerCursor();
             });

@@ -22,8 +22,7 @@ namespace slang_qrhi {
 // When given a LspClient it also provides IDE features driven by Slang's language
 // server: auto-completion, hover docs, signature help, live diagnostic squiggles and
 // Ctrl+Click go-to-definition.
-class SLANG_QRHI_EXPORT CodeEditor final : public QPlainTextEdit
-{
+class SLANG_QRHI_EXPORT CodeEditor final : public QPlainTextEdit {
     Q_OBJECT
 public:
     explicit CodeEditor(QWidget* parent = nullptr);
@@ -66,13 +65,13 @@ private:
     QString m_uri;
     QCompleter* m_completer = nullptr;
     QStringListModel* m_completionModel = nullptr;
-    QHash<QString, QString> m_completionInsert;   // label -> insertText
+    QHash<QString, QString> m_completionInsert; // label -> insertText
     QList<LspDiagnostic> m_diagnostics;
-    QTimer* m_changeTimer = nullptr;              // debounces didChange to the server
-    QTimer* m_autoCompleteTimer = nullptr;        // opens the popup after the user pauses typing
+    QTimer* m_changeTimer = nullptr; // debounces didChange to the server
+    QTimer* m_autoCompleteTimer = nullptr; // opens the popup after the user pauses typing
     QTimer* m_hoverTimer = nullptr;
     QPoint m_hoverPos;
-    int m_completionSerial = 0;                   // drops stale async completion replies
+    int m_completionSerial = 0; // drops stale async completion replies
 };
 
 } // namespace slang_qrhi

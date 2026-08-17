@@ -8,9 +8,18 @@
 namespace slang_qrhi {
 
 enum class ParameterType : quint8 {
-    Float, Float2, Float3, Float4,
-    Int, Int2, Int3, Int4,
-    UInt, UInt2, UInt3, UInt4,
+    Float,
+    Float2,
+    Float3,
+    Float4,
+    Int,
+    Int2,
+    Int3,
+    Int4,
+    UInt,
+    UInt2,
+    UInt3,
+    UInt4,
     Bool,
     Unknown,
 };
@@ -31,8 +40,7 @@ struct ParameterDescriptor {
     QStringList choices;
 };
 
-class SLANG_QRHI_EXPORT ShaderParameterModel final : public QAbstractListModel
-{
+class SLANG_QRHI_EXPORT ShaderParameterModel final : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int byteSize READ byteSize NOTIFY layoutChangedByShader)
 

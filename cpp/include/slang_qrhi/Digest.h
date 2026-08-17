@@ -10,8 +10,7 @@
 
 namespace slang_qrhi {
 
-class SLANG_QRHI_EXPORT Digest final
-{
+class SLANG_QRHI_EXPORT Digest final {
 public:
     static constexpr qsizetype Size = 32;
 
@@ -19,7 +18,8 @@ public:
     explicit Digest(QByteArray bytes);
 
     static Digest hash(QByteArrayView bytes);
-    static Digest combine(QByteArrayView domain, QByteArrayView localPayload, const QList<QPair<QByteArray, Digest>>& dependencies);
+    static Digest combine(QByteArrayView domain, QByteArrayView localPayload,
+        const QList<QPair<QByteArray, Digest>>& dependencies);
 
     [[nodiscard]] QByteArray bytes() const { return m_bytes; }
     [[nodiscard]] QString hex() const { return QString::fromLatin1(m_bytes.toHex()); }

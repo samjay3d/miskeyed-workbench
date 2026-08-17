@@ -31,8 +31,7 @@ struct CompileResult {
 
 class SlangCompilerPrivate;
 
-class SLANG_QRHI_EXPORT SlangCompiler final : public QObject
-{
+class SLANG_QRHI_EXPORT SlangCompiler final : public QObject {
     Q_OBJECT
 public:
     explicit SlangCompiler(QObject* parent = nullptr);
@@ -49,8 +48,7 @@ public:
     void setSystemPrelude(const QString& source);
     [[nodiscard]] QString systemPrelude() const;
 
-    CompileResult compileFullscreen(
-        const QString& source,
+    CompileResult compileFullscreen(const QString& source,
         const QString& virtualPath = QStringLiteral("user_shader.slang"),
         const QString& vertexEntry = QStringLiteral("vsMain"),
         const QString& fragmentEntry = QStringLiteral("psMain"));
