@@ -35,8 +35,9 @@ jobs:
         outputs:
             build: ${{ steps.filter.outputs.build }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - uses: dorny/paths-filter@v4
+
               id: filter
               with:
                   filters: |
@@ -57,7 +58,7 @@ jobs:
         # in parallel with the heavy Windows build below.
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - uses: actions/setup-python@v5
               with:
                   python-version: "3.12"
@@ -82,7 +83,7 @@ jobs:
             matrix:
                 python-version: ["3.11", "3.12", "3.13"]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - uses: actions/setup-python@v5
               with:

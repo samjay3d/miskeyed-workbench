@@ -38,7 +38,7 @@ jobs:
             release: ${{ steps.decide.outputs.release }}
             version: ${{ steps.ver.outputs.version }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - name: Read version
               id: ver
               run: |
@@ -77,7 +77,7 @@ jobs:
             matrix:
                 python-version: ["3.11", "3.12", "3.13"]
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - uses: actions/setup-python@v5
               with:
@@ -217,7 +217,7 @@ jobs:
         if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - uses: actions/setup-python@v5
               with:
                   python-version: "3.12"
@@ -249,7 +249,7 @@ jobs:
         permissions:
             id-token: write
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
@@ -285,7 +285,7 @@ jobs:
         permissions:
             id-token: write
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
@@ -314,7 +314,7 @@ jobs:
         permissions:
             contents: write
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - name: Tag and release
               env:
                   GH_TOKEN: ${{ github.token }}
