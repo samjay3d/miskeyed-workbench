@@ -70,11 +70,13 @@ jobs:
               run: |
                   python -m pip install --upgrade pip
                   # shiboken6-generator only exists on Qt's index; the rest resolve from PyPI.
+                  # scikit-build-core is pinned: newer wheel writers emit a ZIP record PyPI
+                  # rejects ("Unknown record signature"); 1.0.3 is verified compliant.
                   python -m pip install `
                     --index-url https://download.qt.io/official_releases/QtForPython/ `
                     --extra-index-url https://pypi.org/simple `
                     "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" `
-                    scikit-build-core
+                    "scikit-build-core==1.0.3"
 
             - name: Build wheel
               shell: pwsh
@@ -101,7 +103,10 @@ jobs:
                   python-version: "3.12"
             - name: Build sdist
               run: |
-                  python -m pip install scikit-build-core
+                  # Pinned: newer scikit-build-core wheel writers emit a ZIP record PyPI's
+                  # strict validator rejects ("Unknown record signature"); 1.0.3 is verified
+                  # compliant. Kept identical in the wheel job for reproducibility.
+                  python -m pip install "scikit-build-core==1.0.3"
                   mkdir -p dist
                   # Call the sdist backend directly. `python -m build` (even with
                   # --no-isolation) refuses to run unless every build-system.requires is
