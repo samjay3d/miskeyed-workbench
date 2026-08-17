@@ -110,6 +110,19 @@ jobs:
                   # to PATH, which would clobber the matrix interpreter.
                   setup-python: false
 
+            - name: Set up MSVC environment (x64)
+              # Ninja (below) needs cl.exe on PATH. The VS generator finds MSVC on its own
+              # but ignores compiler launchers, so we switch to Ninja to enable sccache.
+              uses: ilammy/msvc-dev-cmd@v1
+              with:
+                  arch: x64
+
+            - name: Set up sccache
+              # Content-addressed compiler cache backed by the GitHub Actions cache; keys on
+              # source + flags, so identical TUs (the whole slang_qrhi_core lib) compile once
+              # and every other matrix job / later run gets a cache hit.
+              uses: mozilla-actions/sccache-action@v0.0.6
+
             - name: Cache Slang SDK
               id: slang-cache
               uses: actions/cache@v4
@@ -143,16 +156,22 @@ jobs:
                     --extra-index-url https://pypi.org/simple `
                     "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" `
                     "scikit-build-core==1.0.3"
-                  python -m pip install pytest
+                  python -m pip install pytest ninja
 
             - name: Build and install extension
               shell: pwsh
               env:
                   CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
+                  # Ninja honors the compiler launcher; the VS generator does not.
+                  CMAKE_GENERATOR: Ninja
+                  SCCACHE_GHA_ENABLED: "true"
               run: |
                   # Build isolation off (shiboken6-generator is not on PyPI); reuse the deps
                   # installed above. --no-deps keeps the Qt-index PySide6 in place.
-                  python -m pip install . --no-build-isolation --no-deps -v
+                  python -m pip install . --no-build-isolation --no-deps -v `
+                    --config-settings=cmake.define.CMAKE_C_COMPILER_LAUNCHER=sccache `
+                    --config-settings=cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=sccache
+                  sccache --show-stats
 
             - name: Run tests
               shell: pwsh
