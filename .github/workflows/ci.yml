@@ -25,6 +25,30 @@ env:
     QT_VERSION: "6.8.3"
 
 jobs:
+    changes:
+        name: Detect changes
+        # Cheap gate so the heavy Windows build below only runs when something that can
+        # actually affect the native extension or the tests changed.
+        runs-on: ubuntu-latest
+        outputs:
+            build: ${{ steps.filter.outputs.build }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v3
+              id: filter
+              with:
+                  filters: |
+                      build:
+                          - 'cpp/**'
+                          - 'bindings/**'
+                          - 'shaders/**'
+                          - 'python/**'
+                          - 'tests/**'
+                          - 'cmake/**'
+                          - 'CMakeLists.txt'
+                          - 'pyproject.toml'
+                          - '.github/workflows/ci.yml'
+
     lint:
         name: Lint (ruff)
         # Pure-Python check: no Qt/Slang toolchain needed, so it runs in seconds on Linux
@@ -44,6 +68,10 @@ jobs:
 
     test:
         name: Tests (py${{ matrix.python-version }})
+        needs: changes
+        # Skip the ~build-heavy job (and its check reports 'skipped' = success) when only
+        # docs/CI-meta changed; the CI gate below still reports so the PR isn't blocked.
+        if: needs.changes.outputs.build == 'true'
         # Same rationale as release.yml: pin VS 2022 so shiboken 6.8's libclang can parse
         # the MSVC STL and the Qt win64_msvc2022_64 ABI matches.
         runs-on: windows-2022
@@ -137,7 +165,7 @@ jobs:
     ci:
         name: CI
         if: always()
-        needs: [lint, test]
+        needs: [changes, lint, test]
         runs-on: ubuntu-latest
         steps:
             - name: Fail if any dependency failed
