@@ -1,9 +1,52 @@
 # Workbench
 
-**Workbench** (distributed on PyPI as `miskeyed-workbench`, imported as `miskeyed.workbench`)
-is a **native Qt 6.8 / QRhi Slang shader workbench**. Shaders are compiled in-process
-through Slang's compilation API, rendered with QRhi, and driven by a live,
-reflection-based parameter UI.
+**Edit a shader on the left, see it render on the right — instantly.**
+
+![Workbench: live Slang editing with a rendered viewport and the compiled HLSL side-by-side](docs/images/workbench.png)
+
+Workbench is a small desktop tool for **writing shaders and watching them update in
+real time**. You type shader code, and the picture on screen recompiles as you go —
+no "export, run the compiler, relaunch, look again" loop. It also shows you the
+*compiled* output (e.g. HLSL) next to your source, and builds sliders and colour
+pickers for your shader's parameters automatically.
+
+> **Heads up — this is a personal side project / experiment.** I built it to see how
+> easy a real-time shader-compile loop could feel for artists and TDs. It's Windows /
+> Direct3D 11 only right now, and I may never fully "finish" it. Treat it as a
+> playground and a proof of concept, not a supported product.
+
+### New to Slang? Read this first
+
+The shaders here are written in **[Slang](https://shader-slang.com/)**, a modern shader
+language from NVIDIA, now governed by Khronos. Its big idea is **write once, run
+everywhere**: the *same* shader source can compile to Direct3D (HLSL), Vulkan (SPIR-V),
+Metal, and WebGPU — so you don't rewrite shaders for every platform.
+
+If you've never touched Slang, this hands-on walkthrough is the friendliest starting
+point (no prior Slang needed):
+
+> 📖 **[Hands-On with Slang: A Practical Tutorial for Graphics Teams](https://blog.4dpipeline.com/hands-on-with-slang-a-practical-tutorial-for-graphics-teams)** — write a
+> simple Slang shader, compile it to Metal / HLSL / SPIR-V from one source, and run it
+> from Python. About 20 minutes end-to-end.
+
+**Why that tutorial matters for this project:** it shows Slang compiling shaders on
+demand from a single source. Workbench takes that idea and makes it *interactive* —
+instead of running the `slangc` compiler on the command line each time, it compiles
+your shader **in-process, on every keystroke**, and shows the result live. That's the
+whole experiment: *how easy and immediate can shader iteration feel* when the compiler
+is always on. You can also try Slang with zero install in the
+[Slang Playground](https://shader-slang.com/playground) in your browser.
+
+You don't need to understand the internals below to *use* Workbench — open it, type in
+the left panel, and watch the right panel. The rest of this README is for people who
+want to embed it or build it from source.
+
+---
+
+For the technically curious: **Workbench** (distributed on PyPI as `miskeyed-workbench`,
+imported as `miskeyed.workbench`) is a **native Qt 6.8 / QRhi Slang shader workbench**.
+Shaders are compiled in-process through Slang's compilation API, rendered with QRhi,
+and driven by a live, reflection-based parameter UI.
 
 The same C++ Qt objects power three surfaces:
 
@@ -23,6 +66,10 @@ pip install miskeyed-workbench
 workbench                 # launch the standalone app
 workbench eye.slang       # open a shader on start
 ```
+
+Then just start typing in the shader panel — edits recompile and re-render live.
+Not sure what to type? Try the [Slang tutorial](https://blog.4dpipeline.com/hands-on-with-slang-a-practical-tutorial-for-graphics-teams)
+or the [Slang Playground](https://shader-slang.com/playground) for shader snippets you can paste in.
 
 Or from Python:
 
