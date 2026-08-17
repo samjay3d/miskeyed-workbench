@@ -22,7 +22,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   via a `#line` reset, and the prelude is the seam for future plugin/sidecar
   metadata definitions.
 - A pull-request CI workflow (`.github/workflows/ci.yml`) that builds the
-  extension and runs the headless pytest suite across Python 3.11–3.13.
+  extension and runs the headless pytest suite across Python 3.11–3.13. It only
+  rebuilds when C++/build inputs change, collapses overlapping push/PR runs into
+  one, and exposes a single aggregate `CI` check to require in branch protection.
 - Headless reflection tests (`tests/test_ui_metadata.py`).
 - Developer tooling: `ruff` lint + format (config in `pyproject.toml`, enforced
   by a fast `lint` job in CI), a `.pre-commit-config.yaml` (ruff, clang-format,
@@ -30,8 +32,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Dependabot config for GitHub Actions, and a `build.cmd` that builds in the
   project `.venv` with build isolation off (the reliable path — `uv`/isolated
   builds can't see the Qt-only `shiboken6-generator`).
-- CI now caches the Qt SDK, the Slang SDK, and pip downloads, so the Windows
-  build/test jobs reuse them across runs instead of re-downloading every time.
+- CI now caches the Qt SDK, the Slang SDK, and pip downloads, and compiles the
+  C++ through `sccache`, so the shared native core is built once and reused across
+  the Python matrix and later runs instead of recompiling every time.
+- Release publishing is automatic: merging a version bump to `main` publishes to
+  PyPI via Trusted Publishing once that version isn't already released, then
+  records the matching `vX.Y.Z` tag and GitHub Release. Pushing a `v*` tag by hand
+  still works as a manual re-release path.
+- A `prepare-release` workflow skill and script that bumps the version across
+  `pyproject.toml` and `CMakeLists.txt`, stamps the changelog, and verifies the
+  build before handing off.
 
 ## [0.1.1] — 2026-08-16
 
