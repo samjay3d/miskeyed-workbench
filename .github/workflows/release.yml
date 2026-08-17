@@ -90,21 +90,26 @@ jobs:
 
             - name: Verify fresh wheel is not corrupt
               shell: pwsh
-              # FATAL on purpose: validates every member's CRC-32 on the just-built wheel,
-              # BEFORE the artifact round-trip. If this passes but the publish job later
-              # sees a bad CRC, the corruption is introduced by upload/download-artifact,
-              # not the build. If it fails here, the build itself produced a bad wheel.
+              # FATAL on purpose: validates every member's CRC-32 on the just-built wheel
+              # BEFORE transport. Confirmed clean here while the publish job saw bad CRCs,
+              # which proved the corruption came from upload/download-artifact handling the
+              # wheel (itself a ZIP) as a loose file. Hence the tar bundling below.
               run: |
                   $whls = (Get-ChildItem wheelhouse\*.whl).FullName
                   python ci\wheelzip.py inspect $whls
 
+            - name: Bundle wheel for transport
+              shell: pwsh
+              # Ship one gzip'd tar instead of loose .whl files. upload-artifact@v4
+              # corrupts the bundled binaries when it re-zips a wheel; wrapping in a tar.gz
+              # makes the payload opaque and gives it a gzip CRC, so any transport
+              # corruption fails `tar -xzf` on download instead of reaching PyPI.
+              run: tar -czf "wheels-${{ matrix.python-version }}.tgz" -C wheelhouse .
+
             - uses: actions/upload-artifact@v4
               with:
                   name: dist-wheels-${{ matrix.python-version }}
-                  path: ./wheelhouse/*.whl
-                  # Store, don't deflate: rules out artifact-side compression as a source
-                  # of the bundled-DLL corruption seen on download.
-                  compression-level: 0
+                  path: wheels-${{ matrix.python-version }}.tgz
 
     build-sdist:
         name: Source distribution
@@ -146,12 +151,21 @@ jobs:
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
-                  path: dist
+                  path: incoming
                   merge-multiple: true
+            - name: Assemble dist/
+              # Wheels arrive as wheels-*.tgz (gzip CRC = transport integrity); the sdist
+              # arrives as a plain *.tar.gz and passes through untouched.
+              run: |
+                  set -euo pipefail
+                  shopt -s nullglob
+                  mkdir -p dist
+                  for f in incoming/*.tar.gz; do cp "$f" dist/; done
+                  for t in incoming/*.tgz; do tar -xzf "$t" -C dist; done
+                  ls -la dist/
             - name: Normalize wheel ZIPs for PyPI
               # Rewrites each wheel as a canonical, seekable archive (member bytes verbatim,
-              # so RECORD stays valid). Also revalidates CRCs, so it fails loudly if the
-              # downloaded artifact is corrupt rather than uploading a bad file.
+              # so RECORD stays valid). Also revalidates CRCs as a final backstop.
               run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
               with:
@@ -173,8 +187,16 @@ jobs:
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
-                  path: dist
+                  path: incoming
                   merge-multiple: true
+            - name: Assemble dist/
+              run: |
+                  set -euo pipefail
+                  shopt -s nullglob
+                  mkdir -p dist
+                  for f in incoming/*.tar.gz; do cp "$f" dist/; done
+                  for t in incoming/*.tgz; do tar -xzf "$t" -C dist; done
+                  ls -la dist/
             - name: Normalize wheel ZIPs for PyPI
               run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
