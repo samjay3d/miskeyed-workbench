@@ -118,10 +118,18 @@ jobs:
                   arch: x64
 
             - name: Set up sccache
-              # Content-addressed compiler cache backed by the GitHub Actions cache; keys on
-              # source + flags, so identical TUs (the whole slang_qrhi_core lib) compile once
-              # and every other matrix job / later run gets a cache hit.
+              # Content-addressed compiler cache. Uses a LOCAL DISK backend (not the GitHub
+              # Actions cache service): a GHAC outage would otherwise fail sccache's server
+              # startup and take the whole build down. The dir is persisted below.
               uses: mozilla-actions/sccache-action@v0.0.6
+
+            - name: Cache sccache objects
+              uses: actions/cache@v4
+              with:
+                  path: ${{ runner.temp }}\sccache
+                  key: sccache-${{ runner.os }}-py${{ matrix.python-version }}-${{ github.sha }}
+                  restore-keys: |
+                      sccache-${{ runner.os }}-py${{ matrix.python-version }}-
 
             - name: Cache Slang SDK
               id: slang-cache
@@ -164,7 +172,8 @@ jobs:
                   CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
                   # Ninja honors the compiler launcher; the VS generator does not.
                   CMAKE_GENERATOR: Ninja
-                  SCCACHE_GHA_ENABLED: "true"
+                  # Local disk cache (see "Set up sccache"): resilient to GHAC outages.
+                  SCCACHE_DIR: ${{ runner.temp }}\sccache
               run: |
                   # Build isolation off (shiboken6-generator is not on PyPI); reuse the deps
                   # installed above. --no-deps keeps the Qt-index PySide6 in place.
