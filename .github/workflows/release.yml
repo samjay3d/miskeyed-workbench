@@ -1,9 +1,11 @@
 name: release
 
-# Builds Windows binary wheels + an sdist entirely on GitHub-hosted runners, and on a
-# version tag publishes them to PyPI via Trusted Publishing (OIDC — no stored tokens).
-# Nothing local is required: the runner provisions the Qt 6.8 dev SDK, the Slang SDK,
-# and the Shiboken6 generator itself.
+# Builds Windows binary wheels + an sdist on GitHub-hosted runners, and publishes them to
+# PyPI via Trusted Publishing (OIDC — no stored tokens). Publishing is automatic: when a
+# version bump lands on `main` (the pyproject version isn't on PyPI yet), this run builds
+# and publishes, then records the `vX.Y.Z` tag + a GitHub Release. Pushing a `v*` tag by
+# hand still works as a manual re-release path. No PAT is needed — the tag is created after
+# publishing and is not relied upon to trigger anything.
 #
 # One-time maintainer setup:
 #   1. PyPI + TestPyPI -> add a GitHub trusted publisher (owner, repo, workflow
@@ -26,8 +28,45 @@ env:
     QT_VERSION: "6.8.3"
 
 jobs:
+    detect:
+        name: Detect release
+        # Decides whether this run should publish. Publishes when the pyproject version
+        # isn't on PyPI yet (a bump landed on main) or when a v* tag was pushed. No PAT is
+        # needed: publishing happens in THIS run, and the tag/Release are recorded after.
+        runs-on: ubuntu-latest
+        outputs:
+            release: ${{ steps.decide.outputs.release }}
+            version: ${{ steps.ver.outputs.version }}
+        steps:
+            - uses: actions/checkout@v4
+            - name: Read version
+              id: ver
+              run: |
+                  v=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "([^"]+)"/\1/')
+                  echo "version=$v" >> "$GITHUB_OUTPUT"
+                  echo "pyproject version: $v"
+            - name: Decide
+              id: decide
+              run: |
+                  set -euo pipefail
+                  v="${{ steps.ver.outputs.version }}"
+                  if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+                      echo "Tag push -> release."; echo "release=true" >> "$GITHUB_OUTPUT"; exit 0
+                  fi
+                  if [[ "$GITHUB_REF" == "refs/heads/main" && ( "$GITHUB_EVENT_NAME" == "push" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ) ]]; then
+                      code=$(curl -sS -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/miskeyed-workbench/$v/json" || echo 000)
+                      if [[ "$code" == "404" ]]; then
+                          echo "Version $v not on PyPI -> release."; echo "release=true" >> "$GITHUB_OUTPUT"; exit 0
+                      fi
+                      echo "Version $v already on PyPI (HTTP $code) -> skip."
+                  fi
+                  echo "release=false" >> "$GITHUB_OUTPUT"
+
     build-wheels:
         name: Wheel (py${{ matrix.python-version }})
+        needs: detect
+        # Build for a real release, and on PRs to main for validation.
+        if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -145,6 +184,8 @@ jobs:
 
     build-sdist:
         name: Source distribution
+        needs: detect
+        if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -170,8 +211,8 @@ jobs:
 
     publish-testpypi:
         name: Publish to TestPyPI
-        needs: [build-wheels, build-sdist]
-        if: startsWith(github.ref, 'refs/tags/v')
+        needs: [detect, build-wheels, build-sdist]
+        if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         environment:
             name: testpypi
@@ -206,8 +247,8 @@ jobs:
 
     publish-pypi:
         name: Publish to PyPI
-        needs: [publish-testpypi]
-        if: startsWith(github.ref, 'refs/tags/v')
+        needs: [detect, publish-testpypi]
+        if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         environment:
             name: pypi
@@ -232,3 +273,35 @@ jobs:
             - name: Normalize wheel ZIPs for PyPI
               run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
+
+    tag-release:
+        name: Tag + GitHub Release
+        needs: [detect, publish-pypi]
+        # Record the release AFTER publishing. Uses the default token; the tag it pushes
+        # deliberately does NOT re-trigger this workflow (we already published). Skipped on
+        # manual tag runs (the tag already exists).
+        if: needs.detect.outputs.release == 'true' && !startsWith(github.ref, 'refs/tags/')
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+            - name: Tag and release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  set -euo pipefail
+                  v="${{ needs.detect.outputs.version }}"
+                  tag="v$v"
+                  if git ls-remote --tags origin "refs/tags/$tag" | grep -q "refs/tags/$tag"; then
+                      echo "Tag $tag already exists."
+                  else
+                      git tag "$tag"
+                      git push origin "$tag"
+                  fi
+                  if gh release view "$tag" >/dev/null 2>&1; then
+                      echo "Release $tag already exists."
+                  else
+                      notes=$(awk -v v="$v" '$0 ~ "^## \\["v"\\]"{f=1;next} /^## \[/{f=0} f' CHANGELOG.md)
+                      gh release create "$tag" --title "$tag" --notes "${notes:-Release $tag}"
+                  fi
