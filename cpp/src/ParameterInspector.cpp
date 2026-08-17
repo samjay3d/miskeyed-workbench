@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QScrollArea>
+#include <QSlider>
 #include <QSpinBox>
 #include <QVBoxLayout>
 #include <QVector2D>
@@ -39,15 +40,43 @@ QWidget* makeEditor(ShaderParameterModel* model, int row, QWidget* parent)
         return w;
     }
     if (type == ParameterType::Float) {
-        auto* w = new QDoubleSpinBox(parent);
         const auto lo = model->data(idx, ShaderParameterModel::MinimumRole);
         const auto hi = model->data(idx, ShaderParameterModel::MaximumRole);
-        w->setRange(lo.isValid()?lo.toDouble():-1000.0, hi.isValid()?hi.toDouble():1000.0);
-        w->setSingleStep(model->data(idx, ShaderParameterModel::StepRole).toDouble());
-        w->setDecimals(6);
-        w->setValue(value.toDouble());
-        QObject::connect(w, &QDoubleSpinBox::valueChanged, model, [model, idx](double v){ model->setData(idx, v, ShaderParameterModel::ValueRole); });
-        return w;
+        const double dmin = lo.isValid()?lo.toDouble():-1000.0;
+        const double dmax = hi.isValid()?hi.toDouble():1000.0;
+        const double step = model->data(idx, ShaderParameterModel::StepRole).toDouble();
+        const QString widget = model->data(idx, ShaderParameterModel::WidgetRole).toString();
+
+        auto* spin = new QDoubleSpinBox;
+        spin->setRange(dmin, dmax);
+        spin->setSingleStep(step > 0 ? step : 0.01);
+        spin->setDecimals(6);
+        spin->setValue(value.toDouble());
+
+        // "slider"/"angle" widgets pair a bounded slider with the spin box; needs a range.
+        const bool bounded = lo.isValid() && hi.isValid() && dmax > dmin;
+        if (bounded && (widget == QLatin1String("slider") || widget == QLatin1String("angle"))) {
+            auto* container = new QWidget(parent);
+            auto* line = new QHBoxLayout(container); line->setContentsMargins(0,0,0,0);
+            auto* slider = new QSlider(Qt::Horizontal, container);
+            slider->setRange(0, 1000);
+            auto toTick = [dmin,dmax](double v){ return int(qBound(0.0, (v-dmin)/(dmax-dmin)*1000.0, 1000.0)); };
+            auto toVal  = [dmin,dmax](int t){ return dmin + (double(t)/1000.0)*(dmax-dmin); };
+            slider->setValue(toTick(value.toDouble()));
+            spin->setParent(container);
+            line->addWidget(slider, 1);
+            line->addWidget(spin);
+            QObject::connect(spin, &QDoubleSpinBox::valueChanged, model, [model, idx, slider, toTick](double v){
+                { QSignalBlocker b(slider); slider->setValue(toTick(v)); }
+                model->setData(idx, v, ShaderParameterModel::ValueRole);
+            });
+            QObject::connect(slider, &QSlider::valueChanged, spin, [spin, toVal](int t){ spin->setValue(toVal(t)); });
+            return container;
+        }
+
+        spin->setParent(parent);
+        QObject::connect(spin, &QDoubleSpinBox::valueChanged, model, [model, idx](double v){ model->setData(idx, v, ShaderParameterModel::ValueRole); });
+        return spin;
     }
 
     // Vector controls stay compact: one spin box per component.

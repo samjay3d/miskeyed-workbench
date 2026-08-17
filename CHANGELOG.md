@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Shader-driven UI metadata. Uniforms can be annotated with `[UIName]`,
+  `[UIGroup]`, `[UIWidget]`, `[UIRange]`, `[UIStep]`, `[UITooltip]`, and
+  `[UIUnits]` attributes; the parameter inspector reflects them to render grouped,
+  labelled controls, with bounded floats getting a synced slider + spin box
+  (`"slider"` / `"angle"` widgets). All built-in shaders and the Volumetric
+  Clouds, Bloom, and CRT samples now ship annotated.
+- A pull-request CI workflow (`.github/workflows/ci.yml`) that builds the
+  extension and runs the headless pytest suite across Python 3.11–3.13.
+- Headless reflection tests (`tests/test_ui_metadata.py`).
+
 ## [0.1.1] — 2026-08-16
 
 ### Added
