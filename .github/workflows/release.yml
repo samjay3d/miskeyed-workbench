@@ -88,6 +88,17 @@ jobs:
                   # CMAKE_PREFIX_PATH and Slang via SLANG_ROOT (see cmake/FindSlang.cmake).
                   python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v
 
+            - name: Inspect wheel ZIP (diagnostic)
+              shell: pwsh
+              continue-on-error: true
+              # Non-fatal: reports whether the freshly built wheel already has a
+              # non-compliant ZIP record (data descriptor / trailing data / unknown
+              # signature) BEFORE it goes through the artifact round-trip, so we can tell
+              # if corruption is from the build tool or from upload/download-artifact.
+              run: |
+                  $whls = (Get-ChildItem wheelhouse\*.whl).FullName
+                  python ci\wheelzip.py inspect @whls
+
             - uses: actions/upload-artifact@v4
               with:
                   name: dist-wheels-${{ matrix.python-version }}
@@ -129,14 +140,23 @@ jobs:
         permissions:
             id-token: write
         steps:
+            - uses: actions/checkout@v4
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
                   path: dist
                   merge-multiple: true
+            - name: Normalize wheel ZIPs for PyPI
+              # PyPI's upload validator rejects ZIPs with uncommon features. Rewrite each
+              # wheel as a canonical, seekable archive (member bytes unchanged, so RECORD
+              # stays valid) right before upload. This is the last mile, so it fixes bad
+              # records no matter whether they came from the build tool or the artifact
+              # round-trip. Verified locally that the normalized wheel still pip-installs.
+              run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
               with:
                   repository-url: https://test.pypi.org/legacy/
+                  skip-existing: true
 
     publish-pypi:
         name: Publish to PyPI
@@ -149,9 +169,12 @@ jobs:
         permissions:
             id-token: write
         steps:
+            - uses: actions/checkout@v4
             - uses: actions/download-artifact@v4
               with:
                   pattern: dist-*
                   path: dist
                   merge-multiple: true
+            - name: Normalize wheel ZIPs for PyPI
+              run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
