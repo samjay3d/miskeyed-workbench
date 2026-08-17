@@ -1,5 +1,8 @@
 name: ci
 
+permissions:
+    contents: read
+
 # Pull-request test gate. Builds the native extension on the same toolchain the release
 # workflow uses (VS 2022 + Qt 6.8 + Slang) and runs the headless pytest suite. The
 # tests only exercise CPU-side Slang reflection (ShaderDocument.compile), so they run
