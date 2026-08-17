@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Keep the GitHub Actions pinned in ci.yml / release.yml current (security + fixes).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci"

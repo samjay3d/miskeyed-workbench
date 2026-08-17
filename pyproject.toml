@@ -93,3 +93,18 @@ sdist.exclude = [
 SLANG_QRHI_BUILD_PYTHON = "ON"
 # The native standalone executable is not part of the importable wheel.
 SLANG_QRHI_BUILD_APP = "OFF"
+
+# Ruff lints + formats the small hand-written Python surface (the package, tests, and
+# helper scripts). Generated/vendored trees are excluded so it never touches shiboken
+# wrappers, CMake build dirs, or the in-repo Qt SDK.
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["build", "6.8.3", "shiboken", "*_autogen", ".venv", "_slang_qrhi*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Byte-layout debug prints and struct.unpack calls read better on one line.
+"ci/wheelzip.py" = ["E501"]

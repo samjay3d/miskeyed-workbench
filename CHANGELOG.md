@@ -17,6 +17,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A pull-request CI workflow (`.github/workflows/ci.yml`) that builds the
   extension and runs the headless pytest suite across Python 3.11–3.13.
 - Headless reflection tests (`tests/test_ui_metadata.py`).
+- Developer tooling: `ruff` lint + format (config in `pyproject.toml`, enforced
+  by a fast `lint` job in CI), a `.pre-commit-config.yaml` (ruff, clang-format,
+  whitespace/EOF/YAML hooks), a `.clang-format` for the hand-written C++, a
+  Dependabot config for GitHub Actions, and a `build.cmd` that builds in the
+  project `.venv` with build isolation off (the reliable path — `uv`/isolated
+  builds can't see the Qt-only `shiboken6-generator`).
 
 ## [0.1.1] — 2026-08-16
 

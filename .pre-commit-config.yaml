@@ -1,0 +1,43 @@
+# Local dev hooks. One-time setup:  pip install pre-commit  &&  pre-commit install
+# Then every commit auto-tidies the files you touched. To sweep the whole tree:
+#   pre-commit run --all-files
+# CI enforces ruff separately (see .github/workflows/ci.yml); clang-format is a local
+# convenience so hand-written C++ stays consistent without a mass reformat in CI.
+
+# Never touch generated or vendored trees.
+exclude: |
+  (?x)^(
+    build/.*|
+    6\.8\.3/.*|
+    .*_autogen/.*|
+    .*shiboken/.*|
+    x64/.*|
+    Debug/.*|
+    Release/.*|
+    CMakeFiles/.*
+  )$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.(cmd|bat)$'
+      - id: end-of-file-fixer
+        exclude: '\.(cmd|bat)$'
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.6
+    hooks:
+      - id: clang-format
+        files: '^(cpp|app|bindings)/.*\.(c|cc|cpp|h|hpp)$'
