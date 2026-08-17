@@ -9,17 +9,16 @@ permissions:
 # fine under the offscreen Qt platform with no GPU on the runner.
 #
 # release.yml already builds wheels on PRs to main; this workflow adds the actual test
-# run and also covers pushes to feature branches (which release.yml ignores).
+# run. It triggers on pull requests only, so an open PR runs the suite exactly once
+# instead of racing a duplicate push-event run (which showed up as a cancelled job with
+# an unexpanded matrix name).
 
 on:
     pull_request:
-    push:
-        branches-ignore: [main]
     workflow_dispatch:
 
 concurrency:
-    # Key on the head branch (same for the push and pull_request events) so a push to a
-    # branch with an open PR collapses to a single run instead of building the matrix twice.
+    # One in-flight run per PR/branch; a newer push cancels the previous run.
     group: ci-${{ github.head_ref || github.ref_name }}
     cancel-in-progress: true
 
