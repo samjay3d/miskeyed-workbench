@@ -53,18 +53,37 @@ QFont monospaceFont(int pt = 11)
     return f;
 }
 
+// UI metadata attribute declarations understood by the parameter inspector. Prepended
+// to every built-in shader so its uniforms drive labelled sliders instead of bare spin
+// boxes. Slang only reflects a `[Foo(...)]` attribute whose type is declared like this.
+constexpr const char* kUiMeta = R"SLANG(
+[__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIWidgetAttribute  { string kind; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIGroupAttribute   { string group; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UITooltipAttribute { string text; }
+[__AttributeUsage(_AttributeTargets.Var)] struct UIUnitsAttribute   { string units; }
+)SLANG";
+
 // Scene body for the scene pass: a few raymarched SDF primitives (sphere, box, torus)
 // on a checker ground with soft shadows and ambient occlusion, framed by an orbit
 // camera. Camera uniforms are additive offsets from a sensible base so the default
 // (all-zero) values already produce a nicely framed image. The scene pass renders this
 // into an offscreen texture (the G-buffer) that the post-process pass then samples.
 constexpr const char* kSceneBody = R"SLANG(
-uniform float camYaw;       // orbit yaw offset (radians)
-uniform float camPitch;     // orbit pitch offset (radians)
-uniform float camDistance;  // distance offset from the subject
-uniform float camFov;       // vertical field-of-view offset (degrees)
-uniform float camPanX;      // look-at pan (world X)
-uniform float camPanY;      // look-at pan (world Y)
+[UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
+uniform float camYaw;
+[UIGroup("Camera")] [UIName("Pitch")]    [UIWidget("angle")]  [UIRange(-1.5, 1.5)]         [UIStep(0.01)] [UIUnits("rad")]
+uniform float camPitch;
+[UIGroup("Camera")] [UIName("Distance")] [UIWidget("slider")] [UIRange(-4.0, 35.0)]        [UIStep(0.05)]
+uniform float camDistance;
+[UIGroup("Camera")] [UIName("FOV")]      [UIWidget("slider")] [UIRange(-40.0, 75.0)]       [UIStep(1.0)]  [UIUnits("deg")]
+uniform float camFov;
+[UIGroup("Camera")] [UIName("Pan X")]    [UIWidget("slider")] [UIRange(-10.0, 10.0)]       [UIStep(0.01)]
+uniform float camPanX;
+[UIGroup("Camera")] [UIName("Pan Y")]    [UIWidget("slider")] [UIRange(-10.0, 10.0)]       [UIStep(0.01)]
+uniform float camPanY;
 
 struct VSOut
 {
@@ -209,7 +228,8 @@ float3 renderScene(float2 uv, float aspect)
 
 QByteArray sceneShaderSource()
 {
-    QByteArray s = "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
+    QByteArray s = kUiMeta;
+    s += "// slang-qt scene pass (camera-driven). Adjust the camera in the Camera panel.\n";
     s += kSceneBody;
     s += R"SLANG(
 [shader("fragment")]
@@ -230,7 +250,7 @@ QByteArray postShaderSource()
     // into an offscreen color texture (the G-buffer); this shader samples that texture
     // and grades it. `uSceneColor`/`uSceneSampler` map to HLSL t1/s1 (SRB slot 1); the
     // globals constant buffer stays at b0, matching QRhi's D3D11 binding fallback.
-    return QByteArray(R"SLANG(
+    return QByteArray(kUiMeta) + R"SLANG(
 // slang-qt post-process pass. Samples the scene G-buffer produced by the scene pass
 // and grades it — this is the second stage that runs on top of the first.
 // The vk::binding annotations only affect SPIR-V; the D3D11 path uses the t1/s1
@@ -238,9 +258,12 @@ QByteArray postShaderSource()
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
 
-uniform float3 tint;     // per-channel color multiplier offset
-uniform float exposure;  // stops of exposure applied to the scene color
-uniform float vignette;  // edge darkening strength
+[UIGroup("Grade")] [UIName("Tint")]     [UIRange(-1.0, 1.0)] [UIStep(0.01)]
+uniform float3 tint;
+[UIGroup("Grade")] [UIName("Exposure")] [UIWidget("slider")] [UIRange(-4.0, 4.0)] [UIStep(0.01)] [UIUnits("EV")]
+uniform float exposure;
+[UIGroup("Grade")] [UIName("Vignette")] [UIWidget("slider")] [UIRange(0.0, 2.0)]  [UIStep(0.01)]
+uniform float vignette;
 
 struct VSOut
 {
@@ -268,7 +291,7 @@ float4 psMain(VSOut input) : SV_Target0
     float vig = 1.0 - saturate(dot(q, q) * vignette);
     return float4(c * vig, 1.0);
 }
-)SLANG");
+)SLANG";
 }
 
 // ---------------------------------------------------------------------------
@@ -284,19 +307,29 @@ float4 psMain(VSOut input) : SV_Target0
 // Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
 QByteArray volumeCloudsSample()
 {
-    return QByteArray(R"SLANG(
+    return QByteArray(kUiMeta) + R"SLANG(
 // Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
 // Drag in either viewport to fly the camera (orbit / pan / zoom).
-uniform float camYaw;       // orbit yaw offset (radians)
-uniform float camPitch;     // orbit pitch offset (radians)
-uniform float camDistance;  // distance offset from the subject
-uniform float camFov;       // vertical field-of-view offset (degrees)
-uniform float camPanX;      // look-at pan (world X)
-uniform float camPanY;      // look-at pan (world Y)
-uniform float coverage;     // cloud coverage bias (higher = more open sky)
-uniform float densityMul;   // extinction strength
-uniform float sunYaw;       // sun direction around the sky
-uniform float3 sunTint;     // additive sun / scatter colour
+[UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
+uniform float camYaw;
+[UIGroup("Camera")] [UIName("Pitch")]    [UIWidget("angle")]  [UIRange(-1.5, 1.5)]         [UIStep(0.01)] [UIUnits("rad")]
+uniform float camPitch;
+[UIGroup("Camera")] [UIName("Distance")] [UIWidget("slider")] [UIRange(-4.0, 34.0)]        [UIStep(0.05)]
+uniform float camDistance;
+[UIGroup("Camera")] [UIName("FOV")]      [UIWidget("slider")] [UIRange(-50.0, 65.0)]       [UIStep(1.0)]  [UIUnits("deg")]
+uniform float camFov;
+[UIGroup("Camera")] [UIName("Pan X")]    [UIWidget("slider")] [UIRange(-10.0, 10.0)]       [UIStep(0.01)]
+uniform float camPanX;
+[UIGroup("Camera")] [UIName("Pan Y")]    [UIWidget("slider")] [UIRange(-10.0, 10.0)]       [UIStep(0.01)]
+uniform float camPanY;
+[UIGroup("Clouds")] [UIName("Coverage")] [UIWidget("slider")] [UIRange(-0.5, 0.6)] [UIStep(0.01)]
+uniform float coverage;
+[UIGroup("Clouds")] [UIName("Density")]  [UIWidget("slider")] [UIRange(0.0, 3.0)]  [UIStep(0.01)]
+uniform float densityMul;
+[UIGroup("Clouds")] [UIName("Sun Angle")][UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
+uniform float sunYaw;
+[UIGroup("Clouds")] [UIName("Sun Tint")] [UIRange(-1.0, 1.0)] [UIStep(0.01)]
+uniform float3 sunTint;
 
 struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
 
@@ -415,23 +448,28 @@ float4 psMain(VSOut input) : SV_Target0
     col = pow(col, float3(0.4545, 0.4545, 0.4545)); // gamma
     return float4(col, 1.0);
 }
-)SLANG");
+)SLANG";
 }
 
 // Post: threshold bloom + radial chromatic aberration + ACES tonemap. Samples the
 // scene G-buffer at t1/s1 (SRB slot 1) exactly like the built-in post pass.
 QByteArray bloomSample()
 {
-    return QByteArray(R"SLANG(
+    return QByteArray(kUiMeta) + R"SLANG(
 // Sample: Bloom + chromatic aberration post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
 
-uniform float exposure;       // stops of exposure
-uniform float bloomThreshold; // luminance knee (added to a 0.6 base)
-uniform float bloomStrength;  // bloom intensity
-uniform float aberration;     // chromatic aberration amount
-uniform float vignette;       // edge darkening
+[UIGroup("Bloom")] [UIName("Exposure")]  [UIWidget("slider")] [UIRange(-4.0, 4.0)] [UIStep(0.01)] [UIUnits("EV")]
+uniform float exposure;
+[UIGroup("Bloom")] [UIName("Threshold")] [UIWidget("slider")] [UIRange(-0.6, 0.4)] [UIStep(0.01)]
+uniform float bloomThreshold;
+[UIGroup("Bloom")] [UIName("Strength")]  [UIWidget("slider")] [UIRange(0.0, 2.0)]  [UIStep(0.01)]
+uniform float bloomStrength;
+[UIGroup("Bloom")] [UIName("Aberration")][UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
+uniform float aberration;
+[UIGroup("Bloom")] [UIName("Vignette")]  [UIWidget("slider")] [UIRange(0.0, 1.5)]  [UIStep(0.01)]
+uniform float vignette;
 
 struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
 
@@ -494,22 +532,27 @@ float4 psMain(VSOut input) : SV_Target0
     float vig = 1.0 - saturate(dot(q, q) * (0.25 + vignette));
     return float4(col * vig, 1.0);
 }
-)SLANG");
+)SLANG";
 }
 
 // Post: retro CRT — barrel distortion, scanlines, aperture-grille mask, vignette.
 QByteArray crtSample()
 {
-    return QByteArray(R"SLANG(
+    return QByteArray(kUiMeta) + R"SLANG(
 // Sample: CRT / scanline post-process. Grades the scene G-buffer.
 [[vk::binding(1)]] Texture2D uSceneColor : register(t1);
 [[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
 
-uniform float curvature;    // barrel distortion (added to a base curve)
-uniform float scanline;     // scanline depth
-uniform float maskStrength;  // aperture-grille strength
-uniform float brightness;   // output gain
-uniform float aberration;   // slight channel split
+[UIGroup("CRT")] [UIName("Curvature")]  [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
+uniform float curvature;
+[UIGroup("CRT")] [UIName("Scanline")]   [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
+uniform float scanline;
+[UIGroup("CRT")] [UIName("Mask")]       [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
+uniform float maskStrength;
+[UIGroup("CRT")] [UIName("Brightness")] [UIWidget("slider")] [UIRange(-0.5, 1.0)] [UIStep(0.01)]
+uniform float brightness;
+[UIGroup("CRT")] [UIName("Aberration")] [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
+uniform float aberration;
 
 struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
 
@@ -560,7 +603,7 @@ float4 psMain(VSOut input) : SV_Target0
     col *= 1.0 - saturate(dot(q, q) * 0.25);
     return float4(saturate(col), 1.0);
 }
-)SLANG");
+)SLANG";
 }
 
 // One entry per sample; `target` picks the editor slot (0 = scene, 1 = post).

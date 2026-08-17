@@ -99,6 +99,41 @@ void collectParameters(slang::TypeLayoutReflection* tl, qsizetype baseOffset,
         d.size = qsizetype(fieldTL->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
         d.defaultValue = defaultFor(d.type);
         d.step = (d.type == ParameterType::Float || d.type == ParameterType::Float2 || d.type == ParameterType::Float3 || d.type == ParameterType::Float4) ? QVariant(0.01) : QVariant(1);
+
+        // Optional UI metadata attributes drive the inspector:
+        //   [UIName("..")] [UIGroup("..")] [UIWidget("slider|drag|angle")]
+        //   [UIRange(lo,hi)] [UIStep(s)] [UITooltip("..")] [UIUnits("..")]
+        QString units;
+        for (unsigned a = 0, n = var->getUserAttributeCount(); a < n; ++a) {
+            auto* attr = var->getUserAttributeByIndex(a);
+            if (!attr) continue;
+            const QByteArray an(attr->getName());
+            auto argStr = [&](unsigned idx) -> QString {
+                size_t len = 0;
+                const char* s = attr->getArgumentValueString(idx, &len);
+                if (!s) return {};
+                QString q = QString::fromUtf8(s, int(len));
+                if (q.size() >= 2 && q.startsWith(QLatin1Char('"')) && q.endsWith(QLatin1Char('"')))
+                    q = q.mid(1, q.size() - 2); // Slang may hand back the literal with quotes
+                return q;
+            };
+            auto argNum = [&](unsigned idx, double& v) -> bool {
+                float f = 0.0f;
+                if (SLANG_SUCCEEDED(attr->getArgumentValueFloat(idx, &f))) { v = f; return true; }
+                int iv = 0;
+                if (SLANG_SUCCEEDED(attr->getArgumentValueInt(idx, &iv))) { v = iv; return true; }
+                return false;
+            };
+            if (an == "UIName")         { const QString s = argStr(0); if (!s.isEmpty()) d.label = s; }
+            else if (an == "UIGroup")   { const QString s = argStr(0); if (!s.isEmpty()) d.group = s; }
+            else if (an == "UIWidget")  { d.widget = argStr(0); }
+            else if (an == "UITooltip") { d.tooltip = argStr(0); }
+            else if (an == "UIUnits")   { units = argStr(0); }
+            else if (an == "UIStep")    { double s; if (argNum(0, s)) d.step = s; }
+            else if (an == "UIRange")   { double lo, hi; if (argNum(0, lo)) d.minimum = lo; if (argNum(1, hi)) d.maximum = hi; }
+        }
+        if (!units.isEmpty()) d.label += QStringLiteral(" (") + units + QLatin1Char(')');
+
         out.push_back(std::move(d));
     }
 }

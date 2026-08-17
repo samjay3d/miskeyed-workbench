@@ -1,0 +1,92 @@
+name: ci
+
+# Pull-request test gate. Builds the native extension on the same toolchain the release
+# workflow uses (VS 2022 + Qt 6.8 + Slang) and runs the headless pytest suite. The
+# tests only exercise CPU-side Slang reflection (ShaderDocument.compile), so they run
+# fine under the offscreen Qt platform with no GPU on the runner.
+#
+# release.yml already builds wheels on PRs to main; this workflow adds the actual test
+# run and also covers pushes to feature branches (which release.yml ignores).
+
+on:
+    pull_request:
+    push:
+        branches-ignore: [main]
+    workflow_dispatch:
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    SLANG_VERSION: "2026.14.1"
+    QT_VERSION: "6.8.3"
+
+jobs:
+    test:
+        name: Tests (py${{ matrix.python-version }})
+        # Same rationale as release.yml: pin VS 2022 so shiboken 6.8's libclang can parse
+        # the MSVC STL and the Qt win64_msvc2022_64 ABI matches.
+        runs-on: windows-2022
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.11", "3.12", "3.13"]
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+
+            - name: Install Qt ${{ env.QT_VERSION }} dev SDK
+              uses: jurplel/install-qt-action@v4
+              with:
+                  version: ${{ env.QT_VERSION }}
+                  host: windows
+                  target: desktop
+                  arch: win64_msvc2022_64
+                  # Must be false: the default installs its own Python 3.12 and prepends it
+                  # to PATH, which would clobber the matrix interpreter.
+                  setup-python: false
+
+            - name: Provision Slang SDK
+              shell: pwsh
+              run: |
+                  $ErrorActionPreference = "Stop"
+                  $ver = "${{ env.SLANG_VERSION }}"
+                  $zip = "$env:RUNNER_TEMP\slang.zip"
+                  $url = "https://github.com/shader-slang/slang/releases/download/v$ver/slang-$ver-windows-x86_64.zip"
+                  Write-Host "Downloading $url"
+                  Invoke-WebRequest -Uri $url -OutFile $zip
+                  $dest = "$env:RUNNER_TEMP\slang"
+                  Expand-Archive -Path $zip -DestinationPath $dest -Force
+                  "SLANG_ROOT=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+            - name: Install build dependencies (Qt index)
+              shell: pwsh
+              run: |
+                  python -m pip install --upgrade pip
+                  python -m pip install `
+                    --index-url https://download.qt.io/official_releases/QtForPython/ `
+                    --extra-index-url https://pypi.org/simple `
+                    "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" `
+                    "scikit-build-core==1.0.3"
+                  python -m pip install pytest
+
+            - name: Build and install extension
+              shell: pwsh
+              env:
+                  CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
+              run: |
+                  # Build isolation off (shiboken6-generator is not on PyPI); reuse the deps
+                  # installed above. --no-deps keeps the Qt-index PySide6 in place.
+                  python -m pip install . --no-build-isolation --no-deps -v
+
+            - name: Run tests
+              shell: pwsh
+              env:
+                  # SLANG_ROOT is exported by the Provision step; the package adds it to the
+                  # DLL search path so _slang_qrhi.pyd can load slang.dll at import time.
+                  QT_QPA_PLATFORM: offscreen
+              run: python -m pytest tests/ -v
