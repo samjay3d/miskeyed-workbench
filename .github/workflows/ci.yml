@@ -25,6 +25,7 @@ concurrency:
 env:
     SLANG_VERSION: "2026.14.1"
     QT_VERSION: "6.8.3"
+    ANARI_SDK_COMMIT: "7897cbe425e5000ce890631bc97d14e00c750175"
 
 jobs:
     changes:
@@ -42,11 +43,13 @@ jobs:
                   filters: |
                       build:
                           - 'cpp/**'
+                          - 'app/**'
                           - 'bindings/**'
                           - 'shaders/**'
                           - 'python/**'
                           - 'tests/**'
                           - 'cmake/**'
+                          - 'spikes/**'
                           - 'CMakeLists.txt'
                           - 'pyproject.toml'
                           - '.github/workflows/ci.yml'
@@ -67,6 +70,52 @@ jobs:
               run: ruff check .
             - name: Format check
               run: ruff format --check .
+
+    anari-backend:
+        name: ANARI backend
+        needs: changes
+        if: needs.changes.outputs.build == 'true'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Build and install pinned ANARI-SDK
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  git clone https://github.com/KhronosGroup/ANARI-SDK.git "$RUNNER_TEMP/anari-sdk"
+                  git -C "$RUNNER_TEMP/anari-sdk" checkout "${ANARI_SDK_COMMIT}"
+                  cmake -S "$RUNNER_TEMP/anari-sdk" -B "$RUNNER_TEMP/anari-sdk-build" \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/anari-install" \
+                    -DBUILD_HELIDE_DEVICE=OFF \
+                    -DBUILD_HELIDE_GPU_DEVICE=OFF \
+                    -DBUILD_EXAMPLES=OFF \
+                    -DBUILD_TESTING=OFF \
+                    -DBUILD_CTS=OFF \
+                    -DBUILD_HDANARI=OFF \
+                    -DBUILD_CAT=OFF
+                  cmake --build "$RUNNER_TEMP/anari-sdk-build" --parallel 2
+                  cmake --install "$RUNNER_TEMP/anari-sdk-build"
+
+            - name: Build standalone backend probe
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  cmake -S spikes/anari_probe -B "$RUNNER_TEMP/miskeyed-anari-build" \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/anari-install" \
+                    -DBUILD_TESTING=ON
+                  cmake --build "$RUNNER_TEMP/miskeyed-anari-build" --parallel 2
+
+            - name: Test candidate parsing and ANARI lifecycle
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  ctest --test-dir "$RUNNER_TEMP/miskeyed-anari-build" --output-on-failure
+                  export LD_LIBRARY_PATH="$RUNNER_TEMP/anari-install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+                  "$RUNNER_TEMP/miskeyed-anari-build/miskeyed-anari-probe" \
+                    "sink,$RUNNER_TEMP/anari-install/lib/"
 
     test:
         name: Tests (py${{ matrix.python-version }})
@@ -195,7 +244,7 @@ jobs:
     ci:
         name: CI
         if: always()
-        needs: [changes, lint, test]
+        needs: [changes, lint, anari-backend, test]
         runs-on: ubuntu-latest
         steps:
             - name: Fail if any dependency failed

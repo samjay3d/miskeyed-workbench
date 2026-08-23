@@ -35,6 +35,10 @@ created, committed, and released through the probe. A full Windows runtime lock 
 requires the production Qt/Slang/OpenUSD environment. Helide is the first rendering
 smoke device; VisRTX remains capability-gated.
 
+The `ANARI backend` CI job repeats that standalone build and sink-device lifecycle on
+Linux for every backend-affecting pull-request change. The existing Windows test matrix
+continues to exercise the default-off Workbench path independently.
+
 Update this file with exact release/commit IDs and runtime artifacts when that Windows
 build is established. Do not turn an experimental backend dependency into a required
 dependency of `slang_qrhi_core`.
