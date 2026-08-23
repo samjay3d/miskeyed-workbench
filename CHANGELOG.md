@@ -6,6 +6,28 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- An opt-in, developer-facing ANARI backend foundation. With
+  `MISKEYED_WORKBENCH_WITH_ANARI=ON`, native Workbench code can load configured ANARI
+  libraries, enumerate device subtypes and extensions, collect status diagnostics, and
+  create device sessions with deterministic library/device teardown. The feature
+  remains off by default and is not exposed in the application UI yet.
+- A standalone `workbench-anari-probe` build under `spikes/anari_probe` for exercising
+  ANARI discovery and device lifecycle without Qt, Slang, Shiboken, or the Workbench
+  application target.
+- ANARI backend CI coverage using a pinned ANARI-SDK revision, candidate parser tests,
+  and a load/query/create/commit/release smoke test against the SDK sink device.
+
+### Changed
+
+- Defined Shader Toy, Render Toy, and the planned ANARI Device mode as separate product
+  boundaries. Device-neutral native code uses `miskeyed::workbench`, while the shipped
+  Slang/QRhi renderer retains its existing `slang_qrhi` namespace and behavior.
+- Converted the ANARI research plan into an implementation breakdown that records the
+  completed backend foundation and the remaining Hydra, tracing, frame-handoff, and
+  Island-device slices.
+
 ## [0.2.0] — 2026-08-17
 
 ### Added
