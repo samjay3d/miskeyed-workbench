@@ -1,0 +1,9 @@
+[package]
+version = "0.1.0"
+title = "Miskeyed Workbench Core Adapter"
+description = "Thin Kit lifecycle adapter for the installed Miskeyed Workbench native package."
+category = "Rendering"
+keywords = ["Slang", "shader", "Workbench"]
+
+[[python.module]]
+name = "miskeyed.workbench.kit_core"

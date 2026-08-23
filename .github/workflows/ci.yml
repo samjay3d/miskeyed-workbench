@@ -68,6 +68,23 @@ jobs:
             - name: Format check
               run: ruff format --check .
 
+    kit-boundary:
+        name: Kit boundary (SDK-free)
+        # The Kit adapter is optional and cannot be imported without Kit, but its manifests
+        # and architectural isolation must still be checked on every PR. Keep this separate
+        # from the Windows native build so an integrations-only change is never silently
+        # treated as a docs-only change by the paths filter.
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - name: Install test dependency
+              run: python -m pip install "pytest==8.*"
+            - name: Test Kit isolation and manifests
+              run: python -m pytest tests/test_kit_boundary.py -v
+
     test:
         name: Tests (py${{ matrix.python-version }})
         needs: changes
@@ -195,7 +212,7 @@ jobs:
     ci:
         name: CI
         if: always()
-        needs: [changes, lint, test]
+        needs: [changes, lint, kit-boundary, test]
         runs-on: ubuntu-latest
         steps:
             - name: Fail if any dependency failed

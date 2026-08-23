@@ -1,0 +1,13 @@
+[package]
+version = "0.1.0"
+title = "Miskeyed Workbench Slang Inspector"
+description = "Compile and inspect Slang shaders through Workbench's native authoring API."
+category = "Rendering"
+keywords = ["Slang", "reflection", "shader"]
+
+[dependencies]
+"miskeyed.workbench.core" = { version = "0.1.0" }
+"omni.ui" = {}
+
+[[python.module]]
+name = "miskeyed.workbench.slang_tools"
