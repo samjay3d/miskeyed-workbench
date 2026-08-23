@@ -308,6 +308,26 @@ python/miskeyed/workbench/
 
 ## Roadmap
 
+### Experimental ANARI backend probe
+
+ANARI work is isolated from the shipped application and defaults to off. Backend
+developers can build the headless probe without Qt, Slang, or the Workbench target:
+
+```powershell
+cmake -S spikes/anari_probe -B build/anari-probe `
+  -DCMAKE_PREFIX_PATH=C:\sdk\anari
+cmake --build build/anari-probe --config Release
+```
+
+The probe tries an explicit semicolon-separated candidate list passed as its first
+argument, then `MISKEYED_ANARI_LIBRARIES`, then the built-in development candidates.
+Each candidate is an ANARI loader name or the SDK's `name,path` form. See
+[`docs/anari/COMPATIBILITY.md`](docs/anari/COMPATIBILITY.md) and the
+[`ANARI implementation breakdown`](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
+
+The root build exposes the same backend behind `SLANG_QRHI_WITH_ANARI=ON`. Leaving it
+off preserves the existing dependency graph and runtime behavior.
+
 1. reflect Slang user attributes into ranges/groups/widgets;
 2. resource reflection model (`Texture2D`, samplers, buffers, HDRI file widgets);
 3. graphics/compute pass graph;

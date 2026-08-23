@@ -28,6 +28,25 @@ viewports, interaction, look inspectors, and how backend data is presented to ar
 The backend exposes small native data contracts for that later task; it does not create
 an extensible UI framework or anticipate its widget hierarchy.
 
+## Implementation status
+
+The first backend slice is now implemented:
+
+- `SLANG_QRHI_WITH_ANARI` is an opt-in CMake feature, defaulting to `OFF`;
+- `slang_qrhi_anari_backend` is isolated from `slang_qrhi_core` and Qt;
+- `AnariCandidates` parses deterministic configured candidates while preserving the
+  ANARI loader's `name,path` syntax;
+- `AnariLibrary` owns load/unload, subtype/extension queries, and status collection;
+- `AnariDeviceCatalog` explicitly probes configured candidates;
+- `AnariDeviceSession` keeps its library alive through device release; and
+- `slang-qrhi-anari-probe` provides the first headless inspection surface, with a
+  standalone ANARI-only build in `spikes/anari_probe`.
+
+The Hydra fixture, `hdAnari` selection seam, device switching across populated scenes,
+tracing, frame snapshots, and Island device remain subsequent implementation slices.
+The breakdown below is retained as executable roadmap and review checklist rather than
+an aspirational product plan.
+
 The upstream review for this revision used these source snapshots:
 
 - ANARI-SDK `7897cbe425e5000ce890631bc97d14e00c750175` (including `hdAnari`,
@@ -646,44 +665,48 @@ Before Island design, inspect exact source files and symbols and complete this t
 Each `TBD` must be replaced with repository, commit, path, symbol, responsibility, and
 license. This evidence determines whether a device kit is justified.
 
-## File-level implementation plan
+## ANARI implementation breakdown
 
-Names below are proposed and should be adjusted only when pinned upstream APIs provide
-a concrete reason.
+Implemented slices list their current files and remaining runtime validation. Later
+slices are concrete breakdowns and may change only when source or test evidence provides
+a reason.
 
-### Stage 0: compatibility and API spike
+### Slice 0: compatibility and API probe — foundation implemented
 
-Create:
+Implemented:
 
-- `docs/anari/COMPATIBILITY.md` — promote the reviewed source snapshots into a tested
-  release lock with targets, runtime artifacts, extension lists, and supported
-  configurations.
-- `spikes/anari_probe/CMakeLists.txt`
-- `spikes/anari_probe/main.cpp` — load a configured library, list device subtypes and
-  extensions, create/release a device, and route status messages.
+- `docs/anari/COMPATIBILITY.md` records the dependency and runtime contract.
+- `app/anari_probe.cpp` loads configured libraries, lists subtypes/extensions, and
+  creates/releases each reported device subtype.
+- `spikes/anari_probe/CMakeLists.txt` builds the backend, probe, and parser test without
+  requiring Qt, Slang, or the shipped application target.
 
 Modify:
 
 - none of the production runtime.
 
-Test:
+Remaining runtime validation:
 
 - CTest cases for Helide success, unknown-library failure, unknown-subtype failure, and
   clean repeated load/unload where the loader supports it.
 
-Milestone: one command produces machine-readable catalog output for Helide and records
-the exact ABI/version evidence.
+Milestone: one command produces deterministic catalog output for Helide and records the
+exact ABI/version evidence. Add a serialized format only when a concrete consumer needs
+one.
 
-### Stage 1: optional host foundation
+### Slice 1: optional host foundation — implemented
 
-Create:
+Implemented:
 
-- `cpp/include/slang_qrhi/AnariLibrary.h`;
-- `cpp/src/AnariLibrary.cpp`;
-- `cpp/include/slang_qrhi/AnariDeviceCatalog.h`;
-- `cpp/src/AnariDeviceCatalog.cpp`;
-- `tests/test_anari_library.cpp`; and
-- `tests/test_anari_device_candidates.cpp`.
+- `cpp/include/slang_qrhi/anari/AnariCandidates.h`;
+- `cpp/src/anari/AnariCandidates.cpp`;
+- `cpp/include/slang_qrhi/anari/AnariLibrary.h`;
+- `cpp/src/anari/AnariLibrary.cpp`;
+- `cpp/include/slang_qrhi/anari/AnariDeviceCatalog.h`;
+- `cpp/src/anari/AnariDeviceCatalog.cpp`;
+- `cpp/include/slang_qrhi/anari/AnariDeviceSession.h`;
+- `cpp/src/anari/AnariDeviceSession.cpp`; and
+- `tests/test_anari_candidates.cpp`.
 
 Modify:
 
@@ -696,7 +719,7 @@ library. The catalog owns probe results, not active render devices.
 Milestone: the native app can probe configured Helide and VisRTX candidates, enumerate
 subtypes/capabilities, and show failures without loading USD or creating a viewport.
 
-### Stage 2: fixture and Hydra/hdAnari proof
+### Slice 2: fixture and Hydra/hdAnari proof — next
 
 Create:
 
@@ -718,13 +741,11 @@ Test:
 
 Milestone: the same fixture and Hydra path produce frames from Helide and VisRTX.
 
-### Stage 3: device switching
+### Slice 3: device switching
 
-Create:
-
-- `cpp/include/slang_qrhi/AnariDeviceSession.h`;
-- `cpp/src/AnariDeviceSession.cpp`;
-- `tests/test_anari_device_switch.cpp`.
+Extend the implemented `cpp/include/slang_qrhi/anari/AnariDeviceSession.h` and
+`cpp/src/anari/AnariDeviceSession.cpp` only as required by the captured lifecycle. Add
+`tests/test_anari_device_switch.cpp`.
 
 Modify:
 
@@ -741,13 +762,13 @@ Test:
 Milestone: one open stage switches between two device sessions without application
 code reopening or traversing the stage.
 
-### Stage 4: tracing and delta proof
+### Slice 4: tracing and delta proof
 
 Create after selecting the upstream-supported instrumentation seam:
 
-- `cpp/include/slang_qrhi/AnariTraceLog.h`;
-- `cpp/src/AnariTraceLog.cpp`;
-- `cpp/include/slang_qrhi/AnariTraceEvent.h`;
+- `cpp/include/slang_qrhi/anari/AnariTraceLog.h`;
+- `cpp/src/anari/AnariTraceLog.cpp`;
+- `cpp/include/slang_qrhi/anari/AnariTraceEvent.h`;
 - `tests/test_anari_trace_log.cpp`;
 - `tests/test_hdanari_deltas.cpp`;
 - `docs/anari/traces/*.json` golden structural traces where stable.
@@ -761,7 +782,7 @@ call counts.
 Milestone: the roughness trace proves material update/recommit and absence of geometry,
 array, stage, or `ShaderDocument` reconstruction.
 
-### Stage 5: SDK debug and optional TSD capture
+### Slice 5: SDK debug and optional TSD capture
 
 Modify:
 
@@ -775,11 +796,11 @@ USD ownership depend on it.
 Milestone: the same `hdAnari` scene produces an inspectable SDK trace; optionally, a
 TSD capture can be opened independently and forwarded through Helide or VisRTX.
 
-### Stage 6: backend handoff and regression gate
+### Slice 6: backend handoff and regression gate
 
 Create:
 
-- `cpp/include/slang_qrhi/AnariBackendTypes.h` only for value types proven necessary by
+- `cpp/include/slang_qrhi/anari/AnariBackendTypes.h` only for value types proven necessary by
   the spikes;
 - `tests/test_anari_backend_lifecycle.cpp`;
 - `tests/test_anari_frame_snapshot.cpp`; and
@@ -794,7 +815,7 @@ capabilities/status/trace records, switch devices, and tear down safely. With AN
 options disabled, the existing application and Python package build and behave exactly
 as before.
 
-### Stage 7: existing-device source comparison
+### Slice 7: existing-device source comparison
 
 Complete the table in this document and move the cited result to
 `docs/anari/DEVICE_IMPLEMENTATION_COMPARISON.md`. Include actual code paths for Helide,
@@ -804,7 +825,7 @@ renderer-specific work and optional features.
 Milestone: the evidence is sufficient to choose helper strategy A, B, or C without
 writing Island code.
 
-### Stage 8: Island backend design only
+### Slice 8: Island backend design only
 
 Create:
 
@@ -841,7 +862,7 @@ Island acceptance is backend-only:
 Milestone: a source-cited triangle and PBR-fixture design exposes any missing generic
 helper before implementation.
 
-### Stage 9: device-adapter decision
+### Slice 9: device-adapter decision
 
 Choose in this order:
 
