@@ -1,9 +1,10 @@
-# ANARI Device mode research and design plan
+# ANARI backend research and implementation plan
 
 ## Status and evidence boundary
 
-This document plans Miskeyed's third work mode, **ANARI Device**. It does not redefine
-the whole application as an ANARI host and it does not make Island the product.
+This document plans the **native backend work** required by Miskeyed's third mode,
+**ANARI Device**. It does not plan or implement an extensible UI, it does not redefine
+the whole application as an ANARI host, and it does not make Island the product.
 
 Miskeyed has three modes with increasing scope:
 
@@ -11,9 +12,21 @@ Miskeyed has three modes with increasing scope:
 2. **Render Toy** — Shader Toy with a scene pre-pass and post-process pass; and
 3. **ANARI Device** — real USD/Hydra scene work through selectable ANARI devices.
 
-Modes 1 and 2 are the shipped Slang/QRhi workbench. Mode 3 is a design and research
-track whose UX must be derived from actual function, capability, and delta data. It
-must not distort the simple modes while that design is unsettled.
+Modes 1 and 2 are the shipped Slang/QRhi workbench. This task builds and tests backend
+capabilities for Mode 3 while a separate task designs its UX and Qt composition. No
+backend milestone may distort or regress the simple modes.
+
+### Scope split
+
+**This plan owns:** ANARI loading, candidate configuration, lifecycle, capability
+queries, status/trace data, Hydra/`hdAnari` proof fixtures, device switching semantics,
+and a future Island ANARI backend.
+
+**A separate UI task owns:** `SceneDocument`, `WorkbenchWindow` composition, Qt models,
+viewports, interaction, look inspectors, and how backend data is presented to artists.
+
+The backend exposes small native data contracts for that later task; it does not create
+an extensible UI framework or anticipate its widget hierarchy.
 
 The upstream review for this revision used these source snapshots:
 
@@ -60,8 +73,9 @@ technical-art look development and renderer debugging
 
 The first architectural proof is not merely rendering USD in Qt. It is one USD stage
 driving multiple interchangeable ANARI devices while incremental scene changes remain
-observable and shader-authoring state remains independent. Which panes, workflows, and
-editing affordances make that useful is deliberately still a design question.
+observable and shader-authoring state remains independent. This backend plan stops at
+producing that evidence and a presentable frame payload; another task decides which
+panes, workflows, and editing affordances make it useful.
 
 ## Relationship to the other two modes
 
@@ -73,8 +87,7 @@ editing affordances make that useful is deliberately still a design question.
 
 ANARI Device mode sits beside the existing modes. It does not turn `SlangRhiWidget`
 into an external-renderer container and does not turn the Render Toy into a USD
-renderer. Shared UI concepts should be extracted only after a working vertical slice
-proves they are truly shared.
+renderer. This plan makes no shared UI abstraction.
 
 ## Target architecture
 
@@ -118,8 +131,11 @@ portable look path should first use USD/MaterialX semantics that devices can adv
 and implement independently. A future Island or other Slang-capable device may expose
 a device-specific extension for lower-level programmable materials, hair, eyes, cloth,
 or geometry. Until that contract exists, shader authoring and ANARI rendering remain
-two visible but independent paths, and the UI must label device-specific Slang behavior
-as non-portable rather than implying every ANARI device can consume it.
+two visible but independent paths. The backend must report portability/capability data
+so a later UI cannot imply every ANARI device consumes the same Slang behavior.
+
+`SceneDocument` in the diagram is the future UI/application coordinator. It is shown to
+locate the backend boundary, not because this plan will implement that class.
 
 ## Non-negotiable ownership boundaries
 
@@ -167,8 +183,8 @@ Do not force one material mechanism to answer two different needs:
 Research whether MaterialX generation can produce the portable representation while a
 device extension exposes an advanced Slang implementation behind a clear capability
 check. Never silently compare a device-specific programmable model with a portable
-fallback as though they were equivalent. The UI must show the active material path,
-unsupported features, and degradation.
+fallback as though they were equivalent. The backend must expose the active material
+path, unsupported features, and degradation for later presentation.
 
 ANARI scene objects describe data and renderer-facing intent; they do not by themselves
 make arbitrary GPU-generated geometry exportable. If a Slang experiment generates or
@@ -176,15 +192,17 @@ deforms geometry solely on a device, exporting it requires an explicit readback/
 contract supplied by that device. Do not promise that opaque device-internal GPU work
 can become USD automatically.
 
-### UI and presentation path
+### Backend-to-UI handoff
 
-- Qt owns application UI and presentation.
 - An ANARI device owns its renderer resources.
-- The generic scene viewport initially maps a frame color channel and uploads it for
-  display.
-- Device-specific native texture interop is deferred until profiling justifies it.
-- Python/PySide may expose native objects but must not own USD, Hydra, ANARI, or render
-  lifecycles.
+- The backend may map a frame into an immutable CPU snapshot containing dimensions,
+  pixel type, bytes, and sequence identity; it does not upload or display that snapshot.
+- Status, capability, and trace records are native value data with stable identities,
+  not Qt widget state.
+- Device-specific native texture interop is outside the MVP and outside this backend
+  plan until profiling and the UI task justify a concrete seam.
+- Python/PySide may eventually expose native objects but must not own USD, Hydra,
+  ANARI, or render lifecycles.
 
 ## Repository assessment
 
@@ -194,17 +212,18 @@ can become USD automatically.
 | --- | --- | --- |
 | `ShaderDocument` | Keep unchanged in purpose | Slang source, compile, reflection, generated shaders, shader dependency state |
 | `DependencyGraph` | Reuse for shader products; possibly use its principles for host records | Do not duplicate Hydra's dirty graph in it |
-| `ShaderParameterModel` and `ParameterInspector` | Keep for reflected Slang parameters | Do not use as an implicit USD material model |
-| `WorkbenchWindow` | Composition root for an initial UI spike | Must stop calling a second shader document the scene document |
-| `SlangRhiWidget` | Keep as the shader viewport initially | Do not force ANARI devices or Island through its QRhi renderer |
-| Shiboken build | Later expose stable `SceneDocument`/host metadata | Native lifecycle stays in C++ |
+| `ShaderParameterModel` and `ParameterInspector` | No changes in this backend task | Do not use as an implicit USD material model |
+| `WorkbenchWindow` | No changes in this backend task | UI composition belongs to the separate task |
+| `SlangRhiWidget` | No changes in this backend task | Do not force ANARI devices or Island through its QRhi renderer |
+| Shiboken build | No changes in this backend task | Bind only a later stable UI-facing contract |
 
-### Naming conflict
+### Naming conflict for the later UI task
 
 `WorkbenchWindow::sceneDocument()` currently returns `ShaderDocument*`, and
 `m_sceneDocument` is another shader pass. Before adding the real scene object, rename
 these to names reflecting their actual role, such as `sceneShaderDocument()` and
-`m_sceneShaderDocument`. No compatibility shim is required.
+`m_sceneShaderDocument`. No compatibility shim is required, but this backend task does
+not perform that rename.
 
 ### Build-system effect
 
@@ -213,6 +232,24 @@ The current core target directly requires Qt and Slang. OpenUSD/Hydra, ANARI, an
 continues to build without those SDKs. Do not hard-code SDK paths. Add CMake discovery
 only after the compatibility spike identifies exported package targets and runtime
 layout.
+
+### Preserve the current workflow
+
+Every backend change is required to keep the shipped path unchanged:
+
+- all ANARI/OpenUSD/Hydra/Island options default to `OFF`;
+- the existing `slang_qrhi_core`, executable, Shiboken module, imports, and entry points
+  keep their current names and dependency set when those options are off;
+- optional SDK discovery occurs only inside the enabled backend target—ordinary CMake
+  configure must not require ANARI or OpenUSD;
+- no ANARI device is probed or loaded when Shader Toy or Render Toy starts;
+- existing `ShaderDocument`, parameter reflection, two-pass rendering, hot reload,
+  deferred QRhi retirement, and headless event-loop tests remain regression gates; and
+- experimental backend failures cannot alter startup, packaging, or runtime DLL lookup
+  for the shipped modes.
+
+Before merging any backend stage, CI must build and test the repository once with all
+ANARI options off. Optional backend CI is additive and cannot replace that baseline.
 
 ### Risky current assumptions
 
@@ -223,8 +260,8 @@ layout.
 4. `hdAnari` exposes enough hooks to associate Hydra dirty events with captured ANARI
    operations.
 5. VisRTX supports the Windows/toolchain target used by the Workbench.
-6. A mapped color channel has an image format and row layout that the generic Qt
-   presenter can handle across all selected devices.
+6. A mapped color channel can be normalized into one implementation-neutral frame
+   snapshot across all selected devices.
 7. A future Island device can coexist with the Workbench Slang runtime.
 
 These are spike questions, not facts to build around.
@@ -355,7 +392,7 @@ Miskeyed should begin with the same scale of mechanism:
 ```text
 built-in candidates: helide, helide_gpu, visrtx, debug
 override: MISKEYED_ANARI_LIBRARIES=name[,path];name[,path];...
-user settings: the same ordered candidate strings, persisted by Qt
+explicit config: the same ordered candidate strings passed to the backend
 ```
 
 The precise separator must avoid colliding with the ANARI SDK's existing `name,path`
@@ -426,8 +463,8 @@ AnariDeviceSession
   - renderer/world/frame handles owned for the active Hydra delegate
   - deterministic teardown
 
-AnariDeviceCatalogModel
-  - read-only Qt model of probed candidates and failures
+AnariDeviceCatalog
+  - native collection of probed candidates and failures
   - stable selection key: library identity + device subtype
 ```
 
@@ -492,7 +529,7 @@ AnariTraceEvent
 ```
 
 Large arrays and images must be summarized by type, dimensions, byte size, and a
-content digest rather than copied into the UI log.
+content digest rather than copied into trace records.
 
 ### Instrumentation decision
 
@@ -532,57 +569,33 @@ unchanged
   instance #9
 ```
 
-## UX research before the ANARI workspace design
+## Data delivered to the separate UI task
 
-The ANARI Device mode UX is intentionally unresolved. Do not begin by adding a third
-large tab that simply looks like a USD viewer. First collect functional data from the
-fixture, devices, and trace layer, then answer these workflow questions with a small
-interactive prototype:
-
-1. Is the primary unit a scene document, a comparison workspace, or a captured delta?
-2. Does a technical artist normally view one device, A/B two devices, or inspect one
-   device plus its ANARI trace?
-3. Which device differences need synchronized camera/time and which settings must stay
-   device-local?
-4. How are unsupported objects, degraded materials, and extension differences surfaced
-   without overwhelming the viewport?
-5. Does selection originate in the USD hierarchy, an image ID channel, or either?
-6. How does a user move from a USD material delta to the exact ANARI parameter operation
-   and then to device diagnostics?
-7. Where can a separate Slang experiment be attached without implying that every ANARI
-   implementation can consume arbitrary Slang?
-
-### Candidate workspace, not a committed UI
+The backend work must finish with an implementation-neutral handoff, not widgets:
 
 ```text
-+----------------------+------------------------+----------------------+
-| USD hierarchy/look   | synchronized viewport | device + render      |
-| session layer edits  | one device or A/B      | settings/capability  |
-+----------------------+------------------------+----------------------+
-| Hydra delta          | ANARI operation trace  | diagnostics          |
-+----------------------+------------------------+----------------------+
-| optional separate ShaderDocument experiment                         |
-+---------------------------------------------------------------------+
+DeviceCandidate
+  configured identity
+  probe state and diagnostic
+  device subtypes and advertised extensions
+
+DeviceSessionStatus
+  stable session identity
+  active candidate/subtype
+  lifecycle state and diagnostics
+
+FrameSnapshot
+  session + frame sequence identity
+  width, height, pixel type, byte storage
+
+AnariTraceEvent
+  ordered operation, stable trace object identity, type/subtype, parameter summary
 ```
 
-The first prototype needs only device selection, one viewport, stage identity, and an
-operation trace. Add comparison layout and look editing only after observing the
-initial population and delta data. Preserve the ability to launch Shader Toy and Render
-Toy without loading OpenUSD or any ANARI device.
-
-### UX evidence deliverable
-
-Before finalizing `SceneDocument` or `WorkbenchWindow` composition, check in
-`docs/anari/ANARI_DEVICE_UX.md` containing:
-
-- the jobs-to-be-done for a technical artist and a renderer developer;
-- screenshots/wireframes for single-device, compare, and trace-focused workflows;
-- device-switch and failure-state behavior;
-- which state is shared across devices and which is local;
-- observed trace examples for every fixture delta; and
-- the chosen smallest useful workspace with rejected alternatives.
-
-That document is a gate for production UI work, not post-hoc documentation.
+Exact C++ types should be introduced only when the spikes need them. They must not
+depend on `QWidget`, `WorkbenchWindow`, `SlangRhiWidget`, or a proposed layout. The
+separate UI task can wrap stable native data in Qt models and decide whether the artist
+workflow is single-device, comparison, or trace-focused.
 
 ## First fixture and delta matrix
 
@@ -667,16 +680,15 @@ Create:
 
 - `cpp/include/slang_qrhi/AnariLibrary.h`;
 - `cpp/src/AnariLibrary.cpp`;
-- `cpp/include/slang_qrhi/AnariDeviceCatalogModel.h`;
-- `cpp/src/AnariDeviceCatalogModel.cpp`;
+- `cpp/include/slang_qrhi/AnariDeviceCatalog.h`;
+- `cpp/src/AnariDeviceCatalog.cpp`;
 - `tests/test_anari_library.cpp`; and
 - `tests/test_anari_device_candidates.cpp`.
 
 Modify:
 
-- `CMakeLists.txt` — use upstream `find_package(anari CONFIG ...)`, add
-  `SLANG_QRHI_WITH_ANARI`, an optional native target, and tests;
-- binding files only after the C++ ownership API stabilizes.
+- `CMakeLists.txt` — use upstream `find_package(anari CONFIG ...)` and add a separate,
+  optional backend target behind `SLANG_QRHI_WITH_ANARI`, defaulting to `OFF`.
 
 Ownership: `AnariLibrary` owns the library handle; a device session retains its
 library. The catalog owns probe results, not active render devices.
@@ -733,10 +745,10 @@ code reopening or traversing the stage.
 
 Create after selecting the upstream-supported instrumentation seam:
 
-- `cpp/include/slang_qrhi/AnariTraceModel.h`;
-- `cpp/src/AnariTraceModel.cpp`;
+- `cpp/include/slang_qrhi/AnariTraceLog.h`;
+- `cpp/src/AnariTraceLog.cpp`;
 - `cpp/include/slang_qrhi/AnariTraceEvent.h`;
-- `tests/test_anari_trace_model.cpp`;
+- `tests/test_anari_trace_log.cpp`;
 - `tests/test_hdanari_deltas.cpp`;
 - `docs/anari/traces/*.json` golden structural traces where stable.
 
@@ -763,82 +775,26 @@ USD ownership depend on it.
 Milestone: the same `hdAnari` scene produces an inspectable SDK trace; optionally, a
 TSD capture can be opened independently and forwarded through Helide or VisRTX.
 
-### Stage 6: real `SceneDocument`
+### Stage 6: backend handoff and regression gate
 
 Create:
 
-- `cpp/include/slang_qrhi/SceneDocument.h`;
-- `cpp/src/SceneDocument.cpp`;
-- `tests/test_scene_document.cpp`.
+- `cpp/include/slang_qrhi/AnariBackendTypes.h` only for value types proven necessary by
+  the spikes;
+- `tests/test_anari_backend_lifecycle.cpp`;
+- `tests/test_anari_frame_snapshot.cpp`; and
+- `docs/anari/BACKEND_HANDOFF.md` describing threading, ownership, callbacks/value
+  records, and limitations for the separate UI task.
 
-Modify:
+Do not create or modify `SceneDocument`, `WorkbenchWindow`, `SlangRhiWidget`, Qt
+inspectors/models, Shiboken bindings, or look-authoring UI in this stage.
 
-- `cpp/include/slang_qrhi/WorkbenchWindow.h`;
-- `cpp/src/WorkbenchWindow.cpp`;
-- `bindings/slang_qrhi_bindings.h` and `bindings/typesystem_slang_qrhi.xml` only after
-  native tests pass;
-- `CMakeLists.txt`.
+Milestone: headless native tests load the fixture, render and copy a frame, report
+capabilities/status/trace records, switch devices, and tear down safely. With ANARI
+options disabled, the existing application and Python package build and behave exactly
+as before.
 
-Minimum coordination surface:
-
-```text
-USD stage URL
-working session/override layer
-Hydra and hdAnari lifecycle
-selected library + device subtype stable key
-ANARI renderer/world/frame coordination required by hdAnari
-time code
-selection
-render settings
-status and diagnostics
-```
-
-It must not own another scene graph, custom USD translation, device GPU internals,
-viewport resources, Slang compiler state, or Python renderer state.
-
-Rename the current shader-pass `sceneDocument()` before introducing the new API.
-
-Milestone: a headless event-loop test opens the fixture, selects Helide, receives a
-frame-ready signal, switches device where available, and closes safely.
-
-### Stage 7: generic scene viewport
-
-Create:
-
-- `cpp/include/slang_qrhi/AnariFrameWidget.h`;
-- `cpp/src/AnariFrameWidget.cpp`;
-- `tests/test_anari_frame_conversion.cpp`.
-
-Modify:
-
-- `WorkbenchWindow` to compose the new scene viewport beside the existing shader
-  viewport rather than turning `SlangRhiWidget` into a multi-renderer abstraction.
-
-The widget consumes a host-owned immutable frame snapshot containing size, format,
-channel metadata, pixels, and sequence number. It owns only presentation resources.
-Frame mapping/copying belongs to the host/session side and must not block the UI thread.
-
-Milestone: one widget displays mapped color output from Helide and VisRTX with no
-device-specific branch.
-
-### Stage 8: USD look editing
-
-Create:
-
-- `cpp/include/slang_qrhi/UsdLookModel.h`;
-- `cpp/src/UsdLookModel.cpp`;
-- `cpp/include/slang_qrhi/UsdLookInspector.h`;
-- `cpp/src/UsdLookInspector.cpp`;
-- `tests/test_usd_look_override.cpp`.
-
-Initial properties: base color and roughness only. `UsdLookModel` authors opinions into
-the working USD layer; it does not edit ANARI objects. Hydra and `hdAnari` propagate
-the result.
-
-Milestone: saving/reopening the override preserves edits, and traces prove each edit
-touches material state without recreating geometry.
-
-### Stage 9: existing-device source comparison
+### Stage 7: existing-device source comparison
 
 Complete the table in this document and move the cited result to
 `docs/anari/DEVICE_IMPLEMENTATION_COMPARISON.md`. Include actual code paths for Helide,
@@ -848,14 +804,15 @@ renderer-specific work and optional features.
 Milestone: the evidence is sufficient to choose helper strategy A, B, or C without
 writing Island code.
 
-### Stage 10: Island device design only
+### Stage 8: Island backend design only
 
 Create:
 
 - `docs/anari/ISLAND_DEVICE_DESIGN.md`.
 
-Do not add production Island code yet. The design must use the captured `hdAnari` call
-surface and identify:
+Do not add production Island code yet. The design must describe an ANARI backend that
+is independently loadable and testable without any Miskeyed UI. It must use the
+captured `hdAnari` call surface and identify:
 
 - fixture-required ANARI types and parameters;
 - exact mapping to Island resources/render-graph APIs;
@@ -867,10 +824,24 @@ surface and identify:
 - teardown and frames-in-flight lifetime;
 - renderer-specific glue size by responsibility, not an arbitrary line target.
 
+The eventual Island deliverable is `anari_library_island` (or the upstream-agreed
+library name), its runtime dependencies, query metadata, and backend tests. It must not
+contain `WorkbenchWindow`, Qt widget, `SceneDocument`, or application-workspace code.
+
+Island acceptance is backend-only:
+
+1. load through `anariLoadLibrary()` and report query metadata;
+2. render a direct ANARI triangle without Miskeyed UI code;
+3. render the captured `hdAnari` fixture call surface;
+4. pass the selected ANARI CTS coverage appropriate to its advertised features;
+5. demonstrate material/geometry/transform incremental commits; and
+6. build as an optional target or independent package without linking Qt, QRhi, or the
+   Workbench application target.
+
 Milestone: a source-cited triangle and PBR-fixture design exposes any missing generic
 helper before implementation.
 
-### Stage 11: device-adapter decision
+### Stage 9: device-adapter decision
 
 Choose in this order:
 
@@ -884,28 +855,15 @@ same missing behavior. Do not make the host depend on this device-authoring laye
 Milestone: an architecture decision record names reused upstream helpers, missing
 facilities, measured duplication, and the smallest justified addition.
 
-## `SceneDocument` design constraints
+## Boundary with the separate UI task
 
-The final API must be derived from the Hydra host prototype, not guessed in advance.
-Its conceptual responsibility remains:
+This plan does not specify or implement `SceneDocument`. The backend handoff records
+must allow the later application coordinator to retain one USD stage while recreating
+device-side world/frame/renderer objects and the Hydra delegate/render index when a
+device changes. Device handles remain private backend state.
 
-```text
-SceneDocument
-  USD stage/session identity
-  Hydra + hdAnari lifecycle
-  active ANARI selection/session coordination
-  time and selection
-  render settings
-  status and diagnostics
-```
-
-Device selection changes renderer implementation only. It must not change stage
-ownership, look-authoring behavior, `SceneDocument` meaning, or `ShaderDocument`
-ownership.
-
-The active session may recreate device-side world/frame/renderer objects and the Hydra
-delegate/render index if required. Those are consequences of switching an ANARI device,
-not reasons to reopen the USD stage or expose device handles as public scene state.
+The UI task must consume this plan's tested lifecycle and data contracts rather than
+moving Qt or workspace decisions back into the backend.
 
 ## Device-specific roles in the first milestone
 
@@ -913,7 +871,7 @@ not reasons to reopen the USD stage or expose device handles as public scene sta
 
 Purpose: baseline correctness and CI-friendly smoke testing. It answers whether the
 host can load a simple implementation and whether the emitted scene is accepted. Do
-not optimize the UI or fixture around its image quality.
+not optimize the fixture or acceptance threshold around its image quality.
 
 ### VisRTX
 
@@ -930,8 +888,8 @@ state. Neither a code trace nor final capture alone replaces semantic delta asse
 ### Island
 
 Purpose: later measure how much renderer-specific work is needed to expose a modern
-Slang/render-graph renderer through ANARI. Island assumptions must not enter the host,
-`SceneDocument`, trace model, or generic viewport.
+Slang/render-graph renderer through ANARI. Island is backend-only: its assumptions must
+not enter the generic host data contracts or any Miskeyed UI class.
 
 ## Risks and stop conditions
 
@@ -944,7 +902,7 @@ Slang/render-graph renderer through ANARI. Island assumptions must not enter the
 | Trace misses `hdAnari` calls | Prefer upstream layer or dispatch interception | Only host calls can be observed |
 | Unsupported `hdAnari` objects | Capture call surface and report capabilities/status | Minimal fixture cannot be expressed by a target device |
 | Unsafe graphics sharing | Begin with mapped color copy | Device cannot provide a safely readable frame |
-| UI blocking on frame map/render | Worker/session thread and immutable frame snapshots | Device API requires unsafe UI-thread ownership |
+| Consumer blocking on frame map/render | Backend worker/session thread and immutable frame snapshots | Device API cannot provide a safe asynchronous handoff |
 | Slang runtime conflict with Island | Pin and test one process before device implementation | Incompatible runtimes/symbols must coexist |
 | Python lifetime ambiguity | Native QObject/session ownership only | Correctness requires Python-owned handles |
 | Over-generalized device kit | Source comparison and measured duplication | Only one adapter needs the proposed helper |
@@ -969,9 +927,8 @@ process-global environment mutation. The next independently testable task is the
 headless USD -> Hydra -> `hdAnari` -> Helide fixture, followed by the exact same path
 through VisRTX.
 
-Do not begin with `SceneDocument`, a Qt viewport, a custom ANARI abstraction, or an
-Island adapter. Their correct shapes depend on evidence produced by these spikes and
-the ANARI Device UX research deliverable.
+Do not begin with `SceneDocument`, a Qt viewport, or an Island adapter. The UI work is a
+separate task, and the Island backend depends on evidence produced by these spikes.
 
 ## Explicit non-goals
 
@@ -981,7 +938,8 @@ Do not:
 - replace ANARI with a renderer-specific API;
 - write custom USD traversal or USD-to-Island translation;
 - mirror Hydra dependency state;
-- hard-code Helide, VisRTX, TSD, or Island into `SceneDocument`;
+- modify `SceneDocument`, `WorkbenchWindow`, `SlangRhiWidget`, inspectors, or Qt layout
+  as part of this backend plan;
 - make Python own rendering;
 - merge `SceneDocument` with `ShaderDocument`;
 - implement complete ANARI or MaterialX support before a fixture requires it;
@@ -993,12 +951,12 @@ Do not:
 
 ## Definition of the first architecture proof
 
-The host architecture is proven when:
+The backend architecture is proven when:
 
 1. one USD stage remains open and authoritative;
 2. one Hydra/`hdAnari` path populates Helide and VisRTX in separate device sessions;
 3. switching devices requires no application-side USD traversal;
-4. both frames can be displayed by one generic mapped-frame Qt viewport;
+4. both devices produce the same implementation-neutral mapped-frame snapshot contract;
 5. base-color and roughness edits are authored into a USD override;
 6. the trace associates those edits with material parameter operations and recommits;
 7. geometry and arrays retain identity across material-only edits;
