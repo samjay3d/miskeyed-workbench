@@ -1,10 +1,10 @@
-#include <slang_qrhi/LspClient.h>
+#include <miskeyed/workbench/slang_rhi/LspClient.h>
 #include <QProcess>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QCoreApplication>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 LspClient::LspClient(QObject* parent)
     : QObject(parent)
@@ -259,4 +259,4 @@ void LspClient::handleMessage(const QJsonObject& message)
     }
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

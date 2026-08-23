@@ -2,12 +2,12 @@
 
 #include <rhi/qshader.h>
 #include <slang.h>
-#include <slang_qrhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
 
-namespace slang_qrhi::qt68 {
+namespace miskeyed::workbench::slang_rhi::qt68 {
 
 QShader buildQShader(QShader::Stage stage, const QString& entryPoint, const QByteArray& spirv,
     const QByteArray& hlsl, const QByteArray& msl, slang::ProgramLayout* layout,
     const QList<ParameterDescriptor>& parameters);
 
-} // namespace slang_qrhi::qt68
+} // namespace miskeyed::workbench::slang_rhi::qt68

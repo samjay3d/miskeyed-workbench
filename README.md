@@ -196,10 +196,10 @@ Digests use a 32-byte BLAKE2b implementation matching
 ## Native C++ API
 
 ```cpp
-#include <slang_qrhi/ShaderDocument.h>
-#include <slang_qrhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
 
-using namespace slang_qrhi;   // internal C++ namespace
+using namespace miskeyed::workbench::slang_rhi;   // internal C++ namespace
 
 auto* doc = new ShaderDocument(parent);
 doc->setFileUrl(QUrl::fromLocalFile("eye.slang"));
@@ -281,7 +281,7 @@ cmake --build build --config Release
 ## Files that matter
 
 ```text
-cpp/include/slang_qrhi/
+cpp/include/miskeyed/workbench/slang_rhi/
     DependencyGraph.h       live dependency DAG + dirty propagation
     ShaderParameterModel.h  reflected GPU parameter model
     ParameterInspector.h    automatic Qt parameter controls

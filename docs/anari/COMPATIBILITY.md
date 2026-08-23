@@ -41,4 +41,4 @@ continues to exercise the default-off Workbench path independently.
 
 Update this file with exact release/commit IDs and runtime artifacts when that Windows
 build is established. Do not turn an experimental backend dependency into a required
-dependency of `slang_qrhi_core`.
+dependency of `miskeyed_workbench_slang_rhi`.

@@ -12,14 +12,14 @@ class QComboBox;
 class QPushButton;
 class QTabWidget;
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 class ShaderDocument;
 class SlangRhiWidget;
 class CodeEditor;
 class LspClient;
 
-class SLANG_QRHI_EXPORT WorkbenchWindow final : public QMainWindow {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchWindow final : public QMainWindow {
     Q_OBJECT
 public:
     explicit WorkbenchWindow(QWidget* parent = nullptr);
@@ -76,4 +76,4 @@ private:
     int m_editorWarnings = 0;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

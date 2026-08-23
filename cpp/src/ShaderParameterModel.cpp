@@ -1,10 +1,10 @@
-#include <slang_qrhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>
 #include <cstring>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 ShaderParameterModel::ShaderParameterModel(QObject* parent)
     : QAbstractListModel(parent)
@@ -214,4 +214,4 @@ bool ShaderParameterModel::packValue(
     }
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

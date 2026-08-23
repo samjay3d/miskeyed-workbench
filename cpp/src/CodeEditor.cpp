@@ -1,4 +1,4 @@
-#include <slang_qrhi/CodeEditor.h>
+#include <miskeyed/workbench/slang_rhi/CodeEditor.h>
 #include <QAbstractItemView>
 #include <QCompleter>
 #include <QJsonArray>
@@ -13,7 +13,7 @@
 #include <QTimer>
 #include <QToolTip>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 namespace {
     // Gutter widget: forwards its paint/width to the owning editor.
@@ -487,4 +487,4 @@ void CodeEditor::mousePressEvent(QMouseEvent* event)
     QPlainTextEdit::mousePressEvent(event);
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi
