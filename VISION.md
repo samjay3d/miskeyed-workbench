@@ -47,8 +47,13 @@ Slang edits       -> ShaderDocument (independent authoring path)
 
 The product value is device comparison, scene-delta inspection, look overrides, and
 renderer debugging in a small neutral host. Helide is a baseline, VisRTX is a useful GPU
-renderer, ANARI-USD is a diagnostic/export target, and Island is a later experiment in
-how easily a modern Slang renderer can be exposed as another device.
+renderer, and ANARI-SDK debug tooling or optional TSD capture can expose submitted
+state. Island is a later experiment in how easily a modern Slang renderer can be
+exposed as another device.
+
+Portable USD/MaterialX looks and device-specific programmable Slang features are
+different lanes. The workbench should make that distinction visible rather than imply
+that arbitrary Slang is portable across every ANARI implementation.
 
 The UX for this mode must be designed from observed Hydra and ANARI behavior. It is not
 defined merely as “render USD in Qt,” and Island is not the product foundation.
