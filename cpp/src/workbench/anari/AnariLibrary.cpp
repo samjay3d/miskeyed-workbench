@@ -1,8 +1,8 @@
-#include <slang_qrhi/anari/AnariLibrary.h>
+#include <miskeyed/workbench/anari/AnariLibrary.h>
 
 #include <utility>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 namespace {
 
     std::vector<std::string> copyStringList(const char* const* values)
@@ -68,4 +68,4 @@ void AnariLibrary::statusCallback(const void* userData, ANARIDevice, ANARIObject
         { severity, code, sourceType, message ? std::string(message) : std::string() });
 }
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

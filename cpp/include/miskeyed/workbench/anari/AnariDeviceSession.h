@@ -1,12 +1,12 @@
 #pragma once
 
-#include <slang_qrhi/anari/AnariLibrary.h>
+#include <miskeyed/workbench/anari/AnariLibrary.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 
 class AnariDeviceSession final {
 public:
@@ -31,4 +31,4 @@ private:
     ANARIDevice m_device = nullptr;
 };
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

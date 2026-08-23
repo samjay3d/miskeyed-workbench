@@ -32,14 +32,16 @@ an extensible UI framework or anticipate its widget hierarchy.
 
 The first backend slice is now implemented:
 
-- `SLANG_QRHI_WITH_ANARI` is an opt-in CMake feature, defaulting to `OFF`;
-- `slang_qrhi_anari_backend` is isolated from `slang_qrhi_core` and Qt;
+- `MISKEYED_WORKBENCH_WITH_ANARI` is an opt-in CMake feature, defaulting to `OFF`;
+- `miskeyed_workbench_anari_backend` is isolated from `slang_qrhi_core` and Qt;
+- device-neutral code lives under `miskeyed::workbench::anari_backend` and
+  `cpp/include/miskeyed/workbench/anari`; the existing renderer remains `slang_qrhi`;
 - `AnariCandidates` parses deterministic configured candidates while preserving the
   ANARI loader's `name,path` syntax;
 - `AnariLibrary` owns load/unload, subtype/extension queries, and status collection;
 - `AnariDeviceCatalog` explicitly probes configured candidates;
 - `AnariDeviceSession` keeps its library alive through device release; and
-- `slang-qrhi-anari-probe` provides the first headless inspection surface, with a
+- `workbench-anari-probe` provides the first headless inspection surface, with a
   standalone ANARI-only build in `spikes/anari_probe`.
 
 The Hydra fixture, `hdAnari` selection seam, device switching across populated scenes,
@@ -698,20 +700,20 @@ one.
 
 Implemented:
 
-- `cpp/include/slang_qrhi/anari/AnariCandidates.h`;
-- `cpp/src/anari/AnariCandidates.cpp`;
-- `cpp/include/slang_qrhi/anari/AnariLibrary.h`;
-- `cpp/src/anari/AnariLibrary.cpp`;
-- `cpp/include/slang_qrhi/anari/AnariDeviceCatalog.h`;
-- `cpp/src/anari/AnariDeviceCatalog.cpp`;
-- `cpp/include/slang_qrhi/anari/AnariDeviceSession.h`;
-- `cpp/src/anari/AnariDeviceSession.cpp`; and
+- `cpp/include/miskeyed/workbench/anari/AnariCandidates.h`;
+- `cpp/src/workbench/anari/AnariCandidates.cpp`;
+- `cpp/include/miskeyed/workbench/anari/AnariLibrary.h`;
+- `cpp/src/workbench/anari/AnariLibrary.cpp`;
+- `cpp/include/miskeyed/workbench/anari/AnariDeviceCatalog.h`;
+- `cpp/src/workbench/anari/AnariDeviceCatalog.cpp`;
+- `cpp/include/miskeyed/workbench/anari/AnariDeviceSession.h`;
+- `cpp/src/workbench/anari/AnariDeviceSession.cpp`; and
 - `tests/test_anari_candidates.cpp`.
 
 Modify:
 
 - `CMakeLists.txt` — use upstream `find_package(anari CONFIG ...)` and add a separate,
-  optional backend target behind `SLANG_QRHI_WITH_ANARI`, defaulting to `OFF`.
+  optional backend target behind `MISKEYED_WORKBENCH_WITH_ANARI`, defaulting to `OFF`.
 
 Ownership: `AnariLibrary` owns the library handle; a device session retains its
 library. The catalog owns probe results, not active render devices.
@@ -743,8 +745,8 @@ Milestone: the same fixture and Hydra path produce frames from Helide and VisRTX
 
 ### Slice 3: device switching
 
-Extend the implemented `cpp/include/slang_qrhi/anari/AnariDeviceSession.h` and
-`cpp/src/anari/AnariDeviceSession.cpp` only as required by the captured lifecycle. Add
+Extend the implemented `cpp/include/miskeyed/workbench/anari/AnariDeviceSession.h` and
+`cpp/src/workbench/anari/AnariDeviceSession.cpp` only as required by the captured lifecycle. Add
 `tests/test_anari_device_switch.cpp`.
 
 Modify:
@@ -766,9 +768,9 @@ code reopening or traversing the stage.
 
 Create after selecting the upstream-supported instrumentation seam:
 
-- `cpp/include/slang_qrhi/anari/AnariTraceLog.h`;
-- `cpp/src/anari/AnariTraceLog.cpp`;
-- `cpp/include/slang_qrhi/anari/AnariTraceEvent.h`;
+- `cpp/include/miskeyed/workbench/anari/AnariTraceLog.h`;
+- `cpp/src/workbench/anari/AnariTraceLog.cpp`;
+- `cpp/include/miskeyed/workbench/anari/AnariTraceEvent.h`;
 - `tests/test_anari_trace_log.cpp`;
 - `tests/test_hdanari_deltas.cpp`;
 - `docs/anari/traces/*.json` golden structural traces where stable.
@@ -800,7 +802,7 @@ TSD capture can be opened independently and forwarded through Helide or VisRTX.
 
 Create:
 
-- `cpp/include/slang_qrhi/anari/AnariBackendTypes.h` only for value types proven necessary by
+- `cpp/include/miskeyed/workbench/anari/AnariBackendTypes.h` only for value types proven necessary by
   the spikes;
 - `tests/test_anari_backend_lifecycle.cpp`;
 - `tests/test_anari_frame_snapshot.cpp`; and

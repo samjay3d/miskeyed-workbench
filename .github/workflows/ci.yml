@@ -114,7 +114,7 @@ jobs:
                   set -euo pipefail
                   ctest --test-dir "$RUNNER_TEMP/miskeyed-anari-build" --output-on-failure
                   export LD_LIBRARY_PATH="$RUNNER_TEMP/anari-install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-                  "$RUNNER_TEMP/miskeyed-anari-build/miskeyed-anari-probe" \
+                  "$RUNNER_TEMP/miskeyed-anari-build/workbench-anari-probe" \
                     "sink,$RUNNER_TEMP/anari-install/lib/"
 
     test:

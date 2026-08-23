@@ -1,9 +1,9 @@
-#include <slang_qrhi/anari/AnariDeviceSession.h>
+#include <miskeyed/workbench/anari/AnariDeviceSession.h>
 
 #include <algorithm>
 #include <utility>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 
 AnariDeviceSession::AnariDeviceSession(std::unique_ptr<AnariLibrary> library, std::string subtype)
     : m_library(std::move(library))
@@ -41,4 +41,4 @@ AnariDeviceSession::~AnariDeviceSession()
     // keeping implementation code loaded until the device has been released.
 }
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

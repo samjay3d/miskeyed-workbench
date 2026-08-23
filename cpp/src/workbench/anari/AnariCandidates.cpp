@@ -1,4 +1,4 @@
-#include <slang_qrhi/anari/AnariCandidates.h>
+#include <miskeyed/workbench/anari/AnariCandidates.h>
 
 #include <algorithm>
 #include <cctype>
@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 namespace {
 
     std::string trim(std::string_view value)
@@ -52,4 +52,4 @@ std::vector<std::string> configuredCandidates()
     return { "helide", "helide_gpu", "visrtx", "debug" };
 }
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

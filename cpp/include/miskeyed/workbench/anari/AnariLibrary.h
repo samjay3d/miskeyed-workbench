@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 
 struct AnariStatusMessage {
     ANARIStatusSeverity severity = ANARI_SEVERITY_INFO;
@@ -43,4 +43,4 @@ private:
     std::vector<AnariStatusMessage> m_status;
 };
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

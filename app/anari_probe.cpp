@@ -1,12 +1,12 @@
-#include <slang_qrhi/anari/AnariCandidates.h>
-#include <slang_qrhi/anari/AnariDeviceCatalog.h>
-#include <slang_qrhi/anari/AnariDeviceSession.h>
+#include <miskeyed/workbench/anari/AnariCandidates.h>
+#include <miskeyed/workbench/anari/AnariDeviceCatalog.h>
+#include <miskeyed/workbench/anari/AnariDeviceSession.h>
 
 #include <iostream>
 
 int main(int argc, char** argv)
 {
-    using namespace slang_qrhi::anari_backend;
+    using namespace miskeyed::workbench::anari_backend;
 
     const auto candidates = argc > 1 ? parseCandidateList(argv[1]) : configuredCandidates();
     AnariDeviceCatalog catalog(candidates);

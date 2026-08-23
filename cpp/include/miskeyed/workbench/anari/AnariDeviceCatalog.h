@@ -1,11 +1,11 @@
 #pragma once
 
-#include <slang_qrhi/anari/AnariLibrary.h>
+#include <miskeyed/workbench/anari/AnariLibrary.h>
 
 #include <string>
 #include <vector>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 
 struct AnariDeviceSubtypeInfo {
     std::string name;
@@ -31,4 +31,4 @@ private:
     std::vector<AnariCandidateInfo> m_entries;
 };
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

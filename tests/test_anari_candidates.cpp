@@ -1,11 +1,11 @@
-#include <slang_qrhi/anari/AnariCandidates.h>
+#include <miskeyed/workbench/anari/AnariCandidates.h>
 
 #include <cassert>
 #include <vector>
 
 int main()
 {
-    using slang_qrhi::anari_backend::parseCandidateList;
+    using miskeyed::workbench::anari_backend::parseCandidateList;
 
     assert((parseCandidateList("") == std::vector<std::string> {}));
     assert(

@@ -1,8 +1,8 @@
-#include <slang_qrhi/anari/AnariDeviceCatalog.h>
+#include <miskeyed/workbench/anari/AnariDeviceCatalog.h>
 
 #include <utility>
 
-namespace slang_qrhi::anari_backend {
+namespace miskeyed::workbench::anari_backend {
 
 AnariDeviceCatalog::AnariDeviceCatalog(std::vector<std::string> candidates)
     : m_candidates(std::move(candidates))
@@ -30,4 +30,4 @@ void AnariDeviceCatalog::probe()
     }
 }
 
-} // namespace slang_qrhi::anari_backend
+} // namespace miskeyed::workbench::anari_backend

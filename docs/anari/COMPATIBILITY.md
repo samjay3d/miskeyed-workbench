@@ -18,7 +18,7 @@ repository.
 
 ## Runtime contract
 
-- `SLANG_QRHI_WITH_ANARI=OFF` is the default and does not call `find_package(anari)`.
+- `MISKEYED_WORKBENCH_WITH_ANARI=OFF` is the default and does not call `find_package(anari)`.
 - With the option enabled, the selected ANARI installation must export
   `anari::anari`.
 - Candidate strings are passed to `anariLoadLibrary()` unchanged. This preserves the

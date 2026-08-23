@@ -325,8 +325,9 @@ Each candidate is an ANARI loader name or the SDK's `name,path` form. See
 [`docs/anari/COMPATIBILITY.md`](docs/anari/COMPATIBILITY.md) and the
 [`ANARI implementation breakdown`](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
 
-The root build exposes the same backend behind `SLANG_QRHI_WITH_ANARI=ON`. Leaving it
-off preserves the existing dependency graph and runtime behavior.
+The root build exposes the same backend behind
+`MISKEYED_WORKBENCH_WITH_ANARI=ON`. Leaving it off preserves the existing dependency
+graph and runtime behavior.
 
 1. reflect Slang user attributes into ranges/groups/widgets;
 2. resource reflection model (`Texture2D`, samplers, buffers, HDRI file widgets);

@@ -6,6 +6,11 @@ This document describes the shipped **Shader Toy** and **Render Toy** modes. The
 planned **ANARI Device** mode is not shipped architecture; its product boundary and
 research gates live in [docs/ANARI_HOST_IMPLEMENTATION_PLAN.md](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
 
+The shipped renderer retains the historical `slang_qrhi` C++ namespace and target
+names. New device-neutral backend code uses `miskeyed::workbench` and
+`miskeyed_workbench_*` so ANARI host infrastructure is not presented as part of the
+Slang/QRhi renderer.
+
 ## Ownership
 
 - **Qt 6.8 / QRhi** owns the graphics device, render targets, command buffers, and widget lifecycle.

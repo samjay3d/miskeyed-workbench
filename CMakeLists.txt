@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 
 option(SLANG_QRHI_BUILD_APP "Build native standalone workbench" ON)
 option(SLANG_QRHI_BUILD_PYTHON "Build Shiboken6 Python bindings" ON)
-option(SLANG_QRHI_WITH_ANARI "Build the optional native ANARI backend foundation" OFF)
+option(MISKEYED_WORKBENCH_WITH_ANARI "Build the optional native ANARI backend foundation" OFF)
 
 # Build inputs come from the environment so a clean checkout and CI build identically,
 # with no machine-specific paths:
@@ -21,31 +21,31 @@ find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Slang REQUIRED)
 
-if(SLANG_QRHI_WITH_ANARI)
+if(MISKEYED_WORKBENCH_WITH_ANARI)
     # ANARI stays in a separate native target so the shipped Shader Toy and Render Toy
     # dependency graph is identical when this experimental backend is disabled.
     find_package(anari CONFIG REQUIRED)
 
-    add_library(slang_qrhi_anari_backend STATIC
-        cpp/src/anari/AnariCandidates.cpp
-        cpp/src/anari/AnariDeviceCatalog.cpp
-        cpp/src/anari/AnariLibrary.cpp
-        cpp/src/anari/AnariDeviceSession.cpp
+    add_library(miskeyed_workbench_anari_backend STATIC
+        cpp/src/workbench/anari/AnariCandidates.cpp
+        cpp/src/workbench/anari/AnariDeviceCatalog.cpp
+        cpp/src/workbench/anari/AnariLibrary.cpp
+        cpp/src/workbench/anari/AnariDeviceSession.cpp
     )
-    target_include_directories(slang_qrhi_anari_backend
+    target_include_directories(miskeyed_workbench_anari_backend
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
             $<INSTALL_INTERFACE:include>
     )
-    target_link_libraries(slang_qrhi_anari_backend PUBLIC anari::anari)
+    target_link_libraries(miskeyed_workbench_anari_backend PUBLIC anari::anari)
 
-    add_executable(slang-qrhi-anari-probe app/anari_probe.cpp)
-    target_link_libraries(slang-qrhi-anari-probe PRIVATE slang_qrhi_anari_backend)
+    add_executable(workbench-anari-probe app/anari_probe.cpp)
+    target_link_libraries(workbench-anari-probe PRIVATE miskeyed_workbench_anari_backend)
 
     include(CTest)
     if(BUILD_TESTING)
         add_executable(test_anari_candidates tests/test_anari_candidates.cpp)
-        target_link_libraries(test_anari_candidates PRIVATE slang_qrhi_anari_backend)
+        target_link_libraries(test_anari_candidates PRIVATE miskeyed_workbench_anari_backend)
         add_test(NAME anari_candidates COMMAND test_anari_candidates)
     endif()
 endif()
@@ -128,7 +128,8 @@ install(TARGETS slang_qrhi_core ARCHIVE DESTINATION lib)
 install(DIRECTORY cpp/include/slang_qrhi DESTINATION include)
 install(DIRECTORY shaders/ DESTINATION miskeyed/workbench/shaders)
 
-if(SLANG_QRHI_WITH_ANARI)
-    install(TARGETS slang_qrhi_anari_backend ARCHIVE DESTINATION lib)
-    install(TARGETS slang-qrhi-anari-probe RUNTIME DESTINATION bin)
+if(MISKEYED_WORKBENCH_WITH_ANARI)
+    install(TARGETS miskeyed_workbench_anari_backend ARCHIVE DESTINATION lib)
+    install(TARGETS workbench-anari-probe RUNTIME DESTINATION bin)
+    install(DIRECTORY cpp/include/miskeyed DESTINATION include)
 endif()
