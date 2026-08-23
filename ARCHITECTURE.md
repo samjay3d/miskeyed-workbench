@@ -2,6 +2,10 @@
 
 `slang-qrhi` is a new native SDK. The old Python renderer/toolchain API is intentionally not part of this package.
 
+This document describes the shipped **Shader Toy** and **Render Toy** modes. The
+planned **ANARI Device** mode is not shipped architecture; its product boundary and
+research gates live in [docs/ANARI_HOST_IMPLEMENTATION_PLAN.md](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
+
 ## Ownership
 
 - **Qt 6.8 / QRhi** owns the graphics device, render targets, command buffers, and widget lifecycle.

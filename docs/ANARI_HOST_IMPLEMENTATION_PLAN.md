@@ -1,23 +1,36 @@
-# Miskeyed ANARI host implementation plan
+# ANARI Device mode research and design plan
 
 ## Status and evidence boundary
 
-This is the implementation plan for making Miskeyed a device-neutral ANARI host and
-technical-art workbench. Island is a future device-adapter experiment, not the product
-foundation and not a prerequisite for the host.
+This document plans Miskeyed's third work mode, **ANARI Device**. It does not redefine
+the whole application as an ANARI host and it does not make Island the product.
 
-The plan is grounded in the current Miskeyed source and the public ANARI API surface.
-The execution environment used to prepare it could not fetch GitHub sources, so exact
-upstream versions and implementation-file citations for ANARI-SDK, `hdAnari`, Helide,
-VisRTX, ANARI-USD, and Island remain mandatory outputs of the first source-audit spike.
-They are recorded as unresolved rather than guessed.
+Miskeyed has three modes with increasing scope:
 
-No production integration should begin until that spike pins mutually compatible
-commits and verifies the API assumptions below against upstream source.
+1. **Shader Toy** — one live Slang shader and reflected parameters;
+2. **Render Toy** — Shader Toy with a scene pre-pass and post-process pass; and
+3. **ANARI Device** — real USD/Hydra scene work through selectable ANARI devices.
+
+Modes 1 and 2 are the shipped Slang/QRhi workbench. Mode 3 is a design and research
+track whose UX must be derived from actual function, capability, and delta data. It
+must not distort the simple modes while that design is unsettled.
+
+The upstream review for this revision used these source snapshots:
+
+- ANARI-SDK `7897cbe425e5000ce890631bc97d14e00c750175` (including `hdAnari`,
+  Helide, Helium, debug, sink, remote, examples, and CTS);
+- VisRTX `2eec808bb6676767c4cf393ba580142026ec384e`;
+- NVIDIA-Omniverse/ANARI-USD `011749627f9bc92c6890411a5850802ae0cd067b`;
+  and
+- Island `ad5ccd073652704aa0dd0461bdf38346e1354a7e`.
+
+These moving snapshots inform the research plan; the first build spike still must pin
+a mutually compatible release set for Miskeyed's supported environment.
 
 ## Product statement
 
-Miskeyed should give technical artists a neutral environment in which they can:
+ANARI Device mode should give technical artists a neutral environment in which they
+can:
 
 - open a USD scene and preserve its authored semantics;
 - author non-destructive USD look overrides;
@@ -38,7 +51,21 @@ technical-art look development and renderer debugging
 
 The first architectural proof is not merely rendering USD in Qt. It is one USD stage
 driving multiple interchangeable ANARI devices while incremental scene changes remain
-observable and shader-authoring state remains independent.
+observable and shader-authoring state remains independent. Which panes, workflows, and
+editing affordances make that useful is deliberately still a design question.
+
+## Relationship to the other two modes
+
+| Mode | Input | Native execution | Intended use | Scene authority |
+| --- | --- | --- | --- | --- |
+| Shader Toy | One Slang program | In-process Slang + one QRhi pass | Fast shader experiments | None |
+| Render Toy | Scene-pass Slang + post-pass Slang | In-process Slang + QRhi offscreen/final passes | Small rendering experiments | Shader-authored procedural scene |
+| ANARI Device | USD/Hydra plus selected ANARI implementation | Hydra/hdAnari + device; separate Slang authoring surface | Look development, device comparison, delta inspection | USD stage/session layer |
+
+ANARI Device mode sits beside the existing modes. It does not turn `SlangRhiWidget`
+into an external-renderer container and does not turn the Render Toy into a USD
+renderer. Shared UI concepts should be extracted only after a working vertical slice
+proves they are truly shared.
 
 ## Target architecture
 
@@ -77,9 +104,10 @@ observable and shader-authoring state remains independent.
                          Island + Slang
 ```
 
-The line from `ShaderDocument` to the host denotes future consumption of compiled
-shader products by a capable device. It does not grant the host or `SceneDocument`
-ownership of Slang compiler state.
+The line from `ShaderDocument` to the host is a research seam, not an MVP feature. A
+future Island or other Slang-capable device might consume an explicit compiled shader
+product. Until that contract exists, shader authoring and ANARI rendering remain two
+visible but independent paths.
 
 ## Non-negotiable ownership boundaries
 
@@ -209,8 +237,65 @@ anariCommitParameters
 anariRelease
 ```
 
-The source audit must verify every signature and availability against the pinned
-`<anari/anari.h>` and extension headers.
+The build spike must verify every signature and availability against the selected
+pinned `<anari/anari.h>` and extension headers.
+
+### Source-confirmed loader behavior
+
+The reviewed ANARI-SDK provides the following concrete deployment seam:
+
+- `anariLoadLibrary(name, callback, userData)` dynamically loads a library named
+  `anari_library_[name]` (with the platform prefix/suffix) and resolves the matching
+  `anari_library_[name]_new_library` entry point.
+- A library can be selected indirectly with `anariLoadLibrary("environment", ...)`,
+  which reads `ANARI_LIBRARY`.
+- The loader first performs an ordinary platform library lookup, then tries beside the
+  ANARI frontend library. It also accepts the SDK's `name,path` form for an explicit
+  library location.
+- `anariGetDeviceSubtypes()` and `anariGetDeviceExtensions()` provide the first level
+  of capability metadata; object and parameter query APIs provide the deeper surface.
+- `anariUnloadLibrary()` deletes the implementation object before unloading its OS
+  module, so every object and device from that library must be gone first.
+
+Sources to recheck at the pinned commit:
+
+- ANARI-SDK `src/anari/README.md`, “Implementing ANARILibrary”;
+- `src/anari/LibraryImpl.cpp`, `loadANARILibrary()`;
+- `src/anari/API.cpp`, `anariLoadLibrary()` and `anariUnloadLibrary()`; and
+- `src/anari/include/anari/anari.h`, initialization and introspection declarations.
+
+The SDK already exports `anari::anari`, `anari::anari_static`, and `anari::helium`
+CMake targets. Miskeyed should consume the exported frontend target rather than add a
+custom `FindANARI.cmake` unless the selected packaged SDK demonstrably lacks its config.
+
+### Source-confirmed `hdAnari` constraint
+
+The reviewed `HdAnariRenderDelegate::Initialize()` currently loads
+`anari::loadLibrary("environment", ...)`, queries the `"default"` device subtype, and
+creates `anari::newDevice(library, "default")`. Consequently:
+
+- the selected library currently comes from the process-wide `ANARI_LIBRARY` value;
+- the selected device subtype is currently fixed to `default`;
+- changing library safely means recreating the Hydra render delegate and all of its
+  device-side ANARI state; and
+- changing `ANARI_LIBRARY` concurrently for multiple delegates is unsafe as a host
+  design because environment state is process-global.
+
+This is the most important function-level result discovered so far. The MVP must not
+pretend arbitrary in-process selection is already exposed by `hdAnari`.
+
+Preferred resolution: contribute or maintain the smallest upstreamable `hdAnari`
+change that accepts library name/path and device subtype through render-delegate create
+arguments or initial settings, then stores that selection per delegate. Do not fork its
+USD translation and do not create a subprocess merely to work around selection when a
+native injection seam can be added.
+
+Relevant upstream symbols:
+
+- `HdAnariRendererPlugin::CreateRenderDelegate()`;
+- `HdAnariRenderDelegate(HdRenderSettingsMap const&)`;
+- `HdAnariRenderDelegate::Initialize()`; and
+- `HdAnariRenderParam`, which retains the shared ANARI device and scene state.
 
 ### Discovery versus enumeration
 
@@ -225,6 +310,89 @@ For each candidate library, the host loads it, enumerates device subtypes, queri
 extensions/capabilities, then unloads it when no device or probe retains it. The exact
 loader filename convention and environment variables must come from the pinned
 ANARI-SDK source, not from a Miskeyed convention.
+
+## MVP device deployment model
+
+The first deployable device-support mechanism should be an **installed device pack**,
+not a compile-time list and not arbitrary plugin code downloaded by the UI.
+
+### Pack layout
+
+```text
+devices/
+  <pack-id>/
+    device.json
+    bin/
+      anari_library_<name>.dll
+      <device-owned runtime DLLs>
+    licenses/
+      ...
+```
+
+`device.json` is Miskeyed installation metadata, not a replacement for ANARI
+introspection. Its minimum fields should be:
+
+```json
+{
+  "schema": 1,
+  "id": "org.vendor.device",
+  "displayName": "Device name",
+  "anariLibrary": "library-name",
+  "libraryDirectory": "bin",
+  "supportedPlatforms": ["windows-x86_64"],
+  "vendorPackageVersion": "...",
+  "anariAbi": "verified-at-install",
+  "licensesDirectory": "licenses"
+}
+```
+
+Do not duplicate renderer subtype, parameter, or extension declarations in the
+manifest; probe those from ANARI. The manifest answers installation and trust questions
+that ANARI introspection does not: where the library came from, where its runtime files
+live, and whether it is intended for this platform.
+
+### MVP install flows
+
+Support two explicit flows before designing a marketplace:
+
+1. **Register an existing SDK installation** by choosing a device manifest or library
+   directory. Store a user-level registration record; do not copy vendor files.
+2. **Install a signed/versioned device pack** supplied as an archive by Miskeyed or the
+   device vendor. Extract atomically to the user device directory and keep its license
+   and dependency files together.
+
+The Workbench scans only configured system locations and its user device directory.
+It validates the manifest, probes the ANARI library in a controlled discovery step,
+records subtype/extension/query data, and reports load failures without preventing the
+other two modes from starting.
+
+### Deployment safety and lifecycle
+
+- Never execute a newly discovered device merely to populate a menu during ordinary
+  startup. Cache signed/registered metadata and probe on explicit refresh or activation.
+- Treat device libraries as native code with the same trust level as a DCC plugin.
+- Keep one selected device session per ANARI Device workspace for the MVP.
+- Activate by creating a new session first; only retire the current session after the
+  replacement has loaded and reported required capabilities.
+- Never unload a device library until its Hydra delegate, ANARI frames, device, and all
+  objects are destroyed.
+- A failed device must not prevent Shader Toy or Render Toy from launching.
+- Do not bundle VisRTX, ANARI-USD, or future Island dependencies into the base wheel by
+  default. Device packs own their native runtime and licensing obligations.
+
+### Why this is the MVP seam
+
+The ANARI loader already defines the runtime ABI and shared-library entry point. The
+pack adds only deterministic discovery, provenance, dependencies, and UX metadata. It
+does not wrap ANARI or require the Workbench to know engine-specific APIs. A renderer
+developer's minimum deployment result is therefore:
+
+```text
+ANARI shared library + dependencies + manifest + licenses
+```
+
+The later Island experiment should produce exactly such a pack. That proves engine
+support is additive rather than making Island a core dependency.
 
 ### Minimal native abstraction
 
@@ -343,6 +511,58 @@ unchanged
   instance #9
 ```
 
+## UX research before the ANARI workspace design
+
+The ANARI Device mode UX is intentionally unresolved. Do not begin by adding a third
+large tab that simply looks like a USD viewer. First collect functional data from the
+fixture, devices, and trace layer, then answer these workflow questions with a small
+interactive prototype:
+
+1. Is the primary unit a scene document, a comparison workspace, or a captured delta?
+2. Does a technical artist normally view one device, A/B two devices, or inspect one
+   device plus its ANARI trace?
+3. Which device differences need synchronized camera/time and which settings must stay
+   device-local?
+4. How are unsupported objects, degraded materials, and extension differences surfaced
+   without overwhelming the viewport?
+5. Does selection originate in the USD hierarchy, an image ID channel, or either?
+6. How does a user move from a USD material delta to the exact ANARI parameter operation
+   and then to device diagnostics?
+7. Where can a separate Slang experiment be attached without implying that every ANARI
+   implementation can consume arbitrary Slang?
+
+### Candidate workspace, not a committed UI
+
+```text
++----------------------+------------------------+----------------------+
+| USD hierarchy/look   | synchronized viewport | device + render      |
+| session layer edits  | one device or A/B      | settings/capability  |
++----------------------+------------------------+----------------------+
+| Hydra delta          | ANARI operation trace  | diagnostics          |
++----------------------+------------------------+----------------------+
+| optional separate ShaderDocument experiment                         |
++---------------------------------------------------------------------+
+```
+
+The first prototype needs only device selection, one viewport, stage identity, and an
+operation trace. Add comparison layout and look editing only after observing the
+initial population and delta data. Preserve the ability to launch Shader Toy and Render
+Toy without loading OpenUSD or any ANARI device.
+
+### UX evidence deliverable
+
+Before finalizing `SceneDocument` or `WorkbenchWindow` composition, check in
+`docs/anari/ANARI_DEVICE_UX.md` containing:
+
+- the jobs-to-be-done for a technical artist and a renderer developer;
+- screenshots/wireframes for single-device, compare, and trace-focused workflows;
+- device-switch and failure-state behavior;
+- which state is shared across devices and which is local;
+- observed trace examples for every fixture delta; and
+- the chosen smallest useful workspace with rejected alternatives.
+
+That document is a gate for production UI work, not post-hoc documentation.
+
 ## First fixture and delta matrix
 
 Create a deterministic textual USD fixture containing:
@@ -401,8 +621,9 @@ a concrete reason.
 
 Create:
 
-- `docs/anari/COMPATIBILITY.md` — pinned upstream commits, targets, runtime artifacts,
-  extension lists, and supported configurations.
+- `docs/anari/COMPATIBILITY.md` — promote the reviewed source snapshots into a tested
+  release lock with targets, runtime artifacts, extension lists, and supported
+  configurations.
 - `spikes/anari_probe/CMakeLists.txt`
 - `spikes/anari_probe/main.cpp` — load a configured library, list device subtypes and
   extensions, create/release a device, and route status messages.
@@ -423,23 +644,27 @@ the exact ABI/version evidence.
 
 Create:
 
-- `cmake/FindANARI.cmake` only if upstream does not export usable CMake config targets;
 - `cpp/include/slang_qrhi/AnariLibrary.h`;
 - `cpp/src/AnariLibrary.cpp`;
+- `cpp/include/slang_qrhi/AnariDevicePack.h`;
+- `cpp/src/AnariDevicePack.cpp`;
 - `cpp/include/slang_qrhi/AnariDeviceCatalogModel.h`;
 - `cpp/src/AnariDeviceCatalogModel.cpp`;
-- `tests/test_anari_library.cpp`.
+- `tests/test_anari_library.cpp`;
+- `tests/test_anari_device_pack.cpp`; and
+- `tests/fixtures/anari/device-packs/` with valid and invalid manifests.
 
 Modify:
 
-- `CMakeLists.txt` — add `SLANG_QRHI_WITH_ANARI`, an optional native target, and tests;
+- `CMakeLists.txt` — use upstream `find_package(anari CONFIG ...)`, add
+  `SLANG_QRHI_WITH_ANARI`, an optional native target, and tests;
 - binding files only after the C++ ownership API stabilizes.
 
 Ownership: `AnariLibrary` owns the library handle; a device session retains its
 library. The catalog owns probe results, not active render devices.
 
-Milestone: the native app can enumerate configured Helide and VisRTX candidates and
-show probe failures without loading USD or creating a viewport.
+Milestone: the native app can enumerate registered Helide and VisRTX packs, probe
+subtypes/capabilities, and show failures without loading USD or creating a viewport.
 
 ### Stage 2: fixture and Hydra/hdAnari proof
 
@@ -707,8 +932,7 @@ Slang/render-graph renderer through ANARI. Island assumptions must not enter the
 
 ## Recommended first coding task
 
-Implement only the standalone `anari_probe` spike after completing the upstream source
-audit and compatibility lock:
+Implement only the standalone `anari_probe` spike and compatibility lock:
 
 1. accept an explicit library candidate;
 2. load it with the pinned ANARI loader;
@@ -718,13 +942,17 @@ audit and compatibility lock:
 6. unload the library deterministically; and
 7. exercise Helide success plus failure paths.
 
-This proves the smallest indispensable host behavior without coupling to USD, Hydra,
-Qt presentation, Island, or the existing QRhi renderer. The next independently
-testable task is the headless USD -> Hydra -> `hdAnari` -> Helide fixture, followed by
-the exact same path through VisRTX.
+This proves the smallest indispensable host behavior and the proposed device-pack
+deployment seam without coupling to USD, Hydra, Qt presentation, Island, or the
+existing QRhi renderer. In parallel, prepare the smallest upstreamable `hdAnari`
+selection change so a delegate receives library identity and device subtype without
+process-global environment mutation. The next independently testable task is the
+headless USD -> Hydra -> `hdAnari` -> Helide fixture, followed by the exact same path
+through VisRTX.
 
 Do not begin with `SceneDocument`, a Qt viewport, a custom ANARI abstraction, or an
-Island adapter. Their correct shapes depend on evidence produced by these two spikes.
+Island adapter. Their correct shapes depend on evidence produced by these spikes and
+the ANARI Device UX research deliverable.
 
 ## Explicit non-goals
 
