@@ -249,7 +249,7 @@ void WorkbenchWindow::buildUi()
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
-    m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Compile"));
+    m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Compilation"));
     m_tabs = tabs;
     tabs->setMinimumWidth(380);
     inspectorLayout->addWidget(tabs, 1);
@@ -892,8 +892,8 @@ void WorkbenchWindow::updateCompileStatus()
 
     if (m_tabs && m_diagTabIndex >= 0) {
         m_tabs->setTabText(m_diagTabIndex,
-            m_editorErrors > 0 ? QStringLiteral("Compile (%1)").arg(m_editorErrors)
-                               : QStringLiteral("Compile"));
+            m_editorErrors > 0 ? QStringLiteral("Compilation (%1)").arg(m_editorErrors)
+                               : QStringLiteral("Compilation"));
     }
 }
 
