@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-08-30
+
+### Fixed
+
+- Live recompilation now refreshes the parameter inspector after UI annotation changes.
+- Constrained the package to the Python versions supported by Qt 6.8.
+- The import-level `__version__` now comes from installed distribution metadata rather
+  than reporting the stale prototype version.
+
 ## [0.2.0] — 2026-08-17
 
 ### Added

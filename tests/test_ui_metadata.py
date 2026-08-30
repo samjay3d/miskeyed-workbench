@@ -95,6 +95,42 @@ def test_uniform_without_metadata_uses_defaults(app):
     assert not _value(model, "plain", Role.WidgetRole)
 
 
+def test_metadata_only_edit_live_updates_parameter_model(app):
+    doc = ShaderDocument()
+    doc.setSource(SHADER)
+    doc.compile()
+
+    model = doc.parameters()
+    Role = ShaderParameterModel.Role
+    assert _value(model, "camFov", Role.LabelRole) == "Field of View (deg)"
+
+    doc.setSource(SHADER.replace('UIName("Field of View")', 'UIName("Lens Angle")'))
+    doc.compile()
+
+    assert _value(model, "camFov", Role.LabelRole) == "Lens Angle (deg)"
+
+
+def test_metadata_only_edit_does_not_invalidate_gpu_layout(app):
+    doc = ShaderDocument()
+    doc.setSource(SHADER)
+    doc.compile()
+
+    graph = doc.dependencyGraph()
+    layout = graph.nodeId("shader:parameter-layout")
+    ui_schema = graph.nodeId("ui:schema")
+    original_layout = bytes(graph.payload(layout))
+    original_ui_schema = bytes(graph.payload(ui_schema))
+    graph.markAllClean()
+
+    doc.setSource(SHADER.replace('UIName("Field of View")', 'UIName("Lens Angle")'))
+    doc.compile()
+
+    assert bytes(graph.payload(layout)) == original_layout
+    assert bytes(graph.payload(ui_schema)) != original_ui_schema
+    assert graph.dirtyFlags(ui_schema) & 1  # UiDirty
+    assert not graph.dirtyFlags(layout) & ((1 << 3) | (1 << 5))  # Binding/PipelineDirty
+
+
 def test_app_icon_available(app):
     # Cheap smoke check that the package resources ship with the wheel.
     assert not workbench.app_icon().isNull()

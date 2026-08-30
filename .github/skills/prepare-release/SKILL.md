@@ -1,6 +1,6 @@
 ---
 name: prepare-release
-description: 'Prepare a miskeyed-workbench release (cut a version). Use when asked to "prepare a release", "cut a release", "bump the version", "release X.Y.Z", or "stamp the changelog". Bumps the version in pyproject.toml + CMakeLists.txt, dates the CHANGELOG [Unreleased] section, rebuilds, runs the headless tests, and commits — without tagging or pushing.'
+description: 'Prepare a miskeyed-workbench release (cut a version). Use when asked to "prepare a release", "cut a release", "bump the version", "release X.Y.Z", or "stamp the changelog". Bumps the version in pyproject.toml, dates the CHANGELOG [Unreleased] section, rebuilds, runs the headless tests, and commits — without tagging or pushing.'
 argument-hint: "the version to cut, e.g. 0.2.0"
 ---
 
@@ -31,9 +31,6 @@ Inspect `## [Unreleased]` in [CHANGELOG.md](../../../CHANGELOG.md):
 - New user-facing feature → bump the **minor** (`0.1.x` → `0.2.0`).
 - Bug fixes / internal only → bump the **patch** (`0.2.0` → `0.2.1`).
 
-Note: `CMakeLists.txt` `project(... VERSION ...)` may already be ahead of
-`pyproject.toml`; the release should align both to the chosen version.
-
 ## Procedure
 
 1. **Apply the edits.** Run the helper (edits files only, no git):
@@ -42,11 +39,10 @@ Note: `CMakeLists.txt` `project(... VERSION ...)` may already be ahead of
    pwsh .github/skills/prepare-release/scripts/prepare_release.ps1 -Version <X.Y.Z>
    ```
 
-   It bumps `version` in [pyproject.toml](../../../pyproject.toml), aligns
-   `project(slang_qrhi VERSION ...)` in [CMakeLists.txt](../../../CMakeLists.txt), and turns
+   It bumps `version` in [pyproject.toml](../../../pyproject.toml) and turns
    `## [Unreleased]` into a dated `## [X.Y.Z]` section with a fresh empty `## [Unreleased]`
-   above it. Review the diff. Add any missing changelog bullets (features/fixes since the
-   last release) in the author's voice.
+   above it. CMake reads the same version from `pyproject.toml`. Review the diff and add
+   any missing changelog bullets.
 
 2. **Rebuild** so the editable install reports the new version. Slang + Qt must be on the
    environment (see [repo memory / build notes]):
@@ -71,7 +67,7 @@ Note: `CMakeLists.txt` `project(... VERSION ...)` may already be ahead of
 4. **Commit** (the pre-commit hook runs; it's fine):
 
    ```pwsh
-   git add pyproject.toml CMakeLists.txt CHANGELOG.md
+   git add pyproject.toml CHANGELOG.md
    git commit -m "release: prepare X.Y.Z (version bump + changelog)"
    ```
 

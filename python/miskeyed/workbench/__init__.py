@@ -7,9 +7,10 @@ The C++ objects are the public API and are re-exported at the top level, e.g.
 from __future__ import annotations
 
 import os
+from importlib.metadata import version
 from pathlib import Path
 
-__version__ = "0.1.0"
+__version__ = version("miskeyed-workbench")
 
 
 def _register_dll_directories() -> None:

@@ -124,11 +124,11 @@ void ShaderDocument::compileNow()
     }
 
     const QByteArray oldLayout = m_graph.payload(m_layoutNode);
-    if (oldLayout != r.reflectionDigest) {
+    const QByteArray oldUiSchema = m_graph.payload(m_uiNode);
+    if (oldLayout != r.parameterLayoutDigest || oldUiSchema != r.uiSchemaDigest) {
         m_parameters.setDescriptors(r.parameters, r.parameterByteSize);
-        m_graph.setPayload(m_layoutNode, r.reflectionDigest);
-        m_graph.setPayload(m_uiNode,
-            r.reflectionDigest); // UI is reflection-derived; metadata will extend this digest.
+        m_graph.setPayload(m_layoutNode, r.parameterLayoutDigest);
+        m_graph.setPayload(m_uiNode, r.uiSchemaDigest);
         m_graph.setPayload(m_valuesNode, m_parameters.packedBytes());
     }
 
