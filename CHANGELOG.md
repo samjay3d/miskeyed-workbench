@@ -90,16 +90,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   handling, public API review, deterministic UI captures, and deliberate non-goals part
   of the contributor workflow without hard-coding a release version.
 - Added Windows D3D11 and Vulkan/SwiftShader draw-recording smoke tests, native
-  workspace/time/module/tool contracts, and a pinned ANARI SDK lifecycle check.
+  workspace/time/module/tool contracts, Linux Vulkan/lavapipe and macOS Metal native
+  smoke lanes, and a pinned ANARI SDK lifecycle check.
 - Added CPython 3.11–3.13 wheel builds for Windows x86_64, Linux x86_64, and macOS
-  arm64/x86_64. Fresh-wheel install/import validates packaging on every target;
-  runtime rendering validation remains stronger on Windows and is not implied for
-  Linux/macOS by wheel success.
+  arm64/x86_64. Fresh-wheel install/import and Python contracts validate packaging on
+  every target; the explicit 3.11 native lanes separately exercise D3D11 and Vulkan on
+  Windows, Vulkan on Linux, and Metal on macOS through the same draw-submission harness.
 - Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
   review-only release artifacts without publishing permissions.
 - Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for
   same-repository PRs and trusted `main`/`release/**` pushes, and a release gate that
   publishes the immutable versioned site before TestPyPI/PyPI publication.
+- Made `/dev/` publication gate the generated `docs` branch push rather than eventual
+  Pages/CDN propagation, while retaining strict public URL verification for immutable
+  release documentation before package publication.
 
 ## [0.2.1] — 2026-08-30
 

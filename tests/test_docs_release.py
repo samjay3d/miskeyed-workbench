@@ -142,6 +142,23 @@ def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     assert "github.event_name == 'push'" in workflow
     assert workflow.count("contents: write") == 1
     assert "--site documentation-preview/site --publish-tree publish --channel dev" in workflow
-    assert "[Public Dev Documentation]($url)" in workflow
-    assert 'grep -F "Workbench development documentation"' in workflow
+    assert "[Development Documentation]($url)" in workflow
+    assert "Pages propagation is asynchronous" in workflow
+    assert 'grep -F "Workbench development documentation"' not in workflow
     assert 'grep -F "Workbench $version documentation"' not in workflow
+
+
+def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
+    distributions = Path(".github/workflows/build-distributions.yml").read_text(encoding="utf-8")
+    release = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "github.event.pull_request.base.ref == 'main'" in release
+    assert "github.event.pull_request.head.ref == 'release/0.3.0'" in release
+    assert 'python-version: ["3.11", "3.12", "3.13"]' in distributions
+    assert "Package + Contracts + Native D3D11 + Vulkan" in distributions
+    assert "Package + Contracts + Native Vulkan" in distributions
+    assert "Package + Contracts + Native Metal" in distributions
+    assert "--rhi d3d11 --rhi-smoke-test" in distributions
+    assert "--rhi vulkan --rhi-smoke-test" in distributions
+    assert "--rhi metal --rhi-smoke-test" in distributions
+    assert "mesa-vulkan-drivers" in distributions

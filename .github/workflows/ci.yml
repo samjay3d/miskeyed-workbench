@@ -314,13 +314,15 @@ jobs:
             - name: Build Documentation Preview Artifact
               if: matrix.python-version == '3.11'
               shell: pwsh
+              env:
+                  SOURCE_REF: ${{ github.head_ref }}
               run: |
                   python -m pip install -r src/docs/requirements.txt
                   $siteRoot = "$env:RUNNER_TEMP\workbench-documentation"
                   New-Item -ItemType Directory -Force -Path $siteRoot | Out-Null
                   python -m ci.build_docs --output "$siteRoot\site"
                   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-                  Set-Content -Path "$siteRoot\source-ref.txt" -Value "${{ github.head_ref }}"
+                  Set-Content -Path "$siteRoot\source-ref.txt" -Value "$env:SOURCE_REF"
 
             - name: Upload Documentation Preview Artifact
               if: matrix.python-version == '3.11'
@@ -379,22 +381,15 @@ jobs:
                       git -C publish commit -m "docs: update development documentation from $GITHUB_REF_NAME"
                       git -C publish push origin docs
                   fi
-            - name: Verify and summarize public development documentation
+            - name: Summarize docs branch publication
               run: |
                   set -euo pipefail
                   url=$(python3 -m ci.docs_metadata --field development_url)
-                  for attempt in $(seq 1 20); do
-                      if page=$(curl --fail --silent --show-error --location "$url") && \
-                         grep -F "Workbench development documentation" <<<"$page"; then
-                          echo "### [Public Dev Documentation]($url)" >> "$GITHUB_STEP_SUMMARY"
-                          echo "Published development documentation is live at $url"
-                          exit 0
-                      fi
-                      echo "Pages has not propagated yet (attempt $attempt/20); waiting 15 seconds."
-                      sleep 15
-                  done
-                  echo "Development documentation did not become public at $url" >&2
-                  exit 1
+                  remote=$(git ls-remote --heads origin docs | cut -f1)
+                  test -n "$remote"
+                  echo "Docs build, screenshot verification, artifact transfer, generated-tree verification, and docs-branch push succeeded."
+                  echo "### [Development Documentation]($url)" >> "$GITHUB_STEP_SUMMARY"
+                  echo "Pages propagation is asynchronous and is not a mutable-preview correctness gate."
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having

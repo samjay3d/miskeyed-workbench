@@ -67,7 +67,13 @@ jobs:
     build-distributions:
         name: Build distributions
         needs: detect
-        if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
+        # The full six-lane platform gate is intentionally reserved for the release
+        # integration PR. Ordinary PRs use ci.yml's focused validation.
+        if: >-
+            needs.detect.outputs.release == 'true' ||
+            (github.event_name == 'pull_request' &&
+             github.event.pull_request.base.ref == 'main' &&
+             github.event.pull_request.head.ref == 'release/0.3.0')
         uses: ./.github/workflows/build-distributions.yml
         permissions:
             contents: read
