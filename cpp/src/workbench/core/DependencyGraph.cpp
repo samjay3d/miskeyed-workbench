@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/DependencyGraph.h>
+#include <miskeyed/workbench/core/DependencyGraph.h>
 #include <algorithm>
 #include <stdexcept>
 

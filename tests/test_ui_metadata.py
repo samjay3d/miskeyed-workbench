@@ -19,7 +19,7 @@ from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E40
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 # NOTE: the shader below deliberately does NOT declare the UI* attribute types. The
-# compiler prepends the published UI header shown in Workbench's Headers panel, so user
+# compiler supplies the packaged UI attribute contract, so user
 # shaders can annotate uniforms without pasting boilerplate. These tests therefore also
 # prove that catalog-backed injection: if it regressed, reflection would come back empty.
 SHADER = """

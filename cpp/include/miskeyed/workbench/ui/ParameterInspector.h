@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Export.h"
-#include "ShaderParameterModel.h"
+#include <miskeyed/workbench/Export.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
 #include <QWidget>
 
 class QVBoxLayout;

@@ -1,5 +1,5 @@
-#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
-#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/ui/ParameterInspector.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
 #include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>

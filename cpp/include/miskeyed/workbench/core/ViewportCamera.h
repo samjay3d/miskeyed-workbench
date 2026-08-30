@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QByteArray>
 #include <QString>
 
 namespace miskeyed::workbench::core {
@@ -24,9 +23,6 @@ struct ViewportCameraBinding final {
     static constexpr const char* panX = "camPanX";
     static constexpr const char* panY = "camPanY";
 
-    // This declaration is inserted into built-in Render Toy sources, where it remains
-    // visible and editable rather than becoming a hidden compiler prelude.
-    [[nodiscard]] static QByteArray slangDeclaration();
     [[nodiscard]] static bool isCameraParameter(const QString& name);
 };
 

@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QSaveFile>

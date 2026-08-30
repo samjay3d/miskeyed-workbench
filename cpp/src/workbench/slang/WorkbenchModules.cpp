@@ -1,19 +1,19 @@
-#include <miskeyed/workbench/core/WorkbenchHeaders.h>
+#include <miskeyed/workbench/slang/WorkbenchModules.h>
 
 #include <QFile>
 
-static void initializeWorkbenchHeaderResources()
+static void initializeWorkbenchModuleResources()
 {
     Q_INIT_RESOURCE(workbench_headers);
 }
 
-namespace miskeyed::workbench::core {
+namespace miskeyed::workbench::slang_rhi {
 namespace {
 
     QByteArray readHeader(const char* path)
     {
         static const bool initialized = [] {
-            initializeWorkbenchHeaderResources();
+            initializeWorkbenchModuleResources();
             return true;
         }();
         Q_UNUSED(initialized);
@@ -23,7 +23,7 @@ namespace {
 
 } // namespace
 
-QList<WorkbenchHeader> workbenchHeaders()
+QList<WorkbenchModule> workbenchModules()
 {
     return {
         { QStringLiteral("ui"), QStringLiteral("UI attributes"),
@@ -35,13 +35,13 @@ QList<WorkbenchHeader> workbenchHeaders()
     };
 }
 
-QByteArray workbenchHeaderSource(const QString& id)
+QByteArray workbenchModuleSource(const QString& id)
 {
-    for (const WorkbenchHeader& header : workbenchHeaders()) {
+    for (const WorkbenchModule& header : workbenchModules()) {
         if (header.id == id)
             return header.source;
     }
     return {};
 }
 
-} // namespace miskeyed::workbench::core
+} // namespace miskeyed::workbench::slang_rhi

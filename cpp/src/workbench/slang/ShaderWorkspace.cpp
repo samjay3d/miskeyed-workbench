@@ -1,5 +1,5 @@
-#include <miskeyed/workbench/slang_rhi/ShaderWorkspace.h>
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang/ShaderWorkspace.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QFileInfo>
 
 namespace miskeyed::workbench::slang_rhi {

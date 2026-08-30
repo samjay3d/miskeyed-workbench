@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/CodeEditor.h>
+#include <miskeyed/workbench/editor/CodeEditor.h>
 #include <QAbstractItemView>
 #include <QCompleter>
 #include <QJsonArray>

@@ -1,6 +1,6 @@
-#include <miskeyed/workbench/slang_rhi/SlangCompiler.h>
-#include <miskeyed/workbench/slang_rhi/Digest.h>
-#include <miskeyed/workbench/core/WorkbenchHeaders.h>
+#include <miskeyed/workbench/slang/SlangCompiler.h>
+#include <miskeyed/workbench/core/Digest.h>
+#include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <QDataStream>
 #include "Qt68ShaderBridge.h"
@@ -254,7 +254,7 @@ public:
     Slang::ComPtr<slang::IGlobalSession> global;
     QStringList searchPaths;
     QString systemPrelude = QStringLiteral("import miskeyed.time;\n")
-        + QString::fromUtf8(core::workbenchHeaderSource(QStringLiteral("ui")));
+        + QString::fromUtf8(workbenchModuleSource(QStringLiteral("ui")));
 
     SlangCompilerPrivate() { slang::createGlobalSession(global.writeRef()); }
 };
@@ -328,7 +328,7 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     // miskeyed.time` in the small system contract resolve it. Project/user modules still
     // resolve through SessionDesc.searchPaths; an ISlangFileSystem can replace this
     // embedded-source edge later without changing authored shaders.
-    const QByteArray timeSource = core::TimeBinding::slangDeclaration();
+    const QByteArray timeSource = workbenchModuleSource(QStringLiteral("time"));
     Slang::ComPtr<slang::IBlob> moduleDiagnostics;
     auto* timeModule = session->loadModuleFromSourceString("miskeyed.time", "miskeyed/time.slang",
         timeSource.constData(), moduleDiagnostics.writeRef());
@@ -343,8 +343,8 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     const auto revision = Digest::hash(src).hex().left(16).toUtf8();
     const QByteArray moduleName = QByteArray("sqr_user_") + revision;
 
-    // Prepend the catalog-backed system header, then reset #line so every diagnostic
-    // still reports the user's own line numbers (not offset by the header declarations).
+    // Prepend the small compiler contract, then reset #line so every diagnostic still
+    // reports the user's own line numbers (not offset by host declarations).
     QByteArray effectiveSrc;
     if (!d->systemPrelude.isEmpty()) {
         QByteArray lineName = path;

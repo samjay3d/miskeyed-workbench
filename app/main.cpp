@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>
+#include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
 #include <QApplication>
 
 int main(int argc, char** argv)

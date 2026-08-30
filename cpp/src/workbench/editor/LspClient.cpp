@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/LspClient.h>
+#include <miskeyed/workbench/editor/LspClient.h>
 #include <QProcess>
 #include <QJsonDocument>
 #include <QJsonArray>

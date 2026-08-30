@@ -1,6 +1,6 @@
-#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
-#include <miskeyed/workbench/slang_rhi/RenderPass.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/RenderPass.h>
 #include <miskeyed/workbench/core/ViewportCamera.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <rhi/qrhi.h>

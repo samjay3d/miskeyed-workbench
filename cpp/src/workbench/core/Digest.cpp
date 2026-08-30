@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/Digest.h>
+#include <miskeyed/workbench/core/Digest.h>
 #include <QtEndian>
 #include <array>
 #include <cstring>

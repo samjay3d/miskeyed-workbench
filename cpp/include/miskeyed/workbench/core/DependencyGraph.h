@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Digest.h"
-#include "Export.h"
+#include <miskeyed/workbench/core/Digest.h>
+#include <miskeyed/workbench/Export.h>
 #include <QObject>
 #include <QHash>
 #include <QSet>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Export.h"
-#include "LspClient.h"
+#include <miskeyed/workbench/Export.h>
+#include <miskeyed/workbench/editor/LspClient.h>
 #include <QPlainTextEdit>
 #include <QHash>
 #include <QList>

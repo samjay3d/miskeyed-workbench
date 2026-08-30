@@ -1,4 +1,5 @@
 #include <miskeyed/workbench/core/TimeContext.h>
+#include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <QCoreApplication>
 #include <cassert>
 #include <cmath>
@@ -21,7 +22,8 @@ int main(int argc, char** argv)
     assert(time.frame() == 1);
     assert(std::abs(time.timeSeconds() - 1.0 / 24.0) < 1.0e-12);
 
-    const QByteArray contract = TimeBinding::slangDeclaration();
+    const QByteArray contract
+        = miskeyed::workbench::slang_rhi::workbenchModuleSource(QStringLiteral("time"));
     assert(contract.contains("WorkbenchTime"));
     assert(contract.contains("workbenchTime"));
     assert(contract.contains("deltaTime"));

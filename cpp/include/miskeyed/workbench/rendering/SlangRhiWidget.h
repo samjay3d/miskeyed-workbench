@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Export.h"
-#include "ShaderDocument.h"
+#include <miskeyed/workbench/Export.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QRhiWidget>
 #include <QPointF>
 #include <memory>

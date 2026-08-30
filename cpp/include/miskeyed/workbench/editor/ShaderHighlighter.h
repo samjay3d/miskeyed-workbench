@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Export.h"
+#include <miskeyed/workbench/Export.h>
 #include <QSyntaxHighlighter>
 #include <QRegularExpression>
 #include <QTextCharFormat>

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QObject>
-#include <QByteArray>
 #include <QtTypes>
 
 namespace miskeyed::workbench::core {
@@ -59,7 +58,6 @@ struct TimeBinding final {
     static constexpr const char* deltaTime = "workbenchTime.deltaTime";
     static constexpr const char* frame = "workbenchTime.frame";
     static constexpr const char* frameRate = "workbenchTime.frameRate";
-    [[nodiscard]] static QByteArray slangDeclaration();
 };
 
 } // namespace miskeyed::workbench::core

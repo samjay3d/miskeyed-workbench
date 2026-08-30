@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
 #include <QVector2D>
 #include <QVector3D>
 #include <QVector4D>

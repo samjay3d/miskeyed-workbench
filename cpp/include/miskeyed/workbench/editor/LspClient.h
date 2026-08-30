@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Export.h"
+#include <miskeyed/workbench/Export.h>
 #include <QObject>
 #include <QString>
 #include <QList>
@@ -53,8 +53,8 @@ public:
 
 signals:
     void ready();
-    void diagnosticsReceived(
-        const QString& uri, const QList<miskeyed::workbench::slang_rhi::LspDiagnostic>& diagnostics);
+    void diagnosticsReceived(const QString& uri,
+        const QList<miskeyed::workbench::slang_rhi::LspDiagnostic>& diagnostics);
 
 private:
     void postNotification(const QString& method, const QJsonObject& params);

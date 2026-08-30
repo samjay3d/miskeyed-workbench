@@ -64,9 +64,9 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/core/Digest.cpp
     cpp/src/workbench/core/DependencyGraph.cpp
     cpp/src/workbench/core/ViewportCamera.cpp
-    cpp/src/workbench/core/WorkbenchHeaders.cpp
-    cpp/src/workbench/core/RenderPass.cpp
-    cpp/src/workbench/core/ShaderWorkspace.cpp
+    cpp/src/workbench/slang/WorkbenchModules.cpp
+    cpp/src/workbench/rendering/RenderPass.cpp
+    cpp/src/workbench/slang/ShaderWorkspace.cpp
     cpp/src/workbench/core/TimeContext.cpp
     cpp/src/workbench/editor/CodeEditor.cpp
     cpp/src/workbench/editor/ShaderHighlighter.cpp
@@ -82,17 +82,17 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
     # Q_OBJECT headers live in cpp/include; list them so AUTOMOC scans them (its
     # basename heuristic only checks the source dir, which would skip moc otherwise).
-    cpp/include/miskeyed/workbench/slang_rhi/DependencyGraph.h
-    cpp/include/miskeyed/workbench/slang_rhi/ShaderParameterModel.h
-    cpp/include/miskeyed/workbench/slang_rhi/ParameterInspector.h
-    cpp/include/miskeyed/workbench/slang_rhi/ShaderDocument.h
-    cpp/include/miskeyed/workbench/slang_rhi/ShaderWorkspace.h
-    cpp/include/miskeyed/workbench/slang_rhi/SlangCompiler.h
-    cpp/include/miskeyed/workbench/slang_rhi/SlangRhiWidget.h
-    cpp/include/miskeyed/workbench/slang_rhi/CodeEditor.h
-    cpp/include/miskeyed/workbench/slang_rhi/ShaderHighlighter.h
-    cpp/include/miskeyed/workbench/slang_rhi/LspClient.h
-    cpp/include/miskeyed/workbench/slang_rhi/WorkbenchWindow.h
+    cpp/include/miskeyed/workbench/core/DependencyGraph.h
+    cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
+    cpp/include/miskeyed/workbench/ui/ParameterInspector.h
+    cpp/include/miskeyed/workbench/slang/ShaderDocument.h
+    cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
+    cpp/include/miskeyed/workbench/slang/SlangCompiler.h
+    cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h
+    cpp/include/miskeyed/workbench/editor/CodeEditor.h
+    cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
+    cpp/include/miskeyed/workbench/editor/LspClient.h
+    cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
     cpp/include/miskeyed/workbench/core/TimeContext.h
 )
 
@@ -155,12 +155,12 @@ if(MISKEYED_WORKBENCH_BUILD_PYTHON)
         TYPESYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/bindings/typesystem_slang_qrhi.xml"
         GLOBAL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/bindings/slang_qrhi_bindings.h"
         WRAPPED_HEADERS
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/DependencyGraph.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/ShaderParameterModel.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/ShaderDocument.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/ParameterInspector.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/SlangRhiWidget.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang_rhi/WorkbenchWindow.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/DependencyGraph.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang/ShaderDocument.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/ui/ParameterInspector.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/TimeContext.h"
         LINK_LIBRARIES miskeyed_workbench_slang_rhi
     )
@@ -179,8 +179,7 @@ if(MISKEYED_WORKBENCH_BUILD_PYTHON)
 endif()
 
 install(TARGETS miskeyed_workbench_slang_rhi ARCHIVE DESTINATION lib)
-install(DIRECTORY cpp/include/miskeyed/workbench/slang_rhi DESTINATION include/miskeyed/workbench)
-install(DIRECTORY cpp/include/miskeyed/workbench/core DESTINATION include/miskeyed/workbench)
+install(DIRECTORY cpp/include/miskeyed DESTINATION include)
 install(DIRECTORY shaders/ DESTINATION miskeyed/workbench/shaders)
 
 if(MISKEYED_WORKBENCH_WITH_ANARI)

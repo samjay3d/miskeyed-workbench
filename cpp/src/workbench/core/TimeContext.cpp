@@ -1,6 +1,4 @@
 #include <miskeyed/workbench/core/TimeContext.h>
-#include <miskeyed/workbench/core/WorkbenchHeaders.h>
-#include <QByteArray>
 #include <algorithm>
 
 namespace miskeyed::workbench::core {
@@ -61,11 +59,6 @@ void TimeContext::step(qint64 frames)
     if (m_playing && next > m_endFrame)
         next = m_startFrame;
     setFrame(next);
-}
-
-QByteArray TimeBinding::slangDeclaration()
-{
-    return workbenchHeaderSource(QStringLiteral("time"));
 }
 
 } // namespace miskeyed::workbench::core

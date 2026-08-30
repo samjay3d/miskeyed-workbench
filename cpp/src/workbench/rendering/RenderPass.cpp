@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/RenderPass.h>
+#include <miskeyed/workbench/rendering/RenderPass.h>
 
 #include <rhi/qrhi.h>
 

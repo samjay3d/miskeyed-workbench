@@ -1,8 +1,8 @@
 #pragma once
 
-#include "DependencyGraph.h"
-#include "ShaderParameterModel.h"
-#include "SlangCompiler.h"
+#include <miskeyed/workbench/core/DependencyGraph.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang/SlangCompiler.h>
 #include <QObject>
 #include <QTimer>
 #include <QUrl>

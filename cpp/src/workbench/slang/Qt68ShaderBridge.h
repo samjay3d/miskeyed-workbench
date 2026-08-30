@@ -2,7 +2,7 @@
 
 #include <rhi/qshader.h>
 #include <slang.h>
-#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
 
 namespace miskeyed::workbench::slang_rhi::qt68 {
 

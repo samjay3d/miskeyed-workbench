@@ -1,78 +1,82 @@
 # Native source layout
 
-The source tree is organized around **Workbench responsibilities and product modes**,
-not around whichever backend happened to ship first. Slang is an important authoring
-and rendering component; it is not the application shell or the owner of future scene
-workflows.
+The native tree is organized by **Workbench responsibility and mode**, not by the first
+renderer that shipped. Public headers and implementations use the same responsibility
+folders so ownership is visible from an include path.
 
 ```text
 cpp/
 ├── include/miskeyed/workbench/
-│   ├── slang_rhi/                 shipped public API (and Shiboken surface)
-│   └── anari/                     experimental ANARI host API
+│   ├── Export.h                   shared native export declaration
+│   ├── core/                      backend-neutral identity and evaluation contracts
+│   ├── editor/                    source editor and language-service API
+│   ├── slang/                     Slang compilation, documents, reflection, modules
+│   ├── rendering/                 QRhi pass and viewport API
+│   ├── ui/                        reusable native inspectors
+│   ├── modes/render_toy/          Render Toy composition root
+│   └── anari/                     optional device-neutral ANARI host API
 └── src/workbench/
-    ├── core/                      shared contracts, pass state, invalidation
-    ├── editor/                    reusable editor and language-service UI
-    ├── slang/                     compilation, reflection, shader documents
-    ├── rendering/                 QRhi presentation and resource lifecycle
-    ├── ui/                        reusable native inspector widgets
-    ├── modes/
-    │   └── render_toy/            current two-pass authoring composition
-    └── anari/                     optional device discovery and lifecycle edge
+    ├── core/
+    ├── editor/
+    ├── slang/
+    ├── rendering/
+    ├── ui/
+    ├── modes/render_toy/
+    └── anari/
 ```
 
-Public headers remain under `slang_rhi` because that is the established API and native
-extension boundary. The implementation layout is intentionally more granular: a
-public API name must not force every future Workbench subsystem into the same module.
-New device-neutral APIs go directly under `miskeyed/workbench` and use the
-`miskeyed::workbench` namespace (with a focused nested namespace where useful).
+The existing C++ types remain in `miskeyed::workbench::slang_rhi` where that is their
+established renderer API namespace; directory placement expresses responsibility and
+does not silently change ABI. New device-neutral APIs use `miskeyed::workbench` or a
+focused nested namespace such as `core` or `anari`.
+
+## Placement rules
+
+- `core` contains only backend-neutral state and identity: `Digest`, `DependencyGraph`,
+  `TimeContext`, and `ViewportCamera`. It does not load Slang source or own QRhi objects.
+- `slang` owns `ShaderDocument`, reflection/parameter models, compilation, open shader
+  workspace state, and the packaged Workbench Slang-module sources.
+- `rendering` owns `RenderPass` and `SlangRhiWidget`, including QRhi resource lifetime
+  and deferred retirement.
+- `editor` and `ui` contain reusable widgets; neither selects a product mode.
+- `modes/render_toy` binds open shader documents to the active Scene/Post passes and
+  owns the small timeline controller. It does not own compiler or GPU implementations.
+- `anari` remains an optional sibling target and never becomes a dependency of the
+  shipped Slang/QRhi modes.
 
 ## Mode composition
 
-A mode is a composition root, not a new owner of compiler, editor, or renderer state:
+A mode is a composition root, not a new owner of shared services:
 
 | Mode | Composes | Does not own |
 | --- | --- | --- |
 | Shader Toy | one `ShaderDocument`, reflected parameters, one QRhi viewport | a scene database |
-| Render Toy | scene and post-process `ShaderDocument`s, two-pass QRhi presentation | general USD scene semantics |
-| ANARI Device (planned) | USD authoring session, Hydra/hdAnari edge, selected device, neutral presentation | Hydra change propagation or the device render core |
+| Render Toy | open shader workspace, active Scene/Post bindings, two-pass presentation | compiler internals or general USD semantics |
+| ANARI Device (planned) | USD authoring session, Hydra/hdAnari edge, selected device, neutral presentation | Hydra propagation or device render core |
 
-The current `WorkbenchWindow` implementation lives in `modes/render_toy` because its
-two documents and scene-to-post-process connection are concretely Render Toy behavior.
-Shader Toy can later receive its own small composition root without conditionalizing
-the compiler or viewport. ANARI Device must similarly be added as a sibling mode only
-after the USD/MaterialX authoring-session boundary is designed and tested.
+`ShaderWorkspace` retains cheap authoring/compile products for open tabs. Only the
+active Scene/Post bindings are consumed by `SlangRhiWidget`, so tabs do not each own a
+QRhi pipeline or render target.
 
 ## Dependency direction
 
 ```text
-modes  ──>  editor / ui / authoring backends / presentation
-                  slang ──> core
-                  rendering ──> slang products
-                  anari ──> external ANARI loader
+modes  ──>  editor / ui / slang / rendering
+                              slang ──> core
+                          rendering ──> slang + core
+                              anari ──> external ANARI loader
 ```
 
-Lower layers never select a mode. In particular:
+Lower layers never select a mode. `ShaderDocument` stays independent of USD, Hydra,
+MaterialX, and ANARI. USD will own authored scene meaning; no parallel scene mirror
+belongs in `core`. Python exposes native objects and never becomes another composition
+or render core.
 
-- `ShaderDocument` remains independent of USD, Hydra, MaterialX, and ANARI.
-- USD will own authored scene meaning; no Workbench scene mirror belongs in `core`.
-- MaterialX support will attach to the USD authoring lane rather than being translated
-  into Slang UI metadata.
-- ANARI stays optional and cannot become a dependency of Shader Toy or Render Toy.
-- Python exposes native objects and never becomes a second composition or render core.
+Workbench-owned `.slang` contracts are authored under `shaders/workbench`, embedded for
+wheel/application packaging, and loaded at the Slang session edge. `miskeyed.time` is a
+normal module consumed through Slang import resolution. Project/user module locations
+continue through `SessionDesc.searchPaths`; a future `ISlangFileSystem` can expose
+package-backed modules without changing `core` or inventing a second resolver.
 
-Render Toy's pass-local QRhi state is represented by `RenderPass` instead of being
-buried in the viewport implementation. Its target composition remains in the viewport,
-where QRhi resource lifetime is owned. The shared `ViewportCamera` contract likewise
-defines the host field names and emits the visible `WorkbenchViewportCamera` Slang
-header used by built-in scene sources. Camera controls are therefore reflected authored
-data, not magic uniforms injected by the compiler.
-
-Workbench-owned Slang declarations live as source files in `shaders/workbench`, are
-embedded into the native target, and are consumed through one `WorkbenchHeaders`
-catalog. The compiler and the read-only **Headers** panel use that same catalog, making
-UI attributes and viewport bindings inspectable without duplicating their definitions.
-
-This layout is deliberately only a reorganization of responsibilities. It introduces
-no speculative mode interface, scene abstraction, or compatibility facade before
-there is a concrete second implementation that needs one.
+This organization establishes ownership boundaries only. It does not add a speculative
+mode interface, scene abstraction, animation system, or compatibility facade.

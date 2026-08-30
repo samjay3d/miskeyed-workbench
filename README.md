@@ -197,8 +197,8 @@ Digests use a 32-byte BLAKE2b implementation matching
 ## Native C++ API
 
 ```cpp
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
-#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
 
 using namespace miskeyed::workbench::slang_rhi;   // internal C++ namespace
 
@@ -282,23 +282,17 @@ cmake --build build --config Release
 ## Files that matter
 
 ```text
-cpp/include/miskeyed/workbench/slang_rhi/
-    DependencyGraph.h       live dependency DAG + dirty propagation
-    ShaderParameterModel.h  reflected GPU parameter model
-    ParameterInspector.h    automatic Qt parameter controls
-    ShaderDocument.h        source/compile/state coordinator
-    SlangRhiWidget.h        embeddable QRhiWidget
-    WorkbenchWindow.h       standalone workbench composition
+cpp/include/miskeyed/workbench/
+    core/                   identity and deterministic evaluation contracts
+    editor/                 code editor and language-service API
+    slang/                  compiler, reflection, documents, workspace, modules
+    rendering/              QRhi pass and viewport API
+    ui/                     reusable parameter inspectors
+    modes/render_toy/       Render Toy window/composition API
+    anari/                  optional ANARI host API
 
-cpp/src/workbench/
-    core/                   shared contracts, pass state, invalidation
-    editor/                 native editor and language-service UI
-    slang/                  compilation, reflection, shader documents
-    rendering/              QRhi presentation and resource lifecycle
-    ui/                     reusable native inspector widgets
-    modes/render_toy/       current two-pass mode composition
-    anari/                  optional ANARI host edge
-
+cpp/src/workbench/          implementations in the same responsibility layout
+shaders/workbench/          packaged Workbench Slang module sources
 docs/SOURCE_LAYOUT.md       ownership and dependency direction
 
 bindings/
@@ -312,10 +306,9 @@ python/miskeyed/workbench/
     __main__.py             `workbench` console entry point
 ```
 
-The **Headers** panel shows the exact Workbench-owned Slang declarations used during
-compilation, including reflected UI attributes and the viewport camera contract. Their
-authored sources live in `shaders/workbench/`; the UI does not reconstruct documentation
-from a separate schema.
+Workbench-owned Slang contracts live in `shaders/workbench/` and are packaged with the
+native target. The editor treats generated text as a document view, while the inspector
+is reserved for reflected parameters, compilation state, and future dependency views.
 
 CI also captures the native window after compilation and its first rendered frames. The
 `workbench-documentation` artifact provides the current screenshot for review and

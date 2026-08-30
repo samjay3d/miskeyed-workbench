@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Export.h"
+#include <miskeyed/workbench/Export.h>
 #include <QAbstractListModel>
 #include <QByteArray>
 #include <QVariant>

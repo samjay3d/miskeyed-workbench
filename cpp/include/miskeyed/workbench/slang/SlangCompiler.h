@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Export.h"
-#include "ShaderParameterModel.h"
+#include <miskeyed/workbench/Export.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
 #include <QObject>
 #include <QMap>
 #include <rhi/qshader.h>
@@ -42,9 +42,9 @@ public:
     [[nodiscard]] QStringList searchPaths() const;
 
     // The system prelude is prepended to every compile so shaders can use Workbench
-    // attributes without copying declarations. Its default comes from the published
-    // WorkbenchHeaders catalog shown in the UI; diagnostics still point at authored text
-    // through a #line reset. Callers may replace it for a different authoring contract.
+    // attributes without copying declarations. Keep this contract small: authored modules
+    // belong in Slang import resolution. Diagnostics point at authored text through a
+    // #line reset. Callers may replace it for a different platform contract.
     void setSystemPrelude(const QString& source);
     [[nodiscard]] QString systemPrelude() const;
 

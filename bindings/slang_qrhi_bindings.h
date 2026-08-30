@@ -1,8 +1,8 @@
 #pragma once
-#include <miskeyed/workbench/slang_rhi/DependencyGraph.h>
-#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
-#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
-#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
-#include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>
+#include <miskeyed/workbench/core/DependencyGraph.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
+#include <miskeyed/workbench/ui/ParameterInspector.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
+#include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
 #include <miskeyed/workbench/core/TimeContext.h>

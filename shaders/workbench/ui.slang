@@ -1,7 +1,7 @@
 // Workbench reflected-control attributes.
 //
 // These declarations are prepended before authored source so attributes remain concise.
-// Workbench's Headers panel shows this exact source; it is not an undocumented contract.
+// This authored module source is packaged with Workbench rather than reconstructed in UI code.
 [__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
 [__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
 [__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }

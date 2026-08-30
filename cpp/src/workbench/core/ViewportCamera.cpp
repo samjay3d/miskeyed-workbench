@@ -1,14 +1,8 @@
 #include <miskeyed/workbench/core/ViewportCamera.h>
-#include <miskeyed/workbench/core/WorkbenchHeaders.h>
 
 #include <array>
 
 namespace miskeyed::workbench::core {
-
-QByteArray ViewportCameraBinding::slangDeclaration()
-{
-    return workbenchHeaderSource(QStringLiteral("viewport-camera"));
-}
 
 bool ViewportCameraBinding::isCameraParameter(const QString& name)
 {

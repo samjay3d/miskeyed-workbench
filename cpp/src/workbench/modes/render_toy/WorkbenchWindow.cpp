@@ -1,11 +1,12 @@
-#include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>
-#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
-#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
-#include <miskeyed/workbench/slang_rhi/CodeEditor.h>
-#include <miskeyed/workbench/slang_rhi/ShaderHighlighter.h>
-#include <miskeyed/workbench/slang_rhi/LspClient.h>
-#include <miskeyed/workbench/slang_rhi/ShaderWorkspace.h>
+#include <miskeyed/workbench/slang/WorkbenchModules.h>
+#include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
+#include <miskeyed/workbench/ui/ParameterInspector.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
+#include <miskeyed/workbench/editor/CodeEditor.h>
+#include <miskeyed/workbench/editor/ShaderHighlighter.h>
+#include <miskeyed/workbench/editor/LspClient.h>
+#include <miskeyed/workbench/slang/ShaderWorkspace.h>
 #include <miskeyed/workbench/core/ViewportCamera.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <QAction>
@@ -211,7 +212,7 @@ float3 renderScene(float2 uv, float aspect)
 
     QByteArray sceneShaderSource()
     {
-        QByteArray s = core::ViewportCameraBinding::slangDeclaration();
+        QByteArray s = workbenchModuleSource(QStringLiteral("viewport-camera"));
         s += "\n// Render Toy scene pass. Adjust workbenchCamera in the Camera panel.\n";
         s += kSceneBody;
         s += R"SLANG(
@@ -290,7 +291,7 @@ float4 psMain(VSOut input) : SV_Target0
     // Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
     QByteArray volumeCloudsSample()
     {
-        QByteArray source = core::ViewportCameraBinding::slangDeclaration();
+        QByteArray source = workbenchModuleSource(QStringLiteral("viewport-camera"));
         source += R"SLANG(
 // Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
 // Drag in either viewport to fly the camera (orbit / pan / zoom).

@@ -1,4 +1,4 @@
-#include <miskeyed/workbench/slang_rhi/ShaderHighlighter.h>
+#include <miskeyed/workbench/editor/ShaderHighlighter.h>
 
 namespace miskeyed::workbench::slang_rhi {
 
