@@ -13,6 +13,7 @@ EXPECTED = {
     "documents_and_bindings.png": (1000, 550),
     "inspector_parameters.png": (280, 450),
     "inspector_dependencies.png": (280, 450),
+    "host_features.png": (280, 450),
     "inspector_entry_points.png": (280, 450),
     # TimelineWidget is intentionally a compact transport strip. Width catches
     # collapsed layouts; 48 px retains readable controls without rejecting the

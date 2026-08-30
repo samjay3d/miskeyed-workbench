@@ -19,6 +19,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Made built-in Workbench Slang host contracts discoverable through semantic module
+  metadata and a focused Host / Slang Inspector page, including host availability,
+  compiler-resolved import state, provided values/resources, and provider/session context.
 - `ShaderWorkspace` and reusable `WorkspaceEditor` ownership for open/focused
   documents, per-document cursor/scroll/view state, and Source, Generated, and Compare
   presentation.

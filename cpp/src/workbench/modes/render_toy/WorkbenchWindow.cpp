@@ -377,6 +377,12 @@ void WorkbenchWindow::buildUi()
         QStringLiteral("Binding"), QStringLiteral("Space") });
     m_resourceTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
+    m_hostSlangTree = new QTreeWidget(inspector);
+    m_hostSlangTree->setObjectName(QStringLiteral("HostSlangTree"));
+    m_hostSlangTree->setHeaderLabels(
+        { QStringLiteral("Host feature / module"), QStringLiteral("State") });
+    m_hostSlangTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+
     auto* compilationPanel = new QSplitter(Qt::Vertical, inspector);
     m_compilationTree = new QTreeWidget(compilationPanel);
     m_compilationTree->setObjectName(QStringLiteral("CompilationTree"));
@@ -390,6 +396,7 @@ void WorkbenchWindow::buildUi()
     tabs->setObjectName(QStringLiteral("ActiveDocumentInspector"));
     tabs->addTab(m_parameterInspector, QStringLiteral("Parameters"));
     tabs->addTab(m_resourceTree, QStringLiteral("Resources"));
+    tabs->addTab(m_hostSlangTree, QStringLiteral("Host / Slang"));
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
@@ -626,8 +633,10 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
             m_diagnostics->setPlainText(doc->diagnostics());
     });
     connect(doc, &ShaderDocument::dependenciesChanged, this, [this, doc] {
-        if (doc == m_workspace->focusedDocument())
+        if (doc == m_workspace->focusedDocument()) {
             refreshDependencyInspector();
+            refreshHostSlangInspector();
+        }
     });
     connect(doc->dependencyGraph(), &DependencyGraph::graphChanged, this, [this, doc] {
         if (doc == m_workspace->focusedDocument())
@@ -670,12 +679,46 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
         });
 }
 
+void WorkbenchWindow::refreshHostSlangInspector()
+{
+    m_hostSlangTree->clear();
+    ShaderDocument* document = m_workspace->focusedDocument();
+    QStringList resolved;
+    if (document) {
+        for (const SourceDependency& dependency : document->importedDependencies())
+            resolved.push_back(dependency.identity);
+    }
+    auto* contracts
+        = new QTreeWidgetItem(m_hostSlangTree, { QStringLiteral("Host features"), QString() });
+    auto* libraries
+        = new QTreeWidgetItem(m_hostSlangTree, { QStringLiteral("Libraries"), QString() });
+    for (const WorkbenchModuleState& state : workbenchModuleStates(resolved)) {
+        QTreeWidgetItem* parent
+            = state.module.kind == WorkbenchModuleKind::HostContract ? contracts : libraries;
+        auto* feature = new QTreeWidgetItem(parent,
+            { state.module.title,
+                state.module.kind == WorkbenchModuleKind::HostContract
+                    ? QStringLiteral("Available · %1")
+                          .arg(state.imported ? QStringLiteral("Imported")
+                                              : QStringLiteral("Not imported"))
+                    : (state.imported ? QStringLiteral("Imported")
+                                      : QStringLiteral("Not imported")) });
+        new QTreeWidgetItem(feature, { QStringLiteral("Module"), state.module.moduleName });
+        new QTreeWidgetItem(feature, { QStringLiteral("Provides"), state.module.provides });
+        new QTreeWidgetItem(feature, { QStringLiteral("Host"), state.module.hostProvider });
+        new QTreeWidgetItem(feature, { QStringLiteral("Used by"), state.module.consumer });
+        feature->setToolTip(0, state.module.description);
+    }
+    m_hostSlangTree->expandAll();
+}
+
 void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
 {
     if (!document) {
         m_parameterInspector->setModel(nullptr);
         m_diagnostics->clear();
         m_dependencyTree->clear();
+        m_hostSlangTree->clear();
         m_resourceTree->clear();
         m_compilationTree->clear();
         m_inspectorDocument->setText(QStringLiteral("No document"));
@@ -697,6 +740,7 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     m_inspectorContext->setText(binding);
     m_diagnostics->setPlainText(m_workspace->focusedDocument()->diagnostics());
     refreshDependencyInspector();
+    refreshHostSlangInspector();
     refreshSemanticInspector();
     if (m_lsp) {
         const QString uri = documentUri(m_workspace->focusedDocument());

@@ -40,6 +40,13 @@ float4 psMain(VSOut input) : SV_Target0 { return sampleScene(input.uv); }
     assert(identities.contains(QStringLiteral("miskeyed.ui")));
     assert(identities.contains(QStringLiteral("miskeyed.time")));
     assert(identities.contains(QStringLiteral("miskeyed.render_toy")));
+    const auto moduleStates = workbenchModuleStates(identities);
+    for (const WorkbenchModuleState& state : moduleStates) {
+        if (state.module.moduleName == QStringLiteral("miskeyed.time"))
+            assert(state.imported);
+        if (state.module.moduleName == QStringLiteral("miskeyed.shader_toy"))
+            assert(!state.imported);
+    }
     QStringList resourceNames;
     for (const ResourceDescriptor& resource : document.resources())
         resourceNames.push_back(resource.name);

@@ -48,14 +48,17 @@ SCENARIOS = {
         "inspector_parameters.png", target="InspectorPanel", minimum_size=(280, 450)
     ),
     "inspector-dependencies": Scenario(
-        "inspector_dependencies.png", target="InspectorPanel", inspector=2, minimum_size=(280, 450)
+        "inspector_dependencies.png", target="InspectorPanel", inspector=3, minimum_size=(280, 450)
+    ),
+    "host-features": Scenario(
+        "host_features.png", target="InspectorPanel", inspector=2, minimum_size=(280, 450)
     ),
     "inspector-entry-points": Scenario(
         "inspector_entry_points.png",
         target="InspectorPanel",
         tool="shader-toy",
         focus="shader",
-        inspector=3,
+        inspector=4,
         minimum_size=(280, 450),
     ),
     "timeline": Scenario("timeline_overview.png", target="Timeline", minimum_size=(700, 48)),
@@ -121,8 +124,10 @@ def configure(window: WorkbenchWindow, scenario: Scenario) -> None:
     tabs = required(window, QTabWidget, "ActiveDocumentInspector")
     tabs.setCurrentIndex(scenario.inspector)
     if scenario.inspector == 2:
-        required(window, QTreeWidget, "DependencyTree").expandAll()
+        required(window, QTreeWidget, "HostSlangTree").expandAll()
     if scenario.inspector == 3:
+        required(window, QTreeWidget, "DependencyTree").expandAll()
+    if scenario.inspector == 4:
         required(window, QTreeWidget, "CompilationTree").expandAll()
     click_view(window, scenario.view)
     target = required(window, QComboBox, "WorkspaceGeneratedTarget")
@@ -192,10 +197,14 @@ def validate(window: WorkbenchWindow, scenario: Scenario) -> QWidget:
         "capture target height": target.height() >= scenario.minimum_size[1],
     }
     if scenario.inspector == 2:
+        checks["host feature rows"] = (
+            required(window, QTreeWidget, "HostSlangTree").topLevelItemCount() > 0
+        )
+    if scenario.inspector == 3:
         checks["dependency rows"] = (
             required(window, QTreeWidget, "DependencyTree").topLevelItemCount() > 0
         )
-    if scenario.inspector == 3:
+    if scenario.inspector == 4:
         checks["entry point rows"] = (
             required(window, QTreeWidget, "CompilationTree").topLevelItemCount() > 0
         )

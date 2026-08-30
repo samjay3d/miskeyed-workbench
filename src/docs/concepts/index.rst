@@ -8,6 +8,7 @@ Concepts explain visible behavior without requiring C++ knowledge.
 
    documents_and_bindings
    slang_modules
+   host_features
    entry_points
    reflection
    dependency_identity

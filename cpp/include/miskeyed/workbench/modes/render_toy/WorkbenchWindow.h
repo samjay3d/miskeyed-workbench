@@ -89,6 +89,7 @@ private:
     void reloadGeneratedTargets();
     void refreshGeneratedView();
     void refreshDependencyInspector();
+    void refreshHostSlangInspector();
     void refreshSemanticInspector();
     void mirrorParameter(ShaderDocument* target, const QString& name, const QVariant& value);
     void rebuildToolSelector();
@@ -113,6 +114,7 @@ private:
     QTreeWidget* m_dependencyTree = nullptr;
     QTreeWidget* m_resourceTree = nullptr;
     QTreeWidget* m_compilationTree = nullptr;
+    QTreeWidget* m_hostSlangTree = nullptr;
     QPlainTextEdit* m_dependencySource = nullptr;
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
     ShaderWorkspace* m_workspace = nullptr;
