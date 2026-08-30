@@ -1,6 +1,11 @@
 Contributing and documentation
 ==============================
 
+Start with the repository ``AGENTS.md`` contract. Architectural work follows the
+reusable ``.github/skills/architecture-review/SKILL.md`` audit; documentation scope is
+selected with ``.github/skills/docs/SKILL.md``. These checklists point to canonical
+code and documentation rather than duplicating the architecture.
+
 Build and test
 --------------
 
@@ -74,3 +79,8 @@ Keep ``CHANGELOG.md`` release-oriented, update the single package version in
 ``pyproject.toml``, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs
 check.
+
+Ordinary post-release work belongs under ``[Unreleased]``. Work explicitly included in
+an active release belongs in that release record. Do not encode one version's state as
+a permanent contributor rule; the ``prepare-release`` skill handles the mechanical
+transition when a release is cut.

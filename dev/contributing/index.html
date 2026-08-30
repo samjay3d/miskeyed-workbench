@@ -340,6 +340,10 @@
         <article role="main" id="furo-main-content">
           <section id="contributing-and-documentation">
 <h1>Contributing and documentation<a class="headerlink" href="#contributing-and-documentation" title="Link to this heading">¶</a></h1>
+<p>Start with the repository <code class="docutils literal notranslate"><span class="pre">AGENTS.md</span></code> contract. Architectural work follows the
+reusable <code class="docutils literal notranslate"><span class="pre">.github/skills/architecture-review/SKILL.md</span></code> audit; documentation scope is
+selected with <code class="docutils literal notranslate"><span class="pre">.github/skills/docs/SKILL.md</span></code>. These checklists point to canonical
+code and documentation rather than duplicating the architecture.</p>
 <section id="build-and-test">
 <h2>Build and test<a class="headerlink" href="#build-and-test" title="Link to this heading">¶</a></h2>
 <p>Use the environment-provided Qt and Slang SDKs. The normal native checks are CTest
@@ -405,6 +409,10 @@ the package release.</p>
 <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs
 check.</p>
+<p>Ordinary post-release work belongs under <code class="docutils literal notranslate"><span class="pre">[Unreleased]</span></code>. Work explicitly included in
+an active release belongs in that release record. Do not encode one version’s state as
+a permanent contributor rule; the <code class="docutils literal notranslate"><span class="pre">prepare-release</span></code> skill handles the mechanical
+transition when a release is cut.</p>
 </section>
 </section>
 
