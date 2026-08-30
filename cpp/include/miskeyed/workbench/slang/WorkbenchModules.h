@@ -3,12 +3,16 @@
 #include <QByteArray>
 #include <QList>
 #include <QString>
+#include <QStringList>
 
 namespace miskeyed::workbench::slang_rhi {
 
 struct WorkbenchModule final {
     QString id;
     QString title;
+    QString moduleName;
+    QString path;
+    QStringList imports;
     QByteArray source;
 };
 

@@ -42,10 +42,12 @@ and Post bindings. Each `ShaderDocument` retains source, dependency-graph identi
 reflection, diagnostics, and generated targets. `SlangRhiWidget` consumes only the two
 active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
 pipelines or textures. Source, generated output, and compare are views of the focused
-document, while reflection remains an inspector concern. The structured **Imports /
-Dependencies** view reads the focused document's compiler-resolved module inputs and
-DependencyGraph identities; selecting an import shows the exact resolved source instead
-of requiring users to infer the import stack from compiler text.
+document, while reflection remains an inspector concern. The structured **Dependencies** view traverses the focused document's live
+`DependencyGraph` from the active pipeline using node IDs, rather than displaying a
+compiler-result snapshot. It exposes the complete source/module/product stack, hashes,
+and dirty state; selecting any node resolves its current payload from the graph. Resolved
+project files are watched, so editing an imported module recompiles the document and
+updates the same graph and inspector in place.
 
 ### Time and deterministic evaluation
 
@@ -60,9 +62,11 @@ active passes. USD, OTIO, an offline renderer, or another host can instead set t
 context directly without translating through an integer frame. Context changes upload
 host-managed uniform bytes without changing shader or dependency identity.
 
-The packaged `miskeyed.time` Slang module supplies `workbenchTime`; the compiler imports
-that standard host contract automatically. An `ISlangFileSystem` edge supplies the packaged module to the Slang session, while project
-and user imports continue to use Slang session search paths.
+The packaged `miskeyed.ui` and `miskeyed.time` modules provide host contracts. Authored
+shaders explicitly import the contracts they use; Render Toy samples import `miskeyed.viewport_camera` and
+`miskeyed.render_toy` according to their role. An `ISlangFileSystem` edge supplies these
+packaged modules to the Slang session, while project and user imports continue through
+Slang session search paths. Slang—not a Workbench header catalog—owns module resolution.
 
 ## Merkle DAG rule
 

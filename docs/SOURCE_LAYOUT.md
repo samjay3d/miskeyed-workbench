@@ -60,8 +60,11 @@ A mode is a composition root, not a new owner of shared services:
 `ShaderWorkspace` retains cheap authoring/compile products for open tabs. Only the
 active Scene/Post bindings are consumed by `SlangRhiWidget`, so tabs do not each own a
 QRhi pipeline or render target. Each successful compiler filesystem load is represented
-as a module node feeding the document entry-point node; the inspector can therefore show
-resolved import identity, content hash, dirtiness, path, and source.
+as a module node feeding the document entry-point node. Built-in module-to-module edges
+retain the authored import stack, and the inspector traverses the live graph by node ID
+to show identity, content hash, dirtiness, and source. Local imported files are watched;
+changes recompile their dependent document and update these nodes without replacing the
+inspector with a compile-result snapshot.
 
 ## Dependency direction
 
@@ -78,8 +81,8 @@ belongs in `core`. Python exposes native objects and never becomes another compo
 or render core.
 
 Workbench-owned `.slang` contracts are authored under `shaders/workbench`, embedded for
-wheel/application packaging, and loaded at the Slang session edge. `miskeyed.time` is a
-normal module consumed through Slang import resolution. Project/user module locations
+wheel/application packaging, and loaded at the Slang session edge. `miskeyed.ui`, `miskeyed.time`, `miskeyed.viewport_camera`, and
+`miskeyed.render_toy` are normal modules consumed through Slang import resolution. Project/user module locations
 continue through `SessionDesc.searchPaths`. A small `ISlangFileSystem` edge exposes embedded
 Workbench sources while delegating ordinary paths to the host filesystem; Slang still owns
 module-name and search-path resolution.

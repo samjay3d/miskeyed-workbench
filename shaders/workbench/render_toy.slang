@@ -7,7 +7,6 @@ struct SceneSample
     float4 color : SV_Target0;
 };
 
-#ifdef WORKBENCH_RENDER_TOY_POST_PROCESS
 // These bindings are owned by Render Toy. User post-process shaders sample the scene
 // through sceneColor rather than redeclaring the host's QRhi binding layout.
 [[vk::binding(1)]] Texture2D sceneColor : register(t1);
@@ -17,4 +16,3 @@ float4 sampleScene(float2 uv)
 {
     return sceneColor.Sample(sceneSampler, uv);
 }
-#endif

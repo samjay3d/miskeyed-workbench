@@ -23,6 +23,7 @@ struct SourceDependency {
     QString path;
     QByteArray source;
     QByteArray digest;
+    QStringList imports;
 };
 
 struct CompileResult {

@@ -308,7 +308,9 @@ python/miskeyed/workbench/
 
 Workbench-owned Slang contracts live in `shaders/workbench/` and are packaged with the
 native target. The editor treats generated text as a document view, while the inspector
-is reserved for reflected parameters, compilation state, and future dependency views.
+separates reflected parameters and compilation from a live dependency view. That view
+walks the focused document's `DependencyGraph`; selecting a node shows the current module
+or source payload, and edits to imported project files update it after recompilation.
 
 CI also captures the native window after compilation and its first rendered frames. The
 `workbench-documentation` artifact provides the current screenshot for review and

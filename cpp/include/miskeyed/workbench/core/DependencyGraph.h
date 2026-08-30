@@ -62,6 +62,8 @@ public:
     Q_INVOKABLE bool contains(const QString& key) const;
     Q_INVOKABLE NodeId nodeId(const QString& key) const;
     Q_INVOKABLE QString digestHex(NodeId id) const;
+    Q_INVOKABLE QString nodeKey(NodeId id) const;
+    Q_INVOKABLE NodeKind nodeKind(NodeId id) const;
     Q_INVOKABLE quint32 dirtyFlags(NodeId id) const;
     Q_INVOKABLE QStringList dependencies(NodeId id) const;
     Q_INVOKABLE QByteArray payload(NodeId id) const;

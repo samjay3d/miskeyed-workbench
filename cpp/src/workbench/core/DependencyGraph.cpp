@@ -47,6 +47,20 @@ QString DependencyGraph::digestHex(NodeId id) const
     return {};
 }
 
+QString DependencyGraph::nodeKey(NodeId id) const
+{
+    if (const auto* n = node(id))
+        return n->key;
+    return {};
+}
+
+NodeKind DependencyGraph::nodeKind(NodeId id) const
+{
+    if (const auto* n = node(id))
+        return n->kind;
+    return NodeKind::Source;
+}
+
 quint32 DependencyGraph::dirtyFlags(NodeId id) const
 {
     if (const auto* n = node(id))

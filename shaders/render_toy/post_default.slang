@@ -1,3 +1,7 @@
+import miskeyed.ui;
+import miskeyed.time;
+import miskeyed.render_toy;
+
 // Render Toy post-process pass. Samples the scene G-buffer produced by the scene pass
 // and grades it — this is the second stage that runs on top of the first.
 // Render Toy supplies the scene target and sampler through its published pass header.
@@ -29,7 +33,8 @@ VSOut vsMain(uint vertexID : SV_VertexID)
 float4 psMain(VSOut input) : SV_Target0
 {
     float3 c = sampleScene(input.uv).rgb;
-    c *= exp2(exposure);
+    float exposurePulse = sin(workbenchTime.time * 1.2) * 0.08;
+    c *= exp2(exposure + exposurePulse);
     c *= (1.0 + tint);
     float2 q = input.uv * 2.0 - 1.0;
     float vig = 1.0 - saturate(dot(q, q) * vignette);

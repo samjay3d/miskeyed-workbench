@@ -1,3 +1,7 @@
+import miskeyed.ui;
+import miskeyed.time;
+import miskeyed.render_toy;
+
 // Sample: Bloom + chromatic aberration post-process. Grades the scene G-buffer.
 
 [UIGroup("Bloom")] [UIName("Exposure")]  [UIWidget("slider")] [UIRange(-4.0, 4.0)] [UIStep(0.01)] [UIUnits("EV")]
@@ -46,7 +50,7 @@ float4 psMain(VSOut input) : SV_Target0
     col.b = sampleSceneClamped(uv + dir).b;
 
     // cheap ring-tap bloom on the bright parts
-    const float r = 0.006;
+    float r = 0.006 * (1.0 + 0.2 * sin(workbenchTime.time * 2.0));
     float3 bloom = float3(0,0,0);
     bloom += bloomTap(uv + float2( r, 0.0));
     bloom += bloomTap(uv + float2(-r, 0.0));

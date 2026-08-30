@@ -79,21 +79,6 @@ namespace {
         return readShaderResource(path);
     }
 
-    QString renderToyPrelude(bool scenePass)
-    {
-        QByteArray source = "import miskeyed.time;\n";
-        source += workbenchModuleSource(QStringLiteral("ui"));
-        source += '\n';
-        if (scenePass) {
-            source += workbenchModuleSource(QStringLiteral("viewport-camera"));
-        } else {
-            source += "#define WORKBENCH_RENDER_TOY_POST_PROCESS\n";
-        }
-        source += '\n';
-        source += workbenchModuleSource(QStringLiteral("render-toy"));
-        return QString::fromUtf8(source);
-    }
-
     QByteArray sceneShaderSource()
     {
         return renderToySource(":/miskeyed/workbench/render_toy/scene_default.slang");
@@ -629,8 +614,13 @@ void WorkbenchWindow::connectUi()
         [this] { refreshGeneratedView(); });
     connect(
         m_dependencyTree, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* item) {
+            if (!item || !m_editorDoc) {
+                m_dependencySource->clear();
+                return;
+            }
+            const NodeId node = item->data(0, Qt::UserRole).toULongLong();
             m_dependencySource->setPlainText(
-                item ? item->data(0, Qt::UserRole).toString() : QString());
+                QString::fromUtf8(m_editorDoc->dependencyGraph()->payload(node)));
         });
     connect(m_sceneViewport, &SlangRhiWidget::activated, this,
         [this] { m_workspace->focusDocument(m_workspace->activeSceneDocument()); });
@@ -640,9 +630,6 @@ void WorkbenchWindow::connectUi()
 
 void WorkbenchWindow::hookDocument(ShaderDocument* doc)
 {
-    const ShaderRole role = m_workspace->role(doc);
-    if (role == ShaderRole::Scene || role == ShaderRole::Post)
-        doc->setSystemPrelude(renderToyPrelude(role == ShaderRole::Scene));
     connect(doc, &ShaderDocument::sourceChanged, this, [this, doc] {
         if (doc == m_editorDoc && m_editor->toPlainText() != doc->source()) {
             QSignalBlocker block(m_editor);
@@ -658,6 +645,15 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
         if (doc == m_editorDoc)
             refreshDependencyInspector();
     });
+    connect(doc->dependencyGraph(), &DependencyGraph::graphChanged, this, [this, doc] {
+        if (doc == m_editorDoc)
+            refreshDependencyInspector();
+    });
+    connect(
+        doc->dependencyGraph(), &DependencyGraph::nodeChanged, this, [this, doc](quint64, quint32) {
+            if (doc == m_editorDoc)
+                refreshDependencyInspector();
+        });
     connect(doc, &ShaderDocument::compilingChanged, this, [this, doc] {
         if (doc == m_editorDoc && doc->compiling()) {
             setCompileState(CompileState::Compiling);
@@ -935,21 +931,47 @@ void WorkbenchWindow::refreshDependencyInspector()
         return;
 
     auto* graph = m_editorDoc->dependencyGraph();
-    const NodeId sourceNode = graph->nodeId(QStringLiteral("source:user"));
-    auto* sourceItem = new QTreeWidgetItem(m_dependencyTree,
-        { QStringLiteral("Source"), documentUri(m_editorDoc), graph->digestHex(sourceNode).left(12),
-            graph->dirtyFlags(sourceNode) ? QStringLiteral("dirty") : QStringLiteral("clean") });
-    sourceItem->setData(0, Qt::UserRole, m_editorDoc->source());
-
-    for (const SourceDependency& dependency : m_editorDoc->importedDependencies()) {
-        const NodeId node = graph->nodeId(QStringLiteral("module:") + dependency.identity);
-        auto* item = new QTreeWidgetItem(m_dependencyTree,
-            { QStringLiteral("Import"), dependency.identity,
-                QString::fromLatin1(dependency.digest.toHex().left(12)),
-                graph->dirtyFlags(node) ? QStringLiteral("dirty") : QStringLiteral("clean") });
-        item->setToolTip(1, dependency.path);
-        item->setData(0, Qt::UserRole, QString::fromUtf8(dependency.source));
-    }
+    auto kindName = [](NodeKind kind) {
+        switch (kind) {
+        case NodeKind::Source:
+            return QStringLiteral("Source");
+        case NodeKind::Module:
+            return QStringLiteral("Import");
+        case NodeKind::EntryPoint:
+            return QStringLiteral("Entry point");
+        case NodeKind::UiSchema:
+            return QStringLiteral("UI schema");
+        case NodeKind::ParameterLayout:
+            return QStringLiteral("Layout");
+        case NodeKind::ParameterValues:
+            return QStringLiteral("Values");
+        case NodeKind::Resource:
+            return QStringLiteral("Resource");
+        case NodeKind::BindingLayout:
+            return QStringLiteral("Bindings");
+        case NodeKind::RenderState:
+            return QStringLiteral("Render state");
+        case NodeKind::Pipeline:
+            return QStringLiteral("Pipeline");
+        }
+        return QStringLiteral("Node");
+    };
+    std::function<void(NodeId, QTreeWidgetItem*)> addNode;
+    addNode = [this, graph, &addNode, &kindName](NodeId node, QTreeWidgetItem* parent) {
+        const QString key = graph->nodeKey(node);
+        if (key.isEmpty())
+            return;
+        auto* item = parent ? new QTreeWidgetItem(parent) : new QTreeWidgetItem(m_dependencyTree);
+        item->setText(0, kindName(graph->nodeKind(node)));
+        item->setText(1, key.startsWith(QStringLiteral("module:")) ? key.mid(7) : key);
+        item->setText(2, graph->digestHex(node).left(12));
+        item->setText(
+            3, graph->dirtyFlags(node) ? QStringLiteral("dirty") : QStringLiteral("clean"));
+        item->setData(0, Qt::UserRole, QVariant::fromValue<qulonglong>(node));
+        for (const QString& dependencyKey : graph->dependencies(node))
+            addNode(graph->nodeId(dependencyKey), item);
+    };
+    addNode(graph->nodeId(QStringLiteral("rhi:pipeline")), nullptr);
     m_dependencyTree->expandAll();
 }
 

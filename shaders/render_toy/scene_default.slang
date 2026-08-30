@@ -1,3 +1,8 @@
+import miskeyed.ui;
+import miskeyed.time;
+import miskeyed.viewport_camera;
+import miskeyed.render_toy;
+
 // Render Toy default scene pass. Camera controls are supplied by Workbench.
 struct VSOut
 {
@@ -23,11 +28,13 @@ float sdTorus(float3 p, float2 t) { float2 q = float2(length(p.xz) - t.x, p.y); 
 float2 mapScene(float3 p)
 {
     float2 res = float2(p.y + 1.0, 0.0);
-    float2 sph = float2(sdSphere(p - float3(-1.35, -0.10, 0.0), 0.90), 1.0);
+    float sphereY = -0.10 + sin(workbenchTime.time * 1.5) * 0.18;
+    float2 sph = float2(sdSphere(p - float3(-1.35, sphereY, 0.0), 0.90), 1.0);
     if (sph.x < res.x) res = sph;
     float2 box = float2(sdBox(p - float3(1.25, -0.35, 0.25), float3(0.55, 0.65, 0.55)), 2.0);
     if (box.x < res.x) res = box;
-    float2 tor = float2(sdTorus(p - float3(0.05, 0.05, -1.55), float2(0.55, 0.20)), 3.0);
+    float torusY = 0.05 + sin(workbenchTime.time * 2.0 + 1.2) * 0.12;
+    float2 tor = float2(sdTorus(p - float3(0.05, torusY, -1.55), float2(0.55, 0.20)), 3.0);
     if (tor.x < res.x) res = tor;
     return res;
 }

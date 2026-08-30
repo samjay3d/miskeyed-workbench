@@ -18,11 +18,11 @@ import miskeyed.workbench as workbench  # noqa: E402
 from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-# NOTE: the shader below deliberately does NOT declare the UI* attribute types. The
-# compiler supplies the packaged UI attribute contract, so user
-# shaders can annotate uniforms without pasting boilerplate. These tests therefore also
-# prove that catalog-backed injection: if it regressed, reflection would come back empty.
+# Workbench contracts are ordinary Slang modules. Authored shaders import the contracts
+# they use, so compiler dependency discovery and diagnostics see the same module stack.
 SHADER = """
+import miskeyed.ui;
+import miskeyed.time;
 [UIGroup("Camera")] [UIName("Field of View")] [UIWidget("slider")]
 [UIRange(10.0, 120.0)] [UIStep(1.0)] [UITooltip("Vertical FOV")] [UIUnits("deg")]
 uniform float camFov;
@@ -155,8 +155,7 @@ def test_app_icon_available(app):
 
 def test_diagnostics_map_to_user_source_line(app):
     # An undefined identifier on line 1 of the user's source. The compiler injects a
-    # multi-line system prelude ahead of it; a #line reset must make the error report
-    # line 1, not a number shifted by the prelude length.
+    # optional compiler prelude ahead of it; diagnostics must still map to authored lines.
     doc = ShaderDocument()
     doc.setSource("float4 psMain() : SV_Target0 { return nope_undefined; }\n")
     doc.compile()

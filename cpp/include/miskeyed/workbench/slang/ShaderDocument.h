@@ -5,6 +5,7 @@
 #include <miskeyed/workbench/slang/SlangCompiler.h>
 #include <QObject>
 #include <QTimer>
+#include <QFileSystemWatcher>
 #include <QUrl>
 #include <QMap>
 #include <QStringList>
@@ -86,6 +87,7 @@ private:
     bool m_dirty = false;
     QString m_diagnostics;
     QTimer m_compileTimer;
+    QFileSystemWatcher m_dependencyWatcher;
     SlangCompiler m_compiler;
     ShaderParameterModel m_parameters;
     DependencyGraph m_graph;

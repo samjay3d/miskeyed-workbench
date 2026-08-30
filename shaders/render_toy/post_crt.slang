@@ -1,3 +1,7 @@
+import miskeyed.ui;
+import miskeyed.time;
+import miskeyed.render_toy;
+
 // Sample: CRT / scanline post-process. Grades the Render Toy scene target.
 // The sceneColor binding is declared by the published Render Toy pass header.
 
@@ -46,7 +50,8 @@ float4 psMain(VSOut input) : SV_Target0
     col.b = sceneColor.Sample(sceneSampler, uv - float2(ab, 0.0)).b;
 
     // scanlines
-    float s = sin(uv.y * 620.0 * 3.14159265);
+    float scanPhase = workbenchTime.time * 18.0;
+    float s = sin((uv.y * 620.0 + scanPhase) * 3.14159265);
     col *= 1.0 - (0.35 + scanline * 0.5) * s * s;
 
     // aperture-grille mask over 3 horizontal subpixels

@@ -27,9 +27,13 @@ namespace {
     // search locations still come from SessionDesc.searchPaths.
     class WorkbenchModuleFileSystem final : public ISlangFileSystem {
     public:
-        explicit WorkbenchModuleFileSystem(QByteArray timeSource)
-            : m_timeSource(std::move(timeSource))
+        explicit WorkbenchModuleFileSystem(const QList<WorkbenchModule>& modules)
         {
+            for (const WorkbenchModule& module : modules) {
+                m_builtinSources.insert(module.path, module.source);
+                m_builtinIdentities.insert(module.path, module.moduleName);
+                m_builtinImports.insert(module.path, module.imports);
+            }
         }
 
         SlangResult SLANG_MCALL queryInterface(const SlangUUID& uuid, void** outObject) override
@@ -67,10 +71,8 @@ namespace {
             QList<SourceDependency> result;
             for (auto it = m_loaded.cbegin(); it != m_loaded.cend(); ++it) {
                 const QByteArray bytes = it.value();
-                result.push_back({ it.key() == QLatin1String("miskeyed/time.slang")
-                        ? QStringLiteral("miskeyed.time")
-                        : it.key(),
-                    it.key(), bytes, Digest::hash(bytes).bytes() });
+                result.push_back({ m_builtinIdentities.value(it.key(), it.key()), it.key(), bytes,
+                    Digest::hash(bytes).bytes(), m_builtinImports.value(it.key()) });
             }
             return result;
         }
@@ -83,8 +85,8 @@ namespace {
             QByteArray bytes;
             const QString fileName
                 = QString::fromUtf8(path).replace(QLatin1Char('\\'), QLatin1Char('/'));
-            if (fileName == QLatin1String("miskeyed/time.slang")) {
-                bytes = m_timeSource;
+            if (m_builtinSources.contains(fileName)) {
+                bytes = m_builtinSources.value(fileName);
             } else {
                 QFile file(QString::fromUtf8(path));
                 if (!file.open(QIODevice::ReadOnly))
@@ -100,7 +102,9 @@ namespace {
 
     private:
         std::atomic<uint32_t> m_refs { 1 };
-        QByteArray m_timeSource;
+        QMap<QString, QByteArray> m_builtinSources;
+        QMap<QString, QString> m_builtinIdentities;
+        QMap<QString, QStringList> m_builtinImports;
         QMap<QString, QByteArray> m_loaded;
     };
 
@@ -343,8 +347,7 @@ class SlangCompilerPrivate {
 public:
     Slang::ComPtr<slang::IGlobalSession> global;
     QStringList searchPaths;
-    QString systemPrelude = QStringLiteral("import miskeyed.time;\n")
-        + QString::fromUtf8(workbenchModuleSource(QStringLiteral("ui")));
+    QString systemPrelude;
 
     SlangCompilerPrivate() { slang::createGlobalSession(global.writeRef()); }
 };
@@ -409,8 +412,7 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     sessionDesc.searchPathCount = searchPtrs.size();
 
     Slang::ComPtr<ISlangFileSystem> moduleFileSystem;
-    auto* workbenchFileSystem
-        = new WorkbenchModuleFileSystem(workbenchModuleSource(QStringLiteral("time")));
+    auto* workbenchFileSystem = new WorkbenchModuleFileSystem(workbenchModules());
     moduleFileSystem.attach(workbenchFileSystem);
     sessionDesc.fileSystem = moduleFileSystem.get();
 

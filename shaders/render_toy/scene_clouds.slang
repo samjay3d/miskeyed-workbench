@@ -1,3 +1,8 @@
+import miskeyed.ui;
+import miskeyed.time;
+import miskeyed.viewport_camera;
+import miskeyed.render_toy;
+
 // Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
 // camera comes from the published Viewport camera header.
 // Drag in either viewport to fly the camera (orbit / pan / zoom).
@@ -61,6 +66,7 @@ float fbm(float3 p)
 // Cloud density in a horizontal slab. Positive = inside cloud.
 float cloudDensity(float3 p)
 {
+    p.xz += float2(workbenchTime.time * 0.18, workbenchTime.time * 0.07);
     float shape = fbm(p * 0.35) - (0.55 + coverage * 0.30);
     float slab = saturate(1.0 - abs(p.y - 1.2) / 1.6);
     return saturate(shape) * slab * (1.0 + densityMul);

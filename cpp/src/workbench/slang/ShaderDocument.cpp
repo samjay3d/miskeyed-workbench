@@ -1,6 +1,7 @@
 #include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 
 namespace miskeyed::workbench::slang_rhi {
@@ -14,6 +15,11 @@ ShaderDocument::ShaderDocument(QObject* parent)
     m_compileTimer.setSingleShot(true);
     m_compileTimer.setInterval(180);
     connect(&m_compileTimer, &QTimer::timeout, this, &ShaderDocument::compileNow);
+    connect(&m_dependencyWatcher, &QFileSystemWatcher::fileChanged, this, [this](const QString&) {
+        // Editors write files by replacement on many platforms, so compileNow re-adds
+        // every resolved dependency after Slang has loaded the new contents.
+        m_compileTimer.start();
+    });
     connect(&m_parameters, &ShaderParameterModel::packedRangeChanged, this,
         [this](int, int) { m_graph.setPayload(m_valuesNode, m_parameters.packedBytes()); });
     initializeGraph();
@@ -128,6 +134,8 @@ void ShaderDocument::compileNow()
     emit compilingChanged();
     const QString virtualPath
         = m_fileUrl.isLocalFile() ? m_fileUrl.toLocalFile() : QStringLiteral("user_shader.slang");
+    if (m_fileUrl.isLocalFile())
+        m_compiler.setSearchPaths({ QFileInfo(virtualPath).absolutePath() });
     QElapsedTimer timer;
     timer.start();
     const CompileResult r = m_compiler.compileFullscreen(m_source, virtualPath);
@@ -136,12 +144,32 @@ void ShaderDocument::compileNow()
     emit compilingChanged();
     setDiagnostics(r.diagnostics);
     m_importedDependencies = r.dependencies;
+    if (!m_dependencyWatcher.files().isEmpty())
+        m_dependencyWatcher.removePaths(m_dependencyWatcher.files());
+    QStringList watchedFiles;
+    for (const SourceDependency& dependency : r.dependencies) {
+        const QFileInfo info(dependency.path);
+        if (info.isFile())
+            watchedFiles.push_back(info.absoluteFilePath());
+    }
+    if (!watchedFiles.isEmpty())
+        m_dependencyWatcher.addPaths(watchedFiles);
     m_moduleNodes.clear();
     for (const SourceDependency& dependency : r.dependencies) {
         const NodeId node
             = m_graph.ensureNode(QStringLiteral("module:") + dependency.identity, NodeKind::Module);
         m_graph.setPayload(node, dependency.source);
         m_moduleNodes.push_back(node);
+    }
+    for (const SourceDependency& dependency : r.dependencies) {
+        QList<NodeId> imports;
+        for (const QString& identity : dependency.imports) {
+            const NodeId imported = m_graph.nodeId(QStringLiteral("module:") + identity);
+            if (imported)
+                imports.push_back(imported);
+        }
+        m_graph.setDependencies(
+            m_graph.nodeId(QStringLiteral("module:") + dependency.identity), imports);
     }
     QList<NodeId> entryDependencies { m_sourceNode };
     entryDependencies.append(m_moduleNodes);
