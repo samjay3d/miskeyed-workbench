@@ -1,8 +1,8 @@
 // Workbench viewport contract.
 //
-// These fields are ordinary reflected parameters. Users can inspect, edit, or replace
-// the camera implementation without relying on undocumented host uniform names.
-struct WorkbenchViewportCamera
+// These fields are ordinary reflected parameters. Users can inspect the reflected camera interface and drive it without relying on
+// undocumented host uniform names. Render Toy supplies this contract to scene shaders.
+struct ViewportCamera
 {
     [UIGroup("Camera")] [UIName("Yaw")]      [UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
     float camYaw;
@@ -17,4 +17,4 @@ struct WorkbenchViewportCamera
     [UIGroup("Camera")] [UIName("Pan Y")]    [UIWidget("slider")] [UIRange(-10.0, 10.0)]       [UIStep(0.01)]
     float camPanY;
 };
-uniform WorkbenchViewportCamera workbenchCamera;
+uniform ViewportCamera camera;

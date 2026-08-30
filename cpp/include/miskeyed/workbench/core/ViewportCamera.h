@@ -5,7 +5,7 @@
 namespace miskeyed::workbench::core {
 
 // Host-side description of the camera contract exposed to authored shaders. The
-// fields intentionally match the leaf names reflected from WorkbenchViewportCamera.
+// fields intentionally match the leaf names reflected from ViewportCamera.
 struct ViewportCamera final {
     float camYaw = 0.0f;
     float camPitch = 0.0f;

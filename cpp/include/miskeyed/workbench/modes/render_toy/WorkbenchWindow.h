@@ -90,8 +90,9 @@ private:
     QHash<QString, QList<LspDiagnostic>> m_diagnosticsByUri; // last diagnostics per document
 
     QPushButton* m_compileStatus = nullptr; // persistent compile-state pill
-    QTabWidget* m_tabs = nullptr; // Camera / Post-Process / Diagnostics
+    QTabWidget* m_tabs = nullptr; // Reflected parameters and diagnostics
     ParameterInspector* m_cameraInspector = nullptr;
+    ParameterInspector* m_sceneInspector = nullptr;
     ParameterInspector* m_postInspector = nullptr;
     int m_diagTabIndex = -1;
     CompileState m_compileState = CompileState::Idle;

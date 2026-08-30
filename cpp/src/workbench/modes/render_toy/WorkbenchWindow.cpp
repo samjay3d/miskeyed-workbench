@@ -63,538 +63,61 @@ namespace {
         return f;
     }
 
-    // Scene body for the scene pass: a few raymarched SDF primitives (sphere, box, torus)
-    // on a checker ground with soft shadows and ambient occlusion, framed by an orbit
-    // camera. Camera uniforms are additive offsets from a sensible base so the default
-    // (all-zero) values already produce a nicely framed image. The scene pass renders this
-    // into an offscreen texture (the G-buffer) that the post-process pass then samples.
-    constexpr const char* kSceneBody = R"SLANG(
-struct VSOut
-{
-    float4 position : SV_Position;
-    float2 uv : TEXCOORD0;
-};
-
-[shader("vertex")]
-VSOut vsMain(uint vertexID : SV_VertexID)
-{
-    float2 p = float2((vertexID << 1) & 2, vertexID & 2);
-    VSOut o;
-    o.uv = p;
-    o.position = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-    return o;
-}
-
-float sdSphere(float3 p, float r) { return length(p) - r; }
-float sdBox(float3 p, float3 b) { float3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
-float sdTorus(float3 p, float2 t) { float2 q = float2(length(p.xz) - t.x, p.y); return length(q) - t.y; }
-
-// Nearest surface as (distance, materialId): a few primitives on a ground plane.
-float2 mapScene(float3 p)
-{
-    float2 res = float2(p.y + 1.0, 0.0);
-    float2 sph = float2(sdSphere(p - float3(-1.35, -0.10, 0.0), 0.90), 1.0);
-    if (sph.x < res.x) res = sph;
-    float2 box = float2(sdBox(p - float3(1.25, -0.35, 0.25), float3(0.55, 0.65, 0.55)), 2.0);
-    if (box.x < res.x) res = box;
-    float2 tor = float2(sdTorus(p - float3(0.05, 0.05, -1.55), float2(0.55, 0.20)), 3.0);
-    if (tor.x < res.x) res = tor;
-    return res;
-}
-
-float3 sceneNormal(float3 p)
-{
-    float2 e = float2(0.0015, 0.0);
-    return normalize(float3(
-        mapScene(p + e.xyy).x - mapScene(p - e.xyy).x,
-        mapScene(p + e.yxy).x - mapScene(p - e.yxy).x,
-        mapScene(p + e.yyx).x - mapScene(p - e.yyx).x));
-}
-
-float softShadow(float3 ro, float3 rd, float mint, float maxt)
-{
-    float res = 1.0;
-    float t = mint;
-    for (int i = 0; i < 48; ++i)
+    QByteArray readShaderResource(const char* path)
     {
-        float h = mapScene(ro + rd * t).x;
-        res = min(res, 10.0 * h / t);
-        t += clamp(h, 0.02, 0.30);
-        if (h < 0.001 || t > maxt) break;
-    }
-    return saturate(res);
-}
-
-float calcAO(float3 p, float3 n)
-{
-    float occ = 0.0;
-    float sca = 1.0;
-    for (int i = 0; i < 5; ++i)
-    {
-        float hr = 0.01 + 0.12 * float(i) / 4.0;
-        float d = mapScene(p + n * hr).x;
-        occ += (hr - d) * sca;
-        sca *= 0.95;
-    }
-    return saturate(1.0 - 3.0 * occ);
-}
-
-float3 materialColor(float id, float3 p)
-{
-    if (id < 0.5)
-    {
-        float checker = fmod(floor(p.x) + floor(p.z), 2.0);
-        return lerp(float3(0.19, 0.20, 0.23), float3(0.30, 0.31, 0.35), checker);
-    }
-    if (id < 1.5) return float3(0.90, 0.42, 0.24); // sphere
-    if (id < 2.5) return float3(0.26, 0.55, 0.74); // box
-    return float3(0.64, 0.42, 0.80);               // torus
-}
-
-// Real viewport aspect from screen-space UV derivatives (no resolution uniform).
-float viewAspect(float2 uv) { return abs(ddy(uv.y)) / max(abs(ddx(uv.x)), 1.0e-8); }
-
-float3 renderScene(float2 uv, float aspect)
-{
-    float2 ndc = uv * 2.0 - 1.0;
-    ndc.y = -ndc.y;
-    ndc.x *= aspect;
-
-    float yaw = workbenchCamera.camYaw + 0.7;
-    float pitch = clamp(workbenchCamera.camPitch + 0.35, -1.45, 1.45);
-    float dist = clamp(workbenchCamera.camDistance + 5.0, 1.6, 40.0);
-    float fov = clamp(workbenchCamera.camFov + 45.0, 5.0, 120.0) * 0.017453292;
-
-    float cy = cos(yaw), sy = sin(yaw);
-    float cp = cos(pitch), sp = sin(pitch);
-    float3 target = float3(workbenchCamera.camPanX, workbenchCamera.camPanY, 0.0);
-    float3 ro = target + float3(sy * cp, sp, cy * cp) * dist;
-    float3 fwd = normalize(target - ro);
-    float3 right = normalize(cross(float3(0.0, 1.0, 0.0), fwd));
-    float3 up = cross(fwd, right);
-    float t = tan(fov * 0.5);
-    float3 rd = normalize(fwd + right * ndc.x * t + up * ndc.y * t);
-
-    float tt = 0.0;
-    float id = -1.0;
-    float3 pos = ro;
-    for (int i = 0; i < 128; ++i)
-    {
-        pos = ro + rd * tt;
-        float2 h = mapScene(pos);
-        if (h.x < 0.001) { id = h.y; break; }
-        tt += h.x;
-        if (tt > 60.0) break;
+        QFile file(QString::fromUtf8(path));
+        if (!file.open(QIODevice::ReadOnly))
+            return QByteArray("// Workbench could not load the embedded shader sample.\n");
+        return file.readAll();
     }
 
-    float3 sky = lerp(float3(0.05, 0.07, 0.11), float3(0.13, 0.19, 0.30), saturate(rd.y * 0.5 + 0.5));
-    if (id < 0.0) return sky;
+    QByteArray renderToySource(const char* path)
+    {
+        return readShaderResource(path);
+    }
 
-    float3 n = sceneNormal(pos);
-    float3 base = materialColor(id, pos);
-
-    float3 lightDir = normalize(float3(0.6, 0.75, 0.35));
-    float diff = saturate(dot(n, lightDir));
-    float sh = softShadow(pos + n * 0.02, lightDir, 0.02, 20.0);
-    float ao = calcAO(pos, n);
-
-    float3 skyAmb = lerp(float3(0.10, 0.12, 0.17), float3(0.28, 0.33, 0.42), saturate(n.y * 0.5 + 0.5));
-    float3 col = base * (skyAmb * ao + diff * sh * float3(1.0, 0.95, 0.85) * 1.6);
-
-    float fres = pow(1.0 - saturate(dot(n, -rd)), 4.0);
-    col += fres * 0.12 * ao;
-
-    float fog = saturate(tt / 60.0);
-    col = lerp(col, sky, fog * 0.30);
-    return col;
-}
-)SLANG";
+    QString renderToyPrelude(bool scenePass)
+    {
+        QByteArray source = workbenchModuleSource(QStringLiteral("ui"));
+        source += '\n';
+        if (scenePass) {
+            source += workbenchModuleSource(QStringLiteral("viewport-camera"));
+        } else {
+            source += "#define WORKBENCH_RENDER_TOY_POST_PROCESS\n";
+        }
+        source += '\n';
+        source += workbenchModuleSource(QStringLiteral("render-toy"));
+        return QString::fromUtf8(source);
+    }
 
     QByteArray sceneShaderSource()
     {
-        QByteArray s = workbenchModuleSource(QStringLiteral("viewport-camera"));
-        s += "\n// Render Toy scene pass. Adjust workbenchCamera in the Camera panel.\n";
-        s += kSceneBody;
-        s += R"SLANG(
-[shader("fragment")]
-float4 psMain(VSOut input) : SV_Target0
-{
-    float3 col = renderScene(input.uv, viewAspect(input.uv));
-    col = col / (col + 1.0);                       // Reinhard tone map
-    col = pow(col, float3(0.4545, 0.4545, 0.4545)); // gamma
-    return float4(col, 1.0);
-}
-)SLANG";
-        return s;
+        return renderToySource(":/miskeyed/workbench/render_toy/scene_default.slang");
     }
 
     QByteArray postShaderSource()
     {
-        // A real post-process pass: it does NOT re-render the scene. The scene pass renders
-        // into an offscreen color texture (the G-buffer); this shader samples that texture
-        // and grades it. `uSceneColor`/`uSceneSampler` map to HLSL t1/s1 (SRB slot 1); the
-        // globals constant buffer stays at b0, matching QRhi's D3D11 binding fallback.
-        return R"SLANG(
-// slang-qt post-process pass. Samples the scene G-buffer produced by the scene pass
-// and grades it — this is the second stage that runs on top of the first.
-// The vk::binding annotations only affect SPIR-V; the D3D11 path uses the t1/s1
-// registers, matching the sampled-texture bound at SRB slot 1.
-[[vk::binding(1)]] Texture2D uSceneColor : register(t1);
-[[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
-
-[UIGroup("Grade")] [UIName("Tint")]     [UIRange(-1.0, 1.0)] [UIStep(0.01)]
-uniform float3 tint;
-[UIGroup("Grade")] [UIName("Exposure")] [UIWidget("slider")] [UIRange(-4.0, 4.0)] [UIStep(0.01)] [UIUnits("EV")]
-uniform float exposure;
-[UIGroup("Grade")] [UIName("Vignette")] [UIWidget("slider")] [UIRange(0.0, 2.0)]  [UIStep(0.01)]
-uniform float vignette;
-
-struct VSOut
-{
-    float4 position : SV_Position;
-    float2 uv : TEXCOORD0;
-};
-
-[shader("vertex")]
-VSOut vsMain(uint vertexID : SV_VertexID)
-{
-    float2 p = float2((vertexID << 1) & 2, vertexID & 2);
-    VSOut o;
-    o.uv = p;
-    o.position = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-    return o;
-}
-
-[shader("fragment")]
-float4 psMain(VSOut input) : SV_Target0
-{
-    float3 c = uSceneColor.Sample(uSceneSampler, input.uv).rgb;
-    c *= exp2(exposure);
-    c *= (1.0 + tint);
-    float2 q = input.uv * 2.0 - 1.0;
-    float vig = 1.0 - saturate(dot(q, q) * vignette);
-    return float4(c * vig, 1.0);
-}
-)SLANG";
+        return renderToySource(":/miskeyed/workbench/render_toy/post_default.slang");
     }
 
-    // ---------------------------------------------------------------------------
-    // Sample shader library. These are ready-to-run drop-ins the user can load from
-    // the "Samples" toolbar menu to get a feel for what the workbench can do. Slang
-    // (like every rasterizer) can't run the hardware ray-tracing pipeline through
-    // QRhi, so the "ray tracing" flavour here is software raymarching in a fragment
-    // shader — the same technique the built-in scene uses, extended to volumes.
-
-    // Volume raymarch (scene pass): each pixel marches a ray through an animated fbm
-    // density field, integrating extinction (Beer-Lambert) with a short sun-march for
-    // single-scatter lighting. Shares the cam* uniforms so the Camera panel and the
-    // Houdini mouse-nav fly the camera. Renders into the G-buffer; the post pass grades it.
-    QByteArray volumeCloudsSample()
-    {
-        QByteArray source = workbenchModuleSource(QStringLiteral("viewport-camera"));
-        source += R"SLANG(
-// Sample: Volumetric cloud raymarch (camera-driven software ray tracing).
-// Drag in either viewport to fly the camera (orbit / pan / zoom).
-[UIGroup("Clouds")] [UIName("Coverage")] [UIWidget("slider")] [UIRange(-0.5, 0.6)] [UIStep(0.01)]
-uniform float coverage;
-[UIGroup("Clouds")] [UIName("Density")]  [UIWidget("slider")] [UIRange(0.0, 3.0)]  [UIStep(0.01)]
-uniform float densityMul;
-[UIGroup("Clouds")] [UIName("Sun Angle")][UIWidget("angle")]  [UIRange(-3.14159, 3.14159)] [UIStep(0.01)] [UIUnits("rad")]
-uniform float sunYaw;
-[UIGroup("Clouds")] [UIName("Sun Tint")] [UIRange(-1.0, 1.0)] [UIStep(0.01)]
-uniform float3 sunTint;
-
-struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
-
-[shader("vertex")]
-VSOut vsMain(uint vertexID : SV_VertexID)
-{
-    float2 p = float2((vertexID << 1) & 2, vertexID & 2);
-    VSOut o; o.uv = p;
-    o.position = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-    return o;
-}
-
-float hash(float3 p)
-{
-    p = frac(p * 0.3183099 + 0.1);
-    p *= 17.0;
-    return frac(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-
-float valueNoise(float3 x)
-{
-    float3 i = floor(x);
-    float3 f = frac(x);
-    f = f * f * (3.0 - 2.0 * f);
-    float n000 = hash(i + float3(0,0,0));
-    float n100 = hash(i + float3(1,0,0));
-    float n010 = hash(i + float3(0,1,0));
-    float n110 = hash(i + float3(1,1,0));
-    float n001 = hash(i + float3(0,0,1));
-    float n101 = hash(i + float3(1,0,1));
-    float n011 = hash(i + float3(0,1,1));
-    float n111 = hash(i + float3(1,1,1));
-    float nx00 = lerp(n000, n100, f.x);
-    float nx10 = lerp(n010, n110, f.x);
-    float nx01 = lerp(n001, n101, f.x);
-    float nx11 = lerp(n011, n111, f.x);
-    float nxy0 = lerp(nx00, nx10, f.y);
-    float nxy1 = lerp(nx01, nx11, f.y);
-    return lerp(nxy0, nxy1, f.z);
-}
-
-float fbm(float3 p)
-{
-    float a = 0.5;
-    float sum = 0.0;
-    for (int i = 0; i < 5; ++i) { sum += a * valueNoise(p); p *= 2.02; a *= 0.5; }
-    return sum;
-}
-
-// Cloud density in a horizontal slab. Positive = inside cloud.
-float cloudDensity(float3 p)
-{
-    float shape = fbm(p * 0.35) - (0.55 + coverage * 0.30);
-    float slab = saturate(1.0 - abs(p.y - 1.2) / 1.6);
-    return saturate(shape) * slab * (1.0 + densityMul);
-}
-
-float3 sunDirection() { float a = sunYaw + 0.6; return normalize(float3(sin(a), 0.55, cos(a))); }
-float viewAspect(float2 uv) { return abs(ddy(uv.y)) / max(abs(ddx(uv.x)), 1.0e-8); }
-
-[shader("fragment")]
-float4 psMain(VSOut input) : SV_Target0
-{
-    float2 uv = input.uv;
-    float aspect = viewAspect(uv);
-    float2 ndc = uv * 2.0 - 1.0;
-    ndc.y = -ndc.y; ndc.x *= aspect;
-
-    float yaw = workbenchCamera.camYaw + 0.7;
-    float pitch = clamp(workbenchCamera.camPitch + 0.15, -1.45, 1.45);
-    float dist = clamp(workbenchCamera.camDistance + 6.0, 1.6, 40.0);
-    float fov = clamp(workbenchCamera.camFov + 55.0, 5.0, 120.0) * 0.017453292;
-
-    float cy = cos(yaw), sy = sin(yaw);
-    float cp = cos(pitch), sp = sin(pitch);
-    float3 target = float3(workbenchCamera.camPanX, 1.2 + workbenchCamera.camPanY, 0.0);
-    float3 ro = target + float3(sy * cp, sp, cy * cp) * dist;
-    float3 fwd = normalize(target - ro);
-    float3 right = normalize(cross(float3(0,1,0), fwd));
-    float3 up = cross(fwd, right);
-    float t = tan(fov * 0.5);
-    float3 rd = normalize(fwd + right * ndc.x * t + up * ndc.y * t);
-
-    float3 sun = sunDirection();
-    float3 sunCol = sunTint + float3(1.0, 0.92, 0.78);
-    float3 skyTop = float3(0.24, 0.42, 0.74);
-    float3 skyHorizon = float3(0.72, 0.78, 0.86);
-    float3 sky = lerp(skyHorizon, skyTop, saturate(rd.y * 0.55 + 0.35));
-    sky += sunCol * pow(saturate(dot(rd, sun)), 48.0) * 0.7; // sun glow
-
-    float tHit = 0.6;
-    float3 scatter = float3(0,0,0);
-    float trans = 1.0;
-    for (int i = 0; i < 64; ++i)
-    {
-        float3 p = ro + rd * tHit;
-        if (p.y < -0.5 || p.y > 3.2 || tHit > 26.0) break;
-        float d = cloudDensity(p);
-        if (d > 0.001)
-        {
-            float shadow = 1.0;
-            float ts = 0.0;
-            for (int j = 0; j < 6; ++j) { ts += 0.35; shadow *= exp(-cloudDensity(p + sun * ts) * 1.4); }
-            float3 lit = sunCol * (0.35 + 0.65 * shadow) + float3(0.10, 0.13, 0.18); // + sky ambient
-            float dt = 0.28;
-            float absorb = exp(-d * dt * 6.0);
-            scatter += trans * (1.0 - absorb) * lit * d;
-            trans *= absorb;
-            if (trans < 0.02) break;
-        }
-        tHit += 0.28;
-    }
-
-    float3 col = sky * trans + scatter;
-    col = col / (col + 1.0);                        // Reinhard tone map
-    col = pow(col, float3(0.4545, 0.4545, 0.4545)); // gamma
-    return float4(col, 1.0);
-}
-)SLANG";
-        return source;
-    }
-
-    // Post: threshold bloom + radial chromatic aberration + ACES tonemap. Samples the
-    // scene G-buffer at t1/s1 (SRB slot 1) exactly like the built-in post pass.
-    QByteArray bloomSample()
-    {
-        return R"SLANG(
-// Sample: Bloom + chromatic aberration post-process. Grades the scene G-buffer.
-[[vk::binding(1)]] Texture2D uSceneColor : register(t1);
-[[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
-
-[UIGroup("Bloom")] [UIName("Exposure")]  [UIWidget("slider")] [UIRange(-4.0, 4.0)] [UIStep(0.01)] [UIUnits("EV")]
-uniform float exposure;
-[UIGroup("Bloom")] [UIName("Threshold")] [UIWidget("slider")] [UIRange(-0.6, 0.4)] [UIStep(0.01)]
-uniform float bloomThreshold;
-[UIGroup("Bloom")] [UIName("Strength")]  [UIWidget("slider")] [UIRange(0.0, 2.0)]  [UIStep(0.01)]
-uniform float bloomStrength;
-[UIGroup("Bloom")] [UIName("Aberration")][UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
-uniform float aberration;
-[UIGroup("Bloom")] [UIName("Vignette")]  [UIWidget("slider")] [UIRange(0.0, 1.5)]  [UIStep(0.01)]
-uniform float vignette;
-
-struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
-
-[shader("vertex")]
-VSOut vsMain(uint vertexID : SV_VertexID)
-{
-    float2 p = float2((vertexID << 1) & 2, vertexID & 2);
-    VSOut o; o.uv = p;
-    o.position = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-    return o;
-}
-
-float3 sampleScene(float2 uv) { return uSceneColor.Sample(uSceneSampler, saturate(uv)).rgb; }
-float luma(float3 c) { return dot(c, float3(0.2126, 0.7152, 0.0722)); }
-
-float3 bloomTap(float2 uv)
-{
-    float thr = 0.6 + bloomThreshold;
-    float3 c = sampleScene(uv);
-    return c * saturate((luma(c) - thr) / max(1.0 - thr, 1.0e-3));
-}
-
-[shader("fragment")]
-float4 psMain(VSOut input) : SV_Target0
-{
-    float2 uv = input.uv;
-    float2 q = uv * 2.0 - 1.0;
-
-    // radial chromatic aberration
-    float2 dir = q * (0.004 + aberration * 0.02);
-    float3 col;
-    col.r = sampleScene(uv - dir).r;
-    col.g = sampleScene(uv).g;
-    col.b = sampleScene(uv + dir).b;
-
-    // cheap ring-tap bloom on the bright parts
-    const float r = 0.006;
-    float3 bloom = float3(0,0,0);
-    bloom += bloomTap(uv + float2( r, 0.0));
-    bloom += bloomTap(uv + float2(-r, 0.0));
-    bloom += bloomTap(uv + float2(0.0,  r));
-    bloom += bloomTap(uv + float2(0.0, -r));
-    bloom += bloomTap(uv + float2( r,  r) * 0.7);
-    bloom += bloomTap(uv + float2(-r,  r) * 0.7);
-    bloom += bloomTap(uv + float2( r, -r) * 0.7);
-    bloom += bloomTap(uv + float2(-r, -r) * 0.7);
-    bloom += bloomTap(uv + float2( 2.0 * r, 0.0));
-    bloom += bloomTap(uv + float2(-2.0 * r, 0.0));
-    bloom += bloomTap(uv + float2(0.0,  2.0 * r));
-    bloom += bloomTap(uv + float2(0.0, -2.0 * r));
-    bloom /= 12.0;
-
-    col += bloom * (0.6 + bloomStrength * 2.0);
-    col *= exp2(exposure);
-
-    // ACES-ish filmic tonemap
-    float3 x = col;
-    col = saturate((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14));
-
-    float vig = 1.0 - saturate(dot(q, q) * (0.25 + vignette));
-    return float4(col * vig, 1.0);
-}
-)SLANG";
-    }
-
-    // Post: retro CRT — barrel distortion, scanlines, aperture-grille mask, vignette.
-    QByteArray crtSample()
-    {
-        return R"SLANG(
-// Sample: CRT / scanline post-process. Grades the scene G-buffer.
-[[vk::binding(1)]] Texture2D uSceneColor : register(t1);
-[[vk::binding(2)]] SamplerState uSceneSampler : register(s1);
-
-[UIGroup("CRT")] [UIName("Curvature")]  [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
-uniform float curvature;
-[UIGroup("CRT")] [UIName("Scanline")]   [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
-uniform float scanline;
-[UIGroup("CRT")] [UIName("Mask")]       [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
-uniform float maskStrength;
-[UIGroup("CRT")] [UIName("Brightness")] [UIWidget("slider")] [UIRange(-0.5, 1.0)] [UIStep(0.01)]
-uniform float brightness;
-[UIGroup("CRT")] [UIName("Aberration")] [UIWidget("slider")] [UIRange(0.0, 1.0)]  [UIStep(0.01)]
-uniform float aberration;
-
-struct VSOut { float4 position : SV_Position; float2 uv : TEXCOORD0; };
-
-[shader("vertex")]
-VSOut vsMain(uint vertexID : SV_VertexID)
-{
-    float2 p = float2((vertexID << 1) & 2, vertexID & 2);
-    VSOut o; o.uv = p;
-    o.position = float4(p * float2(2.0, -2.0) + float2(-1.0, 1.0), 0.0, 1.0);
-    return o;
-}
-
-float2 curve(float2 uv, float amt)
-{
-    uv = uv * 2.0 - 1.0;
-    float2 off = uv.yx * uv.yx * amt;
-    uv += uv * off;
-    return uv * 0.5 + 0.5;
-}
-
-[shader("fragment")]
-float4 psMain(VSOut input) : SV_Target0
-{
-    float amt = 0.12 + curvature * 0.30;
-    float2 uv = curve(input.uv, amt);
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
-        return float4(0.0, 0.0, 0.0, 1.0); // outside the tube
-
-    float ab = 0.0015 + aberration * 0.010;
-    float3 col;
-    col.r = uSceneColor.Sample(uSceneSampler, uv + float2(ab, 0.0)).r;
-    col.g = uSceneColor.Sample(uSceneSampler, uv).g;
-    col.b = uSceneColor.Sample(uSceneSampler, uv - float2(ab, 0.0)).b;
-
-    // scanlines
-    float s = sin(uv.y * 620.0 * 3.14159265);
-    col *= 1.0 - (0.35 + scanline * 0.5) * s * s;
-
-    // aperture-grille mask over 3 horizontal subpixels
-    float m = frac(uv.x * 480.0);
-    float3 mask = (m < 0.333) ? float3(1.0, 0.55, 0.55)
-               : (m < 0.666) ? float3(0.55, 1.0, 0.55)
-                             : float3(0.55, 0.55, 1.0);
-    col *= lerp(float3(1.0, 1.0, 1.0), mask, saturate(0.4 + maskStrength));
-
-    col *= (1.1 + brightness);
-    float2 q = input.uv * 2.0 - 1.0;
-    col *= 1.0 - saturate(dot(q, q) * 0.25);
-    return float4(saturate(col), 1.0);
-}
-)SLANG";
-    }
-
-    // One entry per sample; `target` picks the editor slot (0 = scene, 1 = post).
     struct SampleShader {
-        const char* name;
+        const char* title;
         int target;
-        QByteArray (*source)();
+        const char* resource;
     };
 
-    QVector<SampleShader> sampleShaders()
-    {
-        return {
-            { "Volume — Raymarched Clouds (scene)", 0, &volumeCloudsSample },
-            { "Post — Bloom + Chromatic Aberration", 1, &bloomSample },
-            { "Post — CRT / Scanlines", 1, &crtSample },
-        };
-    }
+    const std::array kSampleShaders = {
+        SampleShader {
+            "Scene — Default studio", 0, ":/miskeyed/workbench/render_toy/scene_default.slang" },
+        SampleShader {
+            "Scene — Raymarched clouds", 0, ":/miskeyed/workbench/render_toy/scene_clouds.slang" },
+        SampleShader {
+            "Post — Default grade", 1, ":/miskeyed/workbench/render_toy/post_default.slang" },
+        SampleShader { "Post — Bloom + chromatic aberration", 1,
+            ":/miskeyed/workbench/render_toy/post_bloom.slang" },
+        SampleShader {
+            "Post — CRT / scanlines", 1, ":/miskeyed/workbench/render_toy/post_crt.slang" },
+    };
 
 } // namespace
 
@@ -649,9 +172,15 @@ void WorkbenchWindow::buildUi()
 
     auto* cameraInspector = new ParameterInspector(this);
     m_cameraInspector = cameraInspector;
+    cameraInspector->setGroupFilter(QStringLiteral("Camera"), true);
     cameraInspector->setModel(m_sceneDocument->parameters());
+    auto* sceneInspector = new ParameterInspector(this);
+    m_sceneInspector = sceneInspector;
+    sceneInspector->setGroupFilter(QStringLiteral("Camera"), false);
+    sceneInspector->setModel(m_sceneDocument->parameters());
     auto* postInspector = new ParameterInspector(this);
     m_postInspector = postInspector;
+    postInspector->setGroupFilter(QStringLiteral("Camera"), false);
     postInspector->setModel(m_document->parameters());
     m_diagnostics = new QPlainTextEdit(this);
     m_diagnostics->setReadOnly(true);
@@ -688,23 +217,26 @@ void WorkbenchWindow::buildUi()
         "Click this viewport to focus the Scene-bound document tab below."));
     m_viewport->setToolTip(QStringLiteral(
         "Post-process pass. This does NOT re-render the scene — it samples the scene\n"
-        "G-buffer texture (uSceneColor) and grades it (exposure / tint / vignette), then\n"
+        "G-buffer texture (`sceneColor`) and grades it (exposure / tint / vignette), then\n"
         "draws on top. Click this viewport to focus the Post-bound document tab below.\n"
         "Camera drag here still moves the shared scene camera."));
 
     auto* tabs = new QTabWidget(this);
     tabs->addTab(cameraInspector, QStringLiteral("Camera"));
-    tabs->addTab(postInspector, QStringLiteral("Post-Process"));
+    tabs->addTab(sceneInspector, QStringLiteral("Scene parameters"));
+    tabs->addTab(postInspector, QStringLiteral("Post parameters"));
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
     m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Diagnostics"));
     m_tabs = tabs;
+    tabs->setMinimumWidth(380);
 
     auto* upper = new QSplitter(Qt::Horizontal, this);
     upper->addWidget(views);
     upper->addWidget(tabs);
     upper->setStretchFactor(0, 4);
     upper->setStretchFactor(1, 1);
+    upper->setSizes({ 1220, 380 });
 
     auto* editorBox = new QWidget(this);
     auto* ev = new QVBoxLayout(editorBox);
@@ -942,17 +474,14 @@ void WorkbenchWindow::buildUi()
     samplesBtn->setToolTip(QStringLiteral(
         "Load a ready-made sample: a camera-driven volume raymarch or a post-process effect."));
     auto* samplesMenu = new QMenu(samplesBtn);
-    for (const SampleShader& s : sampleShaders()) {
-        QAction* a = samplesMenu->addAction(QString::fromUtf8(s.name));
-        const int target = s.target;
-        auto* fn = s.source;
-        const QString name = target == 0
-            ? QStringLiteral("scene_clouds.slang")
-            : (QString::fromUtf8(s.name).contains(QStringLiteral("CRT"))
-                      ? QStringLiteral("post_crt.slang")
-                      : QStringLiteral("post_bloom.slang"));
-        connect(a, &QAction::triggered, this,
-            [this, name, target, fn] { loadSample(name, target, fn()); });
+    for (const SampleShader& sample : kSampleShaders) {
+        QAction* action = samplesMenu->addAction(QString::fromUtf8(sample.title));
+        const int target = sample.target;
+        const auto* resource = sample.resource;
+        const QString name = QFileInfo(QString::fromUtf8(resource)).fileName();
+        connect(action, &QAction::triggered, this, [this, name, target, resource] {
+            loadSample(name, target, renderToySource(resource));
+        });
     }
     samplesBtn->setMenu(samplesMenu);
     tb->addWidget(samplesBtn);
@@ -1047,6 +576,7 @@ void WorkbenchWindow::connectUi()
             m_viewport->setDocument(post);
             if (scene)
                 m_cameraInspector->setModel(scene->parameters());
+            m_sceneInspector->setModel(scene->parameters());
             if (post)
                 m_postInspector->setModel(post->parameters());
             updateDocumentTabs();

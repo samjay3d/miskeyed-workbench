@@ -172,6 +172,13 @@ void ParameterInspector::setModel(ShaderParameterModel* model)
     emit modelChanged();
 }
 
+void ParameterInspector::setGroupFilter(const QString& group, bool include)
+{
+    m_groupFilter = group;
+    m_includeGroup = include;
+    rebuild();
+}
+
 void ParameterInspector::rebuild()
 {
     while (auto* item = m_layout->takeAt(0)) {
@@ -186,8 +193,11 @@ void ParameterInspector::rebuild()
     for (int row = 0; row < m_model->rowCount(); ++row) {
         if (m_model->data(m_model->index(row), ShaderParameterModel::HostManagedRole).toBool())
             continue;
-        groups[m_model->data(m_model->index(row), ShaderParameterModel::GroupRole).toString()]
-            .append(row);
+        const QString group
+            = m_model->data(m_model->index(row), ShaderParameterModel::GroupRole).toString();
+        if (!m_groupFilter.isEmpty() && (group == m_groupFilter) != m_includeGroup)
+            continue;
+        groups[group].append(row);
     }
     for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
         auto* box

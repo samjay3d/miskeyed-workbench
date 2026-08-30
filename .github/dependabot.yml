@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Keep the GitHub Actions pinned in ci.yml / release.yml current (security + fixes).
+  # Keep the GitHub Actions pinned in the workflow files current (security + fixes).
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -15,6 +15,7 @@ public:
     explicit ParameterInspector(QWidget* parent = nullptr);
     ShaderParameterModel* model() const { return m_model; }
     void setModel(ShaderParameterModel* model);
+    void setGroupFilter(const QString& group, bool include);
 
 signals:
     void modelChanged();
@@ -25,6 +26,8 @@ private slots:
 private:
     ShaderParameterModel* m_model = nullptr;
     QVBoxLayout* m_layout = nullptr;
+    QString m_groupFilter;
+    bool m_includeGroup = true;
 };
 
 } // namespace miskeyed::workbench::slang_rhi

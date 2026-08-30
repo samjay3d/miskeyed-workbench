@@ -103,6 +103,18 @@ qt_add_resources(miskeyed_workbench_slang_rhi "workbench_headers"
         shaders/workbench/ui.slang
         shaders/workbench/viewport_camera.slang
         shaders/workbench/time.slang
+        shaders/workbench/render_toy.slang
+)
+
+qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
+    PREFIX "/miskeyed/workbench/render_toy"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/render_toy"
+    FILES
+        shaders/render_toy/scene_default.slang
+        shaders/render_toy/scene_clouds.slang
+        shaders/render_toy/post_default.slang
+        shaders/render_toy/post_bloom.slang
+        shaders/render_toy/post_crt.slang
 )
 
 target_compile_definitions(miskeyed_workbench_slang_rhi PUBLIC MISKEYED_WORKBENCH_SLANG_RHI_STATIC)
@@ -112,8 +124,8 @@ target_include_directories(miskeyed_workbench_slang_rhi
         $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(miskeyed_workbench_slang_rhi
-    PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets
-    PRIVATE Qt6::GuiPrivate Slang::slang
+    PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::GuiPrivate
+    PRIVATE Slang::slang
 )
 add_library(miskeyed::workbench::slang_rhi ALIAS miskeyed_workbench_slang_rhi)
 
@@ -149,11 +161,11 @@ endif()
 
 if(MISKEYED_WORKBENCH_BUILD_PYTHON)
     include(ShibokenBindings)
-    slang_qrhi_add_shiboken_module(
-        TARGET _slang_qrhi
-        MODULE_NAME _slang_qrhi
-        TYPESYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/bindings/typesystem_slang_qrhi.xml"
-        GLOBAL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/bindings/slang_qrhi_bindings.h"
+    workbench_add_shiboken_module(
+        TARGET _workbench
+        MODULE_NAME _workbench
+        TYPESYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/bindings/typesystem_workbench.xml"
+        GLOBAL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/bindings/workbench_bindings.h"
         WRAPPED_HEADERS
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/DependencyGraph.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h"

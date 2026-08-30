@@ -106,7 +106,7 @@ extend-exclude = [
   "shiboken",
   "*_autogen",
   ".venv",
-  "_slang_qrhi*",
+  "_workbench*",
 ]
 
 [tool.ruff.lint]

@@ -15,7 +15,7 @@ distinct without presenting ANARI host infrastructure as part of the Slang/QRhi 
 The CMake project is the `miskeyed_workbench` product umbrella. Consumers inside the
 build use the namespaced aliases `miskeyed::workbench::slang_rhi` and, when ANARI is
 enabled, `miskeyed::workbench::anari_backend`. These target names make the product
-boundary explicit. The private `_slang_qrhi` extension name remains backend-specific,
+boundary explicit. The private `_workbench` extension name remains backend-specific,
 while its generated types use the real nested C++ namespace. A compile test includes
 and links both native surfaces to keep that boundary building before ANARI host work
 expands it.

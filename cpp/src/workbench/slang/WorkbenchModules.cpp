@@ -32,6 +32,8 @@ QList<WorkbenchModule> workbenchModules()
             readHeader(":/miskeyed/workbench/headers/viewport_camera.slang") },
         { QStringLiteral("time"), QStringLiteral("Time evaluation"),
             readHeader(":/miskeyed/workbench/headers/time.slang") },
+        { QStringLiteral("render-toy"), QStringLiteral("Render Toy pass"),
+            readHeader(":/miskeyed/workbench/headers/render_toy.slang") },
     };
 }
 

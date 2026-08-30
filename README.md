@@ -296,7 +296,7 @@ shaders/workbench/          packaged Workbench Slang module sources
 docs/SOURCE_LAYOUT.md       ownership and dependency direction
 
 bindings/
-    typesystem_slang_qrhi.xml
+    typesystem_workbench.xml
 
 app/
     main.cpp                native executable entry point

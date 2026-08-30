@@ -1,8 +1,8 @@
-function(slang_qrhi_add_shiboken_module)
+function(workbench_add_shiboken_module)
     set(options)
     set(oneValueArgs TARGET MODULE_NAME TYPESYSTEM GLOBAL_HEADER)
     set(multiValueArgs WRAPPED_HEADERS LINK_LIBRARIES)
-    cmake_parse_arguments(SQB "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    cmake_parse_arguments(WB "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     execute_process(COMMAND "${Python_EXECUTABLE}" -c
         "import pathlib, shiboken6_generator; print(pathlib.Path(shiboken6_generator.__file__).resolve().parent)"
@@ -47,8 +47,8 @@ function(slang_qrhi_add_shiboken_module)
             --output-directory=${gen_root}
             --typesystem-paths=${PYSIDE_DIR}/typesystems
             ${generator_includes}
-            ${SQB_GLOBAL_HEADER}
-            ${SQB_TYPESYSTEM}
+            ${WB_GLOBAL_HEADER}
+            ${WB_TYPESYSTEM}
         RESULT_VARIABLE shiboken_result
         OUTPUT_VARIABLE shiboken_output
         ERROR_VARIABLE shiboken_error)
@@ -56,25 +56,25 @@ function(slang_qrhi_add_shiboken_module)
         message(FATAL_ERROR "Shiboken generation failed:\n${shiboken_output}\n${shiboken_error}")
     endif()
 
-    file(GLOB_RECURSE generated_sources CONFIGURE_DEPENDS "${gen_root}/${SQB_MODULE_NAME}/*_wrapper.cpp")
+    file(GLOB_RECURSE generated_sources CONFIGURE_DEPENDS "${gen_root}/${WB_MODULE_NAME}/*_wrapper.cpp")
     if(NOT generated_sources)
-        message(FATAL_ERROR "Shiboken produced no wrapper sources under ${gen_root}/${SQB_MODULE_NAME}")
+        message(FATAL_ERROR "Shiboken produced no wrapper sources under ${gen_root}/${WB_MODULE_NAME}")
     endif()
 
     find_library(PYSIDE_LIBRARY NAMES pyside6.abi3 pyside6 HINTS "${PYSIDE_DIR}" REQUIRED)
     find_library(SHIBOKEN_LIBRARY NAMES shiboken6.abi3 shiboken6 HINTS "${SHIBOKEN_DIR}" REQUIRED)
 
-    add_library(${SQB_TARGET} MODULE ${generated_sources})
-    set_target_properties(${SQB_TARGET} PROPERTIES PREFIX "" OUTPUT_NAME "_slang_qrhi")
+    add_library(${WB_TARGET} MODULE ${generated_sources})
+    set_target_properties(${WB_TARGET} PROPERTIES PREFIX "" OUTPUT_NAME "${WB_MODULE_NAME}")
     # Python imports .pyd on Windows; a MODULE lib defaults to .dll otherwise.
     if(WIN32)
-        set_target_properties(${SQB_TARGET} PROPERTIES SUFFIX ".pyd")
+        set_target_properties(${WB_TARGET} PROPERTIES SUFFIX ".pyd")
     endif()
     # Shiboken C++ dev headers (shiboken.h, sbk*.h) ship in the shiboken6_generator
     # wheel's include/ dir; the shiboken6 runtime package only carries the import lib.
     # PySide's per-module wrapper headers (pyside6_qtcore_python.h, ...) live in
     # include/<Module> subdirs, so each linked Qt module needs its own -I.
-    target_include_directories(${SQB_TARGET} PRIVATE
+    target_include_directories(${WB_TARGET} PRIVATE
         "${PYSIDE_DIR}/include"
         "${PYSIDE_DIR}/include/QtCore"
         "${PYSIDE_DIR}/include/QtGui"
@@ -82,6 +82,6 @@ function(slang_qrhi_add_shiboken_module)
         "${SHIBOKEN_GENERATOR_DIR}/include"
         "${SHIBOKEN_DIR}/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include")
-    target_link_libraries(${SQB_TARGET} PRIVATE ${SQB_LINK_LIBRARIES} Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Widgets Python::Module "${PYSIDE_LIBRARY}" "${SHIBOKEN_LIBRARY}")
-    install(TARGETS ${SQB_TARGET} LIBRARY DESTINATION miskeyed/workbench RUNTIME DESTINATION miskeyed/workbench)
+    target_link_libraries(${WB_TARGET} PRIVATE ${WB_LINK_LIBRARIES} Qt6::Core Qt6::Gui Qt6::GuiPrivate Qt6::Widgets Python::Module "${PYSIDE_LIBRARY}" "${SHIBOKEN_LIBRARY}")
+    install(TARGETS ${WB_TARGET} LIBRARY DESTINATION miskeyed/workbench RUNTIME DESTINATION miskeyed/workbench)
 endfunction()
