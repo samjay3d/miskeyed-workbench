@@ -396,7 +396,11 @@ branch.</p>
 <p>The <strong>documentation</strong> environment is used by both trusted development and release
 publication jobs. Pushes to trusted branches publish
 <a class="reference external" href="https://samjay3d.github.io/miskeyed-workbench/dev/">https://samjay3d.github.io/miskeyed-workbench/dev/</a> and place that clickable URL
-in the Actions job summary.</p>
+in the Actions job summary. The mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span></code> gate verifies the build, screenshots,
+artifact, generated branch contents, and successful <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch push separately.
+GitHub Pages propagation is asynchronous and is reported, but a CDN delay does not
+invalidate an otherwise correct development publication. Immutable release publication
+retains the stricter public-URL check before TestPyPI and PyPI.</p>
 <p>The 0.3.0 gate runs in this order: detect the release; build distributions; install
 the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
 verify the <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch and retry the public URL while Pages propagates; publish

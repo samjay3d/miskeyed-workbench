@@ -63,7 +63,11 @@ branch.
 The **documentation** environment is used by both trusted development and release
 publication jobs. Pushes to trusted branches publish
 |development_url| and place that clickable URL
-in the Actions job summary.
+in the Actions job summary. The mutable ``/dev/`` gate verifies the build, screenshots,
+artifact, generated branch contents, and successful ``docs`` branch push separately.
+GitHub Pages propagation is asynchronous and is reported, but a CDN delay does not
+invalidate an otherwise correct development publication. Immutable release publication
+retains the stricter public-URL check before TestPyPI and PyPI.
 
 The 0.3.0 gate runs in this order: detect the release; build distributions; install
 the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
