@@ -3,11 +3,11 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Compilation pipeline" href="compilation.html" /><link rel="prev" title="Ownership and lifetime" href="ownership.html" />
-        <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/architecture/workspace.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Entry points are capabilities" href="entry_points.html" /><link rel="prev" title="Slang modules" href="slang_modules.html" />
+        <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/concepts/host_features.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>Workspace model - Workbench development documentation</title>
+        <title>Host Features and Slang Modules - Workbench development documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -179,7 +179,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -223,16 +223,16 @@
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Concepts</span></p>
-<ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/documents_and_bindings.html">Documents and bindings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/slang_modules.html">Slang modules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/host_features.html">Host Features and Slang Modules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/entry_points.html">Entry points are capabilities</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/reflection.html">Reflection-driven UI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/dependency_identity.html">Dependency identity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/evaluation_time.html">Evaluation and time</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../concepts/tool_sessions.html">Tool sessions and contributions</a></li>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Concepts</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="documents_and_bindings.html">Documents and bindings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="slang_modules.html">Slang modules</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Host Features and Slang Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="entry_points.html">Entry points are capabilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reflection.html">Reflection-driven UI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dependency_identity.html">Dependency identity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="evaluation_time.html">Evaluation and time</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tool_sessions.html">Tool sessions and contributions</a></li>
 </ul>
 </li>
 </ul>
@@ -251,21 +251,21 @@
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
-<ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Architecture</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Architecture</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="overview.html">System overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ownership.html">Ownership and lifetime</a></li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Workspace model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="compilation.html">Compilation pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="module_resolution.html">Module resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="reflection_pipeline.html">Reflection pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dependency_graph.html">Dependency identity and invalidation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="time.html">Time is evaluation, not a widget</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rendering_pipeline.html">Rendering pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="backend_policy.html">Backend policy</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tool_contributions.html">Tool contribution model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="python_boundary.html">Python and Shiboken boundary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source_layout.html">Native source layout</a></li>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../architecture/index.html">Architecture</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Architecture</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/ownership.html">Ownership and lifetime</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/workspace.html">Workspace model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/compilation.html">Compilation pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/module_resolution.html">Module resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/reflection_pipeline.html">Reflection pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/rendering_pipeline.html">Rendering pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/backend_policy.html">Backend policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/tool_contributions.html">Tool contribution model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/python_boundary.html">Python and Shiboken boundary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
 </ul>
 </li>
 </ul>
@@ -319,7 +319,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/architecture/workspace.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/concepts/host_features.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -333,44 +333,41 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="workspace-model">
-<h1>Workspace model<a class="headerlink" href="#workspace-model" title="Link to this heading">¶</a></h1>
-<p><a class="reference internal" href="../concepts/documents_and_bindings.html"><span class="doc">Documents and bindings</span></a> introduces open, focused, and bound state.
-This page describes the native ownership that implements it.</p>
-<p><code class="docutils literal notranslate"><span class="pre">ShaderWorkspace</span></code> owns <code class="docutils literal notranslate"><span class="pre">ShaderDocument</span></code> objects, exactly one focused document,
-per-document <code class="docutils literal notranslate"><span class="pre">DocumentSession</span></code> view state, <code class="docutils literal notranslate"><span class="pre">TimeContext</span></code>, and <code class="docutils literal notranslate"><span class="pre">TimeTransport</span></code>.
-It emits focus and lifetime signals but has no Render Toy or ShaderToy binding policy.</p>
-<p><code class="docutils literal notranslate"><span class="pre">ShaderDocument</span></code> owns source identity, authored buffer, compiler diagnostics,
-reflection, resources, entry points, generated targets, parameter model, and dependency
-graph. <code class="docutils literal notranslate"><span class="pre">DocumentSession</span></code> retains only cursor/selection, scroll positions, view mode,
-and generated target.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>ShaderWorkspace
-   +-&gt; ShaderDocument A
-   +-&gt; ShaderDocument B
-   `-&gt; focus -&gt; WorkspaceEditor + active-document Inspector
-
-RenderToySession ----references----&gt; A/B
-ShaderToySession ----references----&gt; A
+          <section id="host-features-and-slang-modules">
+<h1>Host Features and Slang Modules<a class="headerlink" href="#host-features-and-slang-modules" title="Link to this heading">¶</a></h1>
+<p>A host feature and a Slang module are related contracts, not the same object:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Workbench</span> <span class="n">host</span> <span class="n">feature</span>
+    <span class="o">-&gt;</span> <span class="n">packaged</span> <span class="n">Slang</span> <span class="n">contract</span>
+    <span class="o">-&gt;</span> <span class="n">authored</span> <span class="kn">import</span>
+<span class="w">    </span><span class="o">-&gt;</span> <span class="n">reflected</span> <span class="n">values</span><span class="o">/</span><span class="n">resources</span>
+    <span class="o">-&gt;</span> <span class="n">persistent</span> <span class="n">session</span> <span class="ow">or</span> <span class="n">render</span> <span class="n">surface</span>
 </pre></div>
 </div>
-<p>Closing a document notifies sessions to remove references. Changing the visible tool
-leaves the workspace and both runtime sessions alive.</p>
-<section id="implementation">
-<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
-<p>Relevant source:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cpp/src/workbench/slang/ShaderWorkspace.cpp</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cpp/include/miskeyed/workbench/slang/ShaderDocument.h</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h</span></code></p></li>
-</ul>
-</section>
+<p>For example, the workspace owns a <code class="docutils literal notranslate"><span class="pre">TimeContext</span></code>. The render surface adapts its
+current evaluation sample to <code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code>. An authored shader imports that
+contract and reads <code class="docutils literal notranslate"><span class="pre">workbenchTime.time</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TimeContext</span>
+    <span class="o">-&gt;</span> <span class="n">miskeyed</span><span class="o">.</span><span class="n">time</span>
+    <span class="o">-&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">miskeyed.time</span><span class="p">;</span>
+    <span class="o">-&gt;</span> <span class="n">workbenchTime</span><span class="o">.</span><span class="n">time</span>
+</pre></div>
+</div>
+<p>The <strong>Host / Slang</strong> Inspector page keeps two facts separate: <strong>Available</strong> means the
+running Workbench host provides the capability; <strong>Imported</strong> means Slang actually
+resolved that module for the focused document. Changing the visible tool does not
+change availability because Render Toy and Shader Toy sessions remain alive together.</p>
+<p>Library modules need no runtime provider. The shipped <code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code> library only
+declares semantic attributes consumed by reflection. A future pure library could use
+the same category, but no unshipped module is implied.</p>
+<p>The catalog makes this relationship discoverable; it does not resolve imports or
+locate host services. Slang remains responsible for module semantics and resolution.
+See <a class="reference internal" href="../workbench_slang/modules.html"><span class="doc">Modules and imports</span></a> for the shader-facing contracts.</p>
 </section>
 
         </article>
@@ -378,23 +375,23 @@ leaves the workspace and both runtime sessions alive.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="compilation.html">
+          <a class="next-page" href="entry_points.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Compilation pipeline</div>
+                <div class="title">Entry points are capabilities</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="ownership.html">
+          <a class="prev-page" href="slang_modules.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Ownership and lifetime</div>
+                <div class="title">Slang modules</div>
                 
               </div>
             </a>
@@ -416,27 +413,8 @@ leaves the workspace and both runtime sessions alive.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Workspace model</a><ul>
-<li><a class="reference internal" href="#implementation">Implementation</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>

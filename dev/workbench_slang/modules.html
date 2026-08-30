@@ -227,6 +227,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/documents_and_bindings.html">Documents and bindings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/slang_modules.html">Slang modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/host_features.html">Host Features and Slang Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/entry_points.html">Entry points are capabilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/reflection.html">Reflection-driven UI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/dependency_identity.html">Dependency identity</a></li>
@@ -347,9 +348,23 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">miskeyed.time</span><span class="p">;</span>
 </pre></div>
 </div>
+<p>The built-ins have two categories:</p>
+<dl class="simple">
+<dt><strong>Host contracts</strong></dt><dd><p><code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code>, <code class="docutils literal notranslate"><span class="pre">miskeyed.viewport_camera</span></code>, <code class="docutils literal notranslate"><span class="pre">miskeyed.render_toy</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">miskeyed.shader_toy</span></code> describe values or resources supplied at Workbench’s
+workspace, session, or render-surface edges.</p>
+</dd>
+<dt><strong>Library/language support</strong></dt><dd><p><code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code> declares reflection metadata attributes and needs no runtime host
+state.</p>
+</dd>
+</dl>
 <p>Slang owns import semantics and program composition. Workbench exposes packaged
 sources through <code class="docutils literal notranslate"><span class="pre">ISlangFileSystem</span></code> and supplies project search paths. It watches
-resolved project files; it does not maintain a parallel module database.</p>
+resolved project files; semantic catalog metadata exists only for packaging and the
+Host / Slang Inspector. It is neither a parallel resolver nor a service locator.</p>
+<p>The Inspector compares this catalog with dependencies actually loaded by Slang, so
+<strong>Available</strong> and <strong>Imported</strong> remain distinct. See
+<a class="reference internal" href="../concepts/host_features.html"><span class="doc">Host Features and Slang Modules</span></a> for the complete mental model.</p>
 <section id="implementation">
 <h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
 <p>Relevant source: <code class="docutils literal notranslate"><span class="pre">shaders/workbench/</span></code>, <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>, and

@@ -179,7 +179,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -227,6 +227,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/documents_and_bindings.html">Documents and bindings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/slang_modules.html">Slang modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/host_features.html">Host Features and Slang Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/entry_points.html">Entry points are capabilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/reflection.html">Reflection-driven UI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/dependency_identity.html">Dependency identity</a></li>
@@ -332,7 +333,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -340,19 +341,145 @@
         <article role="main" id="furo-main-content">
           <section id="slang-module-reference">
 <h1>Slang module reference<a class="headerlink" href="#slang-module-reference" title="Link to this heading">¶</a></h1>
-<dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code></dt><dd><p>UI metadata attribute declarations.</p>
+<section id="miskeyed-ui">
+<h2><code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code><a class="headerlink" href="#miskeyed-ui" title="Link to this heading">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">Kind<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Library / language support</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code></dt><dd><p>Host-managed time, delta, frame, and frame-rate fields.</p>
+<dt class="field-even">Purpose<span class="colon">:</span></dt>
+<dd class="field-even"><p>Semantic presentation annotations for reflected controls.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">miskeyed.viewport_camera</span></code></dt><dd><p>Host camera contract for viewport scene programs.</p>
+<dt class="field-odd">Host backing<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None; Workbench packages authored Slang declarations.</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">miskeyed.render_toy</span></code></dt><dd><p>Scene/Post pass contract and scene texture consumption.</p>
+<dt class="field-even">Import<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.ui;</span></code></p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">miskeyed.shader_toy</span></code></dt><dd><p>Minimal fullscreen consumer contract.</p>
+<dt class="field-odd">Contract<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">UIName</span></code>, <code class="docutils literal notranslate"><span class="pre">UIRange</span></code>, <code class="docutils literal notranslate"><span class="pre">UIStep</span></code>, <code class="docutils literal notranslate"><span class="pre">UIWidget</span></code>, <code class="docutils literal notranslate"><span class="pre">UIGroup</span></code>,
+<code class="docutils literal notranslate"><span class="pre">UITooltip</span></code>, and <code class="docutils literal notranslate"><span class="pre">UIUnits</span></code> attributes.</p>
+</dd>
+<dt class="field-even">Relevant consumer<span class="colon">:</span></dt>
+<dd class="field-even"><p>Inspector reflection.</p>
+</dd>
+<dt class="field-odd">Source trail<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">shaders/workbench/ui.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">SlangCompiler.cpp</span></code>.</p>
 </dd>
 </dl>
-<p>Sources live under <code class="docutils literal notranslate"><span class="pre">shaders/workbench/</span></code> and are packaged with installed builds.</p>
+</section>
+<section id="miskeyed-time">
+<h2><code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code><a class="headerlink" href="#miskeyed-time" title="Link to this heading">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">Kind<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host contract</p>
+</dd>
+<dt class="field-even">Purpose<span class="colon">:</span></dt>
+<dd class="field-even"><p>Deterministic evaluation values shared by Workbench tools.</p>
+</dd>
+<dt class="field-odd">Host backing<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Workspace <code class="docutils literal notranslate"><span class="pre">TimeContext</span></code> adapted by each render surface.</p>
+</dd>
+<dt class="field-even">Import<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.time;</span></code></p>
+</dd>
+<dt class="field-odd">Contract<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host-managed <code class="docutils literal notranslate"><span class="pre">workbenchTime.time</span></code>, <code class="docutils literal notranslate"><span class="pre">deltaTime</span></code>, <code class="docutils literal notranslate"><span class="pre">frame</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">frameRate</span></code>.</p>
+</dd>
+<dt class="field-even">Relevant consumer<span class="colon">:</span></dt>
+<dd class="field-even"><p>Render Toy and Shader Toy render surfaces.</p>
+</dd>
+<dt class="field-odd">Source trail<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">shaders/workbench/time.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">TimeContext.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SlangRhiWidget.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="miskeyed-viewport-camera">
+<h2><code class="docutils literal notranslate"><span class="pre">miskeyed.viewport_camera</span></code><a class="headerlink" href="#miskeyed-viewport-camera" title="Link to this heading">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">Kind<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host contract</p>
+</dd>
+<dt class="field-even">Purpose<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reflected camera state for viewport-aware scene programs.</p>
+</dd>
+<dt class="field-odd">Host backing<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Workbench viewport camera interaction.</p>
+</dd>
+<dt class="field-even">Import<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.viewport_camera;</span></code></p>
+</dd>
+<dt class="field-odd">Contract<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">camera</span></code> with yaw, pitch, distance, FOV, and pan fields.</p>
+</dd>
+<dt class="field-even">Relevant consumer<span class="colon">:</span></dt>
+<dd class="field-even"><p>Render Toy scene/post viewports.</p>
+</dd>
+<dt class="field-odd">Source trail<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">shaders/workbench/viewport_camera.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">ViewportCamera.h</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SlangRhiWidget.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="miskeyed-render-toy">
+<h2><code class="docutils literal notranslate"><span class="pre">miskeyed.render_toy</span></code><a class="headerlink" href="#miskeyed-render-toy" title="Link to this heading">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">Kind<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host contract</p>
+</dd>
+<dt class="field-even">Purpose<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scene/Post pass interface and scene-target sampling.</p>
+</dd>
+<dt class="field-odd">Host backing<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Render Toy’s persistent session plus two-pass QRhi renderer.</p>
+</dd>
+<dt class="field-even">Import<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.render_toy;</span></code></p>
+</dd>
+<dt class="field-odd">Contract<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">SceneSample</span></code>, host-bound <code class="docutils literal notranslate"><span class="pre">sceneColor</span></code> and <code class="docutils literal notranslate"><span class="pre">sceneSampler</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">sampleScene</span></code>.</p>
+</dd>
+<dt class="field-even">Relevant consumer<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">RenderToySession</span></code> Scene/Post bindings.</p>
+</dd>
+<dt class="field-odd">Source trail<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">shaders/workbench/render_toy.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">RenderToySession.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SlangRhiWidget.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="miskeyed-shader-toy">
+<h2><code class="docutils literal notranslate"><span class="pre">miskeyed.shader_toy</span></code><a class="headerlink" href="#miskeyed-shader-toy" title="Link to this heading">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">Kind<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host contract</p>
+</dd>
+<dt class="field-even">Purpose<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fullscreen Shader Toy presentation inputs.</p>
+</dd>
+<dt class="field-odd">Host backing<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Shader Toy render surface pixel size.</p>
+</dd>
+<dt class="field-even">Import<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.shader_toy;</span></code></p>
+</dd>
+<dt class="field-odd">Contract<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Host-managed <code class="docutils literal notranslate"><span class="pre">shaderToy.resolution</span></code>.</p>
+</dd>
+<dt class="field-even">Relevant consumer<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">ShaderToySession</span></code> and its fullscreen render surface.</p>
+</dd>
+<dt class="field-odd">Source trail<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">shaders/workbench/shader_toy.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">ShaderToySession.cpp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SlangRhiWidget.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">WorkbenchModules.cpp</span></code>.</p>
+</dd>
+</dl>
+<p>These descriptors document capabilities; Slang still owns module resolution.</p>
+</section>
 </section>
 
         </article>
@@ -398,8 +525,31 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Slang module reference</a><ul>
+<li><a class="reference internal" href="#miskeyed-ui"><code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code></a></li>
+<li><a class="reference internal" href="#miskeyed-time"><code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code></a></li>
+<li><a class="reference internal" href="#miskeyed-viewport-camera"><code class="docutils literal notranslate"><span class="pre">miskeyed.viewport_camera</span></code></a></li>
+<li><a class="reference internal" href="#miskeyed-render-toy"><code class="docutils literal notranslate"><span class="pre">miskeyed.render_toy</span></code></a></li>
+<li><a class="reference internal" href="#miskeyed-shader-toy"><code class="docutils literal notranslate"><span class="pre">miskeyed.shader_toy</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

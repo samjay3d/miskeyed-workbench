@@ -227,6 +227,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/documents_and_bindings.html">Documents and bindings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/slang_modules.html">Slang modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/host_features.html">Host Features and Slang Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/entry_points.html">Entry points are capabilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/reflection.html">Reflection-driven UI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/dependency_identity.html">Dependency identity</a></li>
@@ -345,12 +346,18 @@ editing and inspection; it does not silently rebind a viewport.</p>
 <img alt="Focused Workbench workspace editor showing open document tabs" class="align-center" src="../_images/workspace_documents.png" />
 <p>To work with a document:</p>
 <ol class="arabic simple">
-<li><p>Open it or choose its tab.</p></li>
+<li><p>Use the arrow beside <strong>Open document</strong> to choose where the file should go:
+document-only, Render Toy Scene, Render Toy Post, or Shader Toy. Plain
+<strong>Open document</strong> never silently binds a viewport.</p></li>
 <li><p>Edit Source, Generated, or Compare view.</p></li>
 <li><p>Click a viewport to focus the document bound to that consumer.</p></li>
 <li><p>Read the status binding summary before changing a tool binding.</p></li>
 </ol>
 <p>See <a class="reference internal" href="../concepts/documents_and_bindings.html"><span class="doc">Documents and bindings</span></a> for the open/focused/bound model.</p>
+<p>Workbench reads and compiles a selected file with its containing directory as the
+project search path before binding it to a tool slot. Slang therefore resolves sibling
+imports before Workbench validates the compiled entry points. A failed compile leaves
+the document open for diagnostics but does not replace a working tool binding.</p>
 </section>
 
         </article>

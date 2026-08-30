@@ -227,6 +227,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/documents_and_bindings.html">Documents and bindings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/slang_modules.html">Slang modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/host_features.html">Host Features and Slang Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/entry_points.html">Entry points are capabilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/reflection.html">Reflection-driven UI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../concepts/dependency_identity.html">Dependency identity</a></li>
@@ -348,6 +349,14 @@ controls, reflected resources, resolved dependencies, and compilation products.<
 <p>Notice that groups and bounded controls come from shader metadata. Host-managed time
 fields are absent because the application, not the artist, drives them.</p>
 </section>
+<section id="host-slang">
+<h2>Host / Slang<a class="headerlink" href="#host-slang" title="Link to this heading">¶</a></h2>
+<img alt="Focused Host and Slang Inspector showing available host contracts and focused-document import state" class="align-center" src="../_images/host_features.png" />
+<p><strong>Available</strong> describes what the running host supplies. <strong>Imported</strong> is derived from
+the focused document’s compiler-resolved dependencies. Expand a feature for its
+module, concise contract, provider, and session/tool context. Libraries such as
+<code class="docutils literal notranslate"><span class="pre">miskeyed.ui</span></code> are listed separately because they require no runtime provider.</p>
+</section>
 <section id="dependencies">
 <h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h2>
 <img alt="Focused Dependencies Inspector showing the authored shader and resolved imports" class="align-center" src="../_images/inspector_dependencies.png" />
@@ -418,6 +427,7 @@ fields are absent because the application, not the artist, drives them.</p>
             <ul>
 <li><a class="reference internal" href="#">Use the Inspector</a><ul>
 <li><a class="reference internal" href="#parameters">Parameters</a></li>
+<li><a class="reference internal" href="#host-slang">Host / Slang</a></li>
 <li><a class="reference internal" href="#dependencies">Dependencies</a></li>
 <li><a class="reference internal" href="#entry-points">Entry points</a></li>
 </ul>
