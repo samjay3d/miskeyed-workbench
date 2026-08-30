@@ -17,6 +17,8 @@ namespace {
     struct Panel {
         QWidget* surface;
         QComboBox* binding;
+        QComboBox* vertex;
+        QComboBox* fragment;
         QPushButton* bind;
     };
 
@@ -38,9 +40,36 @@ namespace {
         row->addWidget(new QLabel(QStringLiteral("linked"), header));
         auto* bind = new QPushButton(action, header);
         row->addWidget(bind);
+        auto* vertex = new QComboBox(header);
+        vertex->setToolTip(QStringLiteral("Selected vertex entry point"));
+        auto* fragment = new QComboBox(header);
+        fragment->setToolTip(QStringLiteral("Selected fragment entry point"));
+        row->addWidget(new QLabel(QStringLiteral("Vertex"), header));
+        row->addWidget(vertex);
+        row->addWidget(new QLabel(QStringLiteral("Fragment"), header));
+        row->addWidget(fragment);
         column->addWidget(header);
         column->addWidget(viewport, 1);
-        return { surface, binding, bind };
+        return { surface, binding, vertex, fragment, bind };
+    }
+
+    void repopulateEntryPoints(
+        Panel panel, ShaderDocument* document, const QString& vertex, const QString& fragment)
+    {
+        QSignalBlocker vertexBlock(panel.vertex), fragmentBlock(panel.fragment);
+        panel.vertex->clear();
+        panel.fragment->clear();
+        if (!document)
+            return;
+        for (const CompiledEntryPoint& entry : document->entryPoints()) {
+            QComboBox* combo = entry.stage == ShaderStage::Vertex ? panel.vertex
+                : entry.stage == ShaderStage::Fragment            ? panel.fragment
+                                                                  : nullptr;
+            if (combo)
+                combo->addItem(entry.name);
+        }
+        panel.vertex->setCurrentText(vertex);
+        panel.fragment->setCurrentText(fragment);
     }
 
     template <typename BoundDocument>
@@ -59,7 +88,7 @@ namespace {
     class RenderToyContribution final : public WorkbenchToolContribution {
     public:
         RenderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
-            RenderToySession* session, QWidget* sceneViewport, QWidget* postViewport)
+            RenderToySession* session, SlangRhiWidget* sceneViewport, SlangRhiWidget* postViewport)
             : WorkbenchToolContribution(parent)
             , m_workspace(workspace)
             , m_session(session)
@@ -84,12 +113,58 @@ namespace {
             auto refresh = [this] {
                 repopulate(m_scene, m_workspace, m_session->sceneDocument());
                 repopulate(m_post, m_workspace, m_session->postDocument());
+                repopulateEntryPoints(m_scenePanel, m_session->sceneDocument(),
+                    m_session->sceneVertexEntry(), m_session->sceneFragmentEntry());
+                repopulateEntryPoints(m_postPanel, m_session->postDocument(),
+                    m_session->postVertexEntry(), m_session->postFragmentEntry());
             };
+            m_scenePanel = scene;
+            m_postPanel = post;
+            auto selectScene = [this, sceneViewport] {
+                m_session->selectSceneEntryPoints(
+                    m_scenePanel.vertex->currentText(), m_scenePanel.fragment->currentText());
+                sceneViewport->setEntryPoints(
+                    m_session->sceneVertexEntry(), m_session->sceneFragmentEntry());
+            };
+            auto selectPost = [this, postViewport] {
+                m_session->selectPostEntryPoints(
+                    m_postPanel.vertex->currentText(), m_postPanel.fragment->currentText());
+                postViewport->setEntryPoints(
+                    m_session->postVertexEntry(), m_session->postFragmentEntry());
+            };
+            connect(scene.vertex, &QComboBox::currentTextChanged, this, selectScene);
+            connect(scene.fragment, &QComboBox::currentTextChanged, this, selectScene);
+            connect(post.vertex, &QComboBox::currentTextChanged, this, selectPost);
+            connect(post.fragment, &QComboBox::currentTextChanged, this, selectPost);
+            connect(session, &RenderToySession::entryPointsChanged, this,
+                [this, sceneViewport, postViewport] {
+                    sceneViewport->setEntryPoints(
+                        m_session->sceneVertexEntry(), m_session->sceneFragmentEntry());
+                    postViewport->setEntryPoints(
+                        m_session->postVertexEntry(), m_session->postFragmentEntry());
+                    postViewport->setSceneEntryPoints(
+                        m_session->sceneVertexEntry(), m_session->sceneFragmentEntry());
+                });
             connect(session, &RenderToySession::bindingsChanged, this, refresh);
             connect(workspace, &ShaderWorkspace::documentAdded, this, refresh);
             connect(workspace, &ShaderWorkspace::documentClosed, this, refresh);
             connect(workspace, &ShaderWorkspace::documentOrderChanged, this, refresh);
+            auto hookDocument = [this, refresh](ShaderDocument* document) {
+                auto resolve = [this, refresh] {
+                    m_session->resolveEntryPoints();
+                    refresh();
+                };
+                connect(document, &ShaderDocument::compiled, this, resolve);
+            };
+            for (int i = 0; i < workspace->documentCount(); ++i)
+                hookDocument(workspace->documentAt(i));
+            connect(workspace, &ShaderWorkspace::documentAdded, this, hookDocument);
             refresh();
+            sceneViewport->setEntryPoints(
+                session->sceneVertexEntry(), session->sceneFragmentEntry());
+            postViewport->setEntryPoints(session->postVertexEntry(), session->postFragmentEntry());
+            postViewport->setSceneEntryPoints(
+                session->sceneVertexEntry(), session->sceneFragmentEntry());
         }
         QString toolId() const override { return QStringLiteral("render-toy"); }
         QString title() const override { return QStringLiteral("Render Toy"); }
@@ -108,12 +183,14 @@ namespace {
         QList<QWidget*> m_views;
         QComboBox* m_scene;
         QComboBox* m_post;
+        Panel m_scenePanel;
+        Panel m_postPanel;
     };
 
     class ShaderToyContribution final : public WorkbenchToolContribution {
     public:
         ShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
-            ShaderToySession* session, QWidget* viewport)
+            ShaderToySession* session, SlangRhiWidget* viewport)
             : WorkbenchToolContribution(parent)
             , m_workspace(workspace)
             , m_session(session)
@@ -123,6 +200,7 @@ namespace {
             p.surface->setObjectName(QStringLiteral("ShaderToyView"));
             m_views = { p.surface };
             m_binding = p.binding;
+            m_panel = p;
             connect(p.bind, &QPushButton::clicked, this,
                 [this] { m_session->bindShader(m_workspace->focusedDocument()); });
             connect(m_binding, QOverload<int>::of(&QComboBox::activated), this, [this](int i) {
@@ -141,9 +219,25 @@ namespace {
                     if (document == m_session->shaderDocument())
                         m_binding->setCurrentIndex(m_binding->count() - 1);
                 }
+                repopulateEntryPoints(m_panel, m_session->shaderDocument(),
+                    m_session->vertexEntry(), m_session->fragmentEntry());
             };
+            auto select = [this, viewport] {
+                m_session->selectEntryPoints(
+                    m_panel.vertex->currentText(), m_panel.fragment->currentText());
+                viewport->setEntryPoints(m_session->vertexEntry(), m_session->fragmentEntry());
+            };
+            connect(p.vertex, &QComboBox::currentTextChanged, this, select);
+            connect(p.fragment, &QComboBox::currentTextChanged, this, select);
+            connect(session, &ShaderToySession::entryPointsChanged, this,
+                [this, viewport](const QString& vertex, const QString& fragment) {
+                    viewport->setEntryPoints(vertex, fragment);
+                });
             auto hookDocument = [this, refresh](ShaderDocument* document) {
-                connect(document, &ShaderDocument::compiled, this, refresh);
+                connect(document, &ShaderDocument::compiled, this, [this, refresh] {
+                    m_session->resolveEntryPoints();
+                    refresh();
+                });
                 connect(document, &ShaderDocument::compileFailed, this, refresh);
             };
             connect(session, &ShaderToySession::bindingChanged, this, refresh);
@@ -157,6 +251,7 @@ namespace {
             for (int i = 0; i < workspace->documentCount(); ++i)
                 hookDocument(workspace->documentAt(i));
             refresh();
+            viewport->setEntryPoints(session->vertexEntry(), session->fragmentEntry());
         }
         QString toolId() const override { return QStringLiteral("shader-toy"); }
         QString title() const override { return QStringLiteral("ShaderToy"); }
@@ -173,6 +268,7 @@ namespace {
         ShaderToySession* m_session;
         QList<QWidget*> m_views;
         QComboBox* m_binding;
+        Panel m_panel;
     };
 } // namespace
 

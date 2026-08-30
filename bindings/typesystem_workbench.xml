@@ -26,6 +26,8 @@
         </object-type>
         <object-type name="ParameterInspector" />
         <object-type name="ShaderDocument" />
+        <enum-type name="ShaderStage" />
+        <value-type name="CompiledEntryPoint" />
         <object-type name="SlangRhiWidget">
             <!-- Protected overrides use QRhiCommandBuffer, a Qt private-rhi type not
                  exposed by PySide6; they are C++-only and must not be wrapped. -->

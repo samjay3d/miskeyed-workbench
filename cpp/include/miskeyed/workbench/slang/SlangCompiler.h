@@ -9,9 +9,15 @@
 
 namespace miskeyed::workbench::slang_rhi {
 
-struct CompiledStage {
+enum class ShaderStage : quint8 { Unknown, Vertex, Fragment, Compute };
+[[nodiscard]] MISKEYED_WORKBENCH_SLANG_RHI_EXPORT QString shaderStageName(ShaderStage stage);
+
+struct CompiledEntryPoint {
+    QString name;
+    ShaderStage stage = ShaderStage::Unknown;
+    QString sourceIdentity;
     QShader shader;
-    QByteArray entryPointHash;
+    QByteArray identity;
     // Human-readable generated code per backend target ("HLSL", "GLSL", "SPIR-V",
     // "Metal") for the editor's "compiled output" viewer. Populated best-effort; a
     // target that is unavailable or fails simply does not appear.
@@ -36,8 +42,7 @@ struct ResourceDescriptor {
 struct CompileResult {
     bool ok = false;
     QString diagnostics;
-    CompiledStage vertex;
-    CompiledStage fragment;
+    QList<CompiledEntryPoint> entryPoints;
     QList<ParameterDescriptor> parameters;
     qsizetype parameterByteSize = 0;
     int parameterBinding = 0;
@@ -65,10 +70,8 @@ public:
     void setSystemPrelude(const QString& source);
     [[nodiscard]] QString systemPrelude() const;
 
-    CompileResult compileFullscreen(const QString& source,
-        const QString& virtualPath = QStringLiteral("user_shader.slang"),
-        const QString& vertexEntry = QStringLiteral("vsMain"),
-        const QString& fragmentEntry = QStringLiteral("psMain"));
+    CompileResult compileProgram(
+        const QString& source, const QString& virtualPath = QStringLiteral("user_shader.slang"));
 
 private:
     std::unique_ptr<SlangCompilerPrivate> d;

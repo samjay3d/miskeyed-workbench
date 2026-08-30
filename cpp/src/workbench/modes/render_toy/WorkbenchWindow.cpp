@@ -1163,8 +1163,39 @@ void WorkbenchWindow::refreshSemanticInspector()
                 : QStringLiteral("—") });
     auto* entryPoints
         = new QTreeWidgetItem(m_compilationTree, { QStringLiteral("Entry points"), QString() });
-    new QTreeWidgetItem(entryPoints, { QStringLiteral("Vertex"), QStringLiteral("vsMain") });
-    new QTreeWidgetItem(entryPoints, { QStringLiteral("Fragment"), QStringLiteral("psMain") });
+    for (const CompiledEntryPoint& entry : m_workspace->focusedDocument()->entryPoints()) {
+        auto* item = new QTreeWidgetItem(entryPoints, { entry.name, shaderStageName(entry.stage) });
+        item->setToolTip(0,
+            QStringLiteral("Source: %1\nIdentity: %2")
+                .arg(entry.sourceIdentity, QString::fromLatin1(entry.identity.toHex())));
+    }
+    auto* compatibility = new QTreeWidgetItem(
+        m_compilationTree, { QStringLiteral("Bindings / compatibility"), QString() });
+    ShaderDocument* document = m_workspace->focusedDocument();
+    const bool graphics = document->findEntryPoint(ShaderStage::Vertex)
+        && document->findEntryPoint(ShaderStage::Fragment);
+    new QTreeWidgetItem(compatibility,
+        { QStringLiteral("ShaderToy"),
+            graphics ? QStringLiteral("Compatible · expects Vertex + Fragment")
+                     : QStringLiteral("Incompatible · missing Vertex or Fragment") });
+    if (document == m_shaderToySession->shaderDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("ShaderToy using"),
+                QStringLiteral("%1 + %2").arg(
+                    m_shaderToySession->vertexEntry(), m_shaderToySession->fragmentEntry()) });
+    }
+    if (document == m_renderToySession->sceneDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("Render Toy Scene using"),
+                QStringLiteral("%1 + %2").arg(m_renderToySession->sceneVertexEntry(),
+                    m_renderToySession->sceneFragmentEntry()) });
+    }
+    if (document == m_renderToySession->postDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("Render Toy Post using"),
+                QStringLiteral("%1 + %2").arg(m_renderToySession->postVertexEntry(),
+                    m_renderToySession->postFragmentEntry()) });
+    }
     auto* targets
         = new QTreeWidgetItem(m_compilationTree, { QStringLiteral("Targets"), QString() });
     for (const QString& target : m_workspace->focusedDocument()->generatedTargets())

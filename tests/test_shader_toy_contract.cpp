@@ -76,6 +76,25 @@ int main(int argc, char** argv)
     assert(fullscreen.dependencyGraph()->contains(QStringLiteral("module:miskeyed.time")));
     assert(fullscreen.dependencyGraph()->contains(QStringLiteral("module:miskeyed.shader_toy")));
 
+    ShaderDocument arbitraryProgram;
+    arbitraryProgram.setSystemPrelude(QString());
+    arbitraryProgram.setSource(QStringLiteral(R"SLANG(
+struct V { float4 position : SV_Position; };
+[shader("vertex")] V vertexMain(uint id : SV_VertexID) { V v; v.position = 0; return v; }
+[shader("fragment")] float4 imageMain() : SV_Target0 { return 1; }
+[shader("fragment")] float4 debugMain() : SV_Target0 { return float4(1, 0, 1, 1); }
+[shader("compute")] [numthreads(1, 1, 1)] void inferMain(uint3 id : SV_DispatchThreadID) {}
+)SLANG"));
+    arbitraryProgram.compile();
+    assert(arbitraryProgram.compileSucceeded());
+    assert(arbitraryProgram.entryPoints().size() == 4);
+    assert(
+        arbitraryProgram.findEntryPoint(ShaderStage::Vertex)->name == QStringLiteral("vertexMain"));
+    assert(arbitraryProgram.findEntryPoint(ShaderStage::Compute, QStringLiteral("inferMain")));
+    assert(shaderToy.bindShader(&arbitraryProgram));
+    assert(shaderToy.selectEntryPoints(QStringLiteral("vertexMain"), QStringLiteral("debugMain")));
+    assert(shaderToy.fragmentEntry() == QStringLiteral("debugMain"));
+
     ShaderDocument incompatible;
     incompatible.setSource(QStringLiteral("this is not a graphics program"));
     incompatible.compile();

@@ -15,16 +15,23 @@ public:
     explicit ShaderToySession(QObject* parent = nullptr);
 
     ShaderDocument* shaderDocument() const { return m_shader; }
+    QString vertexEntry() const { return m_vertexEntry; }
+    QString fragmentEntry() const { return m_fragmentEntry; }
     bool canBindShader(ShaderDocument* document) const;
     bool bindShader(ShaderDocument* document);
+    bool selectEntryPoints(const QString& vertex, const QString& fragment);
+    void resolveEntryPoints();
     void removeDocument(ShaderDocument* document);
 
 signals:
     void bindingChanged(ShaderDocument* document);
     void bindingRejected(ShaderDocument* document, const QString& reason);
+    void entryPointsChanged(const QString& vertex, const QString& fragment);
 
 private:
     ShaderDocument* m_shader = nullptr;
+    QString m_vertexEntry;
+    QString m_fragmentEntry;
 };
 
 } // namespace miskeyed::workbench::slang_rhi

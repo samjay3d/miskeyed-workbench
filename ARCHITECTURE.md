@@ -90,6 +90,13 @@ compiler and renderer DAG products remain collapsed under an Advanced graph bran
 Compilation presents status, elapsed compile time, entry points, generated targets,
 profile, and diagnostics as structured document information.
 
+Entry points are reflected from the Slang module into `CompiledEntryPoint` records (name,
+stage, source identity, semantic identity, generated targets, and optional live `QShader`).
+`ShaderDocument` owns that program-shaped result. Runtime sessions retain their selected
+vertex/fragment names, so two consumers may choose different entry points from the same
+document without recompiling or copying it. The familiar `vsMain`/`psMain` names are only
+preferences when a consumer has not made an explicit selection.
+
 ### Time and deterministic evaluation
 
 `core::TimeValue` carries a floating-point coordinate and its units-per-second rate;

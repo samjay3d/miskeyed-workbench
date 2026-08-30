@@ -28,6 +28,7 @@ public:
 
     ShaderDocument* document() const { return m_document; }
     void setDocument(ShaderDocument* document);
+    void setEntryPoints(const QString& vertex, const QString& fragment);
     float exposure() const { return m_exposure; }
     void setExposure(float value);
 
@@ -36,6 +37,7 @@ public:
     // post-process that samples that texture (bound at SRB slot 1 -> HLSL t1/s1).
     ShaderDocument* scenePass() const { return m_scenePass; }
     void setScenePass(ShaderDocument* sceneDocument);
+    void setSceneEntryPoints(const QString& vertex, const QString& fragment);
     miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
     void setTimeContext(miskeyed::workbench::core::TimeContext* context);
 
@@ -71,6 +73,10 @@ private:
 
     ShaderDocument* m_document = nullptr;
     ShaderDocument* m_scenePass = nullptr;
+    QString m_vertexEntry;
+    QString m_fragmentEntry;
+    QString m_sceneVertexEntry;
+    QString m_sceneFragmentEntry;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     float m_exposure = 1.0f;
     QPointF m_lastDragPos;
