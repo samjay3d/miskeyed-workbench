@@ -2,6 +2,7 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <QCoreApplication>
 #include <QFile>
+#include <QTemporaryDir>
 #include <rhi/qshader.h>
 #include <array>
 #include <cassert>
@@ -14,6 +15,33 @@ int main(int argc, char** argv)
     const QString imports = QStringLiteral("import miskeyed.ui;\n"
                                            "import miskeyed.time;\n"
                                            "import miskeyed.render_toy;\n");
+
+    // Regression: a local document can compile before it uses any Workbench module,
+    // then add imports on a later edit. Slang probes those imports below the document
+    // search directory; the packaged host namespace must still resolve in-process.
+    QTemporaryDir localProject;
+    assert(localProject.isValid());
+    ShaderDocument editedDocument;
+    editedDocument.setSystemPrelude(QString());
+    editedDocument.setFileUrl(
+        QUrl::fromLocalFile(localProject.filePath(QStringLiteral("authored.slang"))));
+    editedDocument.setSource(QStringLiteral(R"SLANG(
+struct VSOut { float4 position : SV_Position; };
+[shader("vertex")] VSOut vsMain(uint id : SV_VertexID) { VSOut output; output.position = 0; return output; }
+[shader("fragment")] float4 psMain(VSOut input) : SV_Target0 { return 1.0; }
+)SLANG"));
+    editedDocument.compile();
+    assert(editedDocument.diagnostics().isEmpty());
+    assert(editedDocument.importedDependencies().isEmpty());
+    editedDocument.setSource(imports + editedDocument.source());
+    editedDocument.compile();
+    assert(editedDocument.diagnostics().isEmpty());
+    QStringList editedImports;
+    for (const SourceDependency& dependency : editedDocument.importedDependencies())
+        editedImports.push_back(dependency.identity);
+    assert(editedImports.contains(QStringLiteral("miskeyed.ui")));
+    assert(editedImports.contains(QStringLiteral("miskeyed.time")));
+    assert(editedImports.contains(QStringLiteral("miskeyed.render_toy")));
 
     ShaderDocument document;
     document.setSystemPrelude(QString());

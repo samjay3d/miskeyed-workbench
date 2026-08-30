@@ -66,6 +66,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolved packaged `miskeyed.*` modules when Slang qualifies their paths beneath a
+  local document search directory, including when imports are added after an earlier
+  import-free compile.
 - Made the Open control name its destination explicitly and resolve/compile project
   imports before binding a selected file to Render Toy or Shader Toy. Failed reads no
   longer leave an empty focused document, and failed compiles preserve existing bindings.
