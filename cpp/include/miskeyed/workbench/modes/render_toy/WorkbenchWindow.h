@@ -77,6 +77,8 @@ signals:
     void activeToolChanged(const QString& toolId);
 
 private:
+    enum class OpenDestination { Document, RenderToyScene, RenderToyPost, ShaderToy };
+
     void buildUi();
     void connectUi();
     void applyTheme();
@@ -89,10 +91,13 @@ private:
     void reloadGeneratedTargets();
     void refreshGeneratedView();
     void refreshDependencyInspector();
+    void refreshHostSlangInspector();
     void refreshSemanticInspector();
     void mirrorParameter(ShaderDocument* target, const QString& name, const QVariant& value);
     void rebuildToolSelector();
     void setToolSummaryProvider(const QString& toolId, std::function<QString()> provider);
+    void chooseShader(OpenDestination destination);
+    bool openShader(const QString& path, OpenDestination destination);
 
     // Compile-status feedback: a persistent, color-coded pill in the editor bar.
     enum class CompileState { Idle, Dirty, Compiling, Ok, Warn, Error };
@@ -113,6 +118,7 @@ private:
     QTreeWidget* m_dependencyTree = nullptr;
     QTreeWidget* m_resourceTree = nullptr;
     QTreeWidget* m_compilationTree = nullptr;
+    QTreeWidget* m_hostSlangTree = nullptr;
     QPlainTextEdit* m_dependencySource = nullptr;
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
     ShaderWorkspace* m_workspace = nullptr;
@@ -142,6 +148,7 @@ private:
     QLabel* m_inspectorContext = nullptr;
     QLabel* m_bindingSummary = nullptr;
     int m_diagTabIndex = -1;
+    QString m_openDirectory;
     QString m_activeTool;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;

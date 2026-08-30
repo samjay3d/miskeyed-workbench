@@ -76,6 +76,10 @@ work use [.github/skills/architecture-review/SKILL.md](.github/skills/architectu
 - **Slang owns language and module resolution.** Workbench owns packaged module bytes,
   project search-path configuration, and host/editor/runtime composition; it supplies
   these at Slang's filesystem/session edge rather than resolving imports itself.
+- Host contracts and their Slang modules are related but are not the same object.
+  Module metadata exists only for packaging, introspection, and user discovery: never
+  turn the catalog into a service locator or second resolver, and keep host-backed
+  contracts self-documenting in the Inspector and shader reference.
 - **Sessions own runtime bindings and entry-point selections.** `ShaderWorkspace` owns
   documents, focus/editor sessions, and shared evaluation time. Tool contributions
   adapt sessions into views; they do not become the state owner.

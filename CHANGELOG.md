@@ -19,6 +19,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Made built-in Workbench Slang host contracts discoverable through semantic module
+  metadata and a focused Host / Slang Inspector page, including host availability,
+  compiler-resolved import state, provided values/resources, and provider/session context.
 - `ShaderWorkspace` and reusable `WorkspaceEditor` ownership for open/focused
   documents, per-document cursor/scroll/view state, and Source, Generated, and Compare
   presentation.
@@ -63,6 +66,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolved packaged `miskeyed.*` modules when Slang qualifies their paths beneath a
+  local document search directory, including when imports are added after an earlier
+  import-free compile.
+- Made the Open control name its destination explicitly and resolve/compile project
+  imports before binding a selected file to Render Toy or Shader Toy. Failed reads no
+  longer leave an empty focused document, and failed compiles preserve existing bindings.
 - Vulkan packages execute Slang's exported SPIR-V entry name while preserving authored
   names for reflection and consumer selection.
 - Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
@@ -74,6 +83,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Developer / CI
 
+- Corrected development-documentation publication verification to check the development
+  page identity rather than the release-version identity after a successful Pages push.
 - Added repository-local architecture-review and documentation checklists, clarified
   ownership and anti-generalization rules in `AGENTS.md`, and made contextual changelog
   handling, public API review, deterministic UI captures, and deliberate non-goals part

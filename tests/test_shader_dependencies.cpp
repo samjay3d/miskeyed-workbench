@@ -1,4 +1,5 @@
 #include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/slang/ShaderWorkspace.h>
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
@@ -24,16 +25,29 @@ int main(int argc, char** argv)
     const QString modulePath = project.filePath(QStringLiteral("animated.slang"));
     const QString shaderPath = project.filePath(QStringLiteral("scene.slang"));
     writeModule(modulePath, "float importedValue() { return 1.0; }\n");
-
-    ShaderDocument document;
-    document.setSystemPrelude(QString());
-    document.setFileUrl(QUrl::fromLocalFile(shaderPath));
-    document.setSource(QStringLiteral(R"SLANG(
+    const QByteArray shaderSource = R"SLANG(
 import animated;
 struct VSOut { float4 position : SV_Position; };
 [shader("vertex")] VSOut vsMain(uint id : SV_VertexID) { VSOut o; o.position = 0; return o; }
 [shader("fragment")] float4 psMain(VSOut input) : SV_Target0 { return importedValue(); }
-)SLANG"));
+)SLANG";
+    writeModule(shaderPath, shaderSource);
+
+    // Opening a project file establishes its directory, lets Slang resolve imports,
+    // and completes compilation before a caller can bind the returned document.
+    ShaderWorkspace workspace;
+    assert(!workspace.openFile(project.filePath(QStringLiteral("missing.slang"))));
+    assert(workspace.documentCount() == 0);
+    ShaderDocument* opened = workspace.openFile(shaderPath);
+    assert(opened);
+    assert(opened->compileSucceeded());
+    assert(opened->importedDependencies().size() == 1);
+    assert(opened->importedDependencies().front().path == modulePath);
+
+    ShaderDocument document;
+    document.setSystemPrelude(QString());
+    document.setFileUrl(QUrl::fromLocalFile(shaderPath));
+    document.setSource(QString::fromUtf8(shaderSource));
     document.compile();
     assert(document.diagnostics().isEmpty());
     assert(document.importedDependencies().size() == 1);

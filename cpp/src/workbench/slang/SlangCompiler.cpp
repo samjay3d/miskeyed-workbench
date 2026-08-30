@@ -3,6 +3,7 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <QDataStream>
+#include <QDir>
 #include <QFile>
 #include "Qt68ShaderBridge.h"
 #include <slang.h>
@@ -97,10 +98,21 @@ namespace {
                 return SLANG_FAIL;
             *outBlob = nullptr;
             QByteArray bytes;
-            const QString fileName
-                = QString::fromUtf8(path).replace(QLatin1Char('\\'), QLatin1Char('/'));
-            if (m_builtinSources.contains(fileName)) {
-                bytes = m_builtinSources.value(fileName);
+            const QString fileName = QDir::cleanPath(
+                QString::fromUtf8(path).replace(QLatin1Char('\\'), QLatin1Char('/')));
+            QString builtinPath;
+            for (auto it = m_builtinSources.cbegin(); it != m_builtinSources.cend(); ++it) {
+                // With a local authored document, Slang may probe an import beneath the
+                // document search path (for example C:/project/miskeyed/time.slang).
+                // The miskeyed.* namespace is host-owned, so map that qualified suffix
+                // back to its packaged bytes while leaving every other path to QFile.
+                if (fileName == it.key() || fileName.endsWith(QLatin1Char('/') + it.key())) {
+                    builtinPath = it.key();
+                    break;
+                }
+            }
+            if (!builtinPath.isEmpty()) {
+                bytes = m_builtinSources.value(builtinPath);
             } else {
                 QFile file(QString::fromUtf8(path));
                 if (!file.open(QIODevice::ReadOnly))
@@ -109,7 +121,7 @@ namespace {
             }
             if (bytes.isEmpty())
                 return SLANG_FAIL;
-            m_loaded.insert(fileName, bytes);
+            m_loaded.insert(builtinPath.isEmpty() ? fileName : builtinPath, bytes);
             *outBlob = slang_createBlob(bytes.constData(), size_t(bytes.size()));
             return *outBlob ? SLANG_OK : SLANG_FAIL;
         }

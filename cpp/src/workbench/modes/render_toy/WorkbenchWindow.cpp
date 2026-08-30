@@ -377,6 +377,12 @@ void WorkbenchWindow::buildUi()
         QStringLiteral("Binding"), QStringLiteral("Space") });
     m_resourceTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
+    m_hostSlangTree = new QTreeWidget(inspector);
+    m_hostSlangTree->setObjectName(QStringLiteral("HostSlangTree"));
+    m_hostSlangTree->setHeaderLabels(
+        { QStringLiteral("Host feature / module"), QStringLiteral("State") });
+    m_hostSlangTree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+
     auto* compilationPanel = new QSplitter(Qt::Vertical, inspector);
     m_compilationTree = new QTreeWidget(compilationPanel);
     m_compilationTree->setObjectName(QStringLiteral("CompilationTree"));
@@ -390,6 +396,7 @@ void WorkbenchWindow::buildUi()
     tabs->setObjectName(QStringLiteral("ActiveDocumentInspector"));
     tabs->addTab(m_parameterInspector, QStringLiteral("Parameters"));
     tabs->addTab(m_resourceTree, QStringLiteral("Resources"));
+    tabs->addTab(m_hostSlangTree, QStringLiteral("Host / Slang"));
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
@@ -454,8 +461,20 @@ void WorkbenchWindow::buildUi()
     rebuildToolSelector();
     tb->addWidget(m_toolSelector);
     tb->addSeparator();
-    auto* open = tb->addAction(QStringLiteral("Open"));
-    open->setShortcut(QKeySequence::Open);
+    auto* openButton = new QToolButton(tb);
+    openButton->setText(QStringLiteral("Open"));
+    openButton->setPopupMode(QToolButton::MenuButtonPopup);
+    openButton->setToolTip(QStringLiteral(
+        "Open a Slang document, or compile it and bind it to a specific tool slot."));
+    auto* openMenu = new QMenu(openButton);
+    auto* openDocument = openMenu->addAction(QStringLiteral("Open document…"));
+    auto* openScene = openMenu->addAction(QStringLiteral("Open in Render Toy · Scene…"));
+    auto* openPost = openMenu->addAction(QStringLiteral("Open in Render Toy · Post…"));
+    auto* openShaderToy = openMenu->addAction(QStringLiteral("Open in Shader Toy…"));
+    openDocument->setShortcut(QKeySequence::Open);
+    openButton->setDefaultAction(openDocument);
+    openButton->setMenu(openMenu);
+    tb->addWidget(openButton);
     auto* save = tb->addAction(QStringLiteral("Save"));
     save->setShortcut(QKeySequence::Save);
     auto* compile = tb->addAction(QStringLiteral("Compile"));
@@ -487,12 +506,14 @@ void WorkbenchWindow::buildUi()
     samplesBtn->setMenu(samplesMenu);
     tb->addWidget(samplesBtn);
 
-    connect(open, &QAction::triggered, this, [this] {
-        const auto p = QFileDialog::getOpenFileName(
-            this, QStringLiteral("Open Slang shader"), {}, QStringLiteral("Slang (*.slang)"));
-        if (!p.isEmpty())
-            openShader(p);
-    });
+    connect(openDocument, &QAction::triggered, this,
+        [this] { chooseShader(OpenDestination::Document); });
+    connect(openScene, &QAction::triggered, this,
+        [this] { chooseShader(OpenDestination::RenderToyScene); });
+    connect(openPost, &QAction::triggered, this,
+        [this] { chooseShader(OpenDestination::RenderToyPost); });
+    connect(openShaderToy, &QAction::triggered, this,
+        [this] { chooseShader(OpenDestination::ShaderToy); });
     connect(save, &QAction::triggered, this, [this] {
         if (m_workspace->focusedDocument()) {
             m_workspace->focusedDocument()->setSource(m_editor->toPlainText());
@@ -626,8 +647,10 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
             m_diagnostics->setPlainText(doc->diagnostics());
     });
     connect(doc, &ShaderDocument::dependenciesChanged, this, [this, doc] {
-        if (doc == m_workspace->focusedDocument())
+        if (doc == m_workspace->focusedDocument()) {
             refreshDependencyInspector();
+            refreshHostSlangInspector();
+        }
     });
     connect(doc->dependencyGraph(), &DependencyGraph::graphChanged, this, [this, doc] {
         if (doc == m_workspace->focusedDocument())
@@ -670,12 +693,46 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
         });
 }
 
+void WorkbenchWindow::refreshHostSlangInspector()
+{
+    m_hostSlangTree->clear();
+    ShaderDocument* document = m_workspace->focusedDocument();
+    QStringList resolved;
+    if (document) {
+        for (const SourceDependency& dependency : document->importedDependencies())
+            resolved.push_back(dependency.identity);
+    }
+    auto* contracts
+        = new QTreeWidgetItem(m_hostSlangTree, { QStringLiteral("Host features"), QString() });
+    auto* libraries
+        = new QTreeWidgetItem(m_hostSlangTree, { QStringLiteral("Libraries"), QString() });
+    for (const WorkbenchModuleState& state : workbenchModuleStates(resolved)) {
+        QTreeWidgetItem* parent
+            = state.module.kind == WorkbenchModuleKind::HostContract ? contracts : libraries;
+        auto* feature = new QTreeWidgetItem(parent,
+            { state.module.title,
+                state.module.kind == WorkbenchModuleKind::HostContract
+                    ? QStringLiteral("Available · %1")
+                          .arg(state.imported ? QStringLiteral("Imported")
+                                              : QStringLiteral("Not imported"))
+                    : (state.imported ? QStringLiteral("Imported")
+                                      : QStringLiteral("Not imported")) });
+        new QTreeWidgetItem(feature, { QStringLiteral("Module"), state.module.moduleName });
+        new QTreeWidgetItem(feature, { QStringLiteral("Provides"), state.module.provides });
+        new QTreeWidgetItem(feature, { QStringLiteral("Host"), state.module.hostProvider });
+        new QTreeWidgetItem(feature, { QStringLiteral("Used by"), state.module.consumer });
+        feature->setToolTip(0, state.module.description);
+    }
+    m_hostSlangTree->expandAll();
+}
+
 void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
 {
     if (!document) {
         m_parameterInspector->setModel(nullptr);
         m_diagnostics->clear();
         m_dependencyTree->clear();
+        m_hostSlangTree->clear();
         m_resourceTree->clear();
         m_compilationTree->clear();
         m_inspectorDocument->setText(QStringLiteral("No document"));
@@ -697,6 +754,7 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     m_inspectorContext->setText(binding);
     m_diagnostics->setPlainText(m_workspace->focusedDocument()->diagnostics());
     refreshDependencyInspector();
+    refreshHostSlangInspector();
     refreshSemanticInspector();
     if (m_lsp) {
         const QString uri = documentUri(m_workspace->focusedDocument());
@@ -1094,8 +1152,87 @@ void WorkbenchWindow::mirrorParameter(
 
 void WorkbenchWindow::openShader(const QString& path)
 {
-    if (!m_workspace->openFile(path))
+    openShader(path, OpenDestination::Document);
+}
+
+void WorkbenchWindow::chooseShader(OpenDestination destination)
+{
+    QString destinationName;
+    switch (destination) {
+    case OpenDestination::Document:
+        destinationName = QStringLiteral("as a document");
+        break;
+    case OpenDestination::RenderToyScene:
+        destinationName = QStringLiteral("in Render Toy · Scene");
+        break;
+    case OpenDestination::RenderToyPost:
+        destinationName = QStringLiteral("in Render Toy · Post");
+        break;
+    case OpenDestination::ShaderToy:
+        destinationName = QStringLiteral("in Shader Toy");
+        break;
+    }
+    const QString path = QFileDialog::getOpenFileName(this,
+        QStringLiteral("Open Slang shader %1").arg(destinationName), m_openDirectory,
+        QStringLiteral("Slang (*.slang)"));
+    if (path.isEmpty())
+        return;
+    m_openDirectory = QFileInfo(path).absolutePath();
+    openShader(path, destination);
+}
+
+bool WorkbenchWindow::openShader(const QString& path, OpenDestination destination)
+{
+    ShaderDocument* document = m_workspace->openFile(path);
+    if (!document) {
         statusBar()->showMessage(QStringLiteral("Could not open %1").arg(path), 2200);
+        return false;
+    }
+
+    // openFile compiles through Slang before returning, so project imports and entry
+    // points are resolved before any tool session decides whether to consume the file.
+    if (destination != OpenDestination::Document && !document->compileSucceeded()) {
+        statusBar()->showMessage(
+            QStringLiteral("Opened %1, but did not bind it because compilation failed. "
+                           "See Compilation diagnostics.")
+                .arg(QFileInfo(path).fileName()),
+            5000);
+        return false;
+    }
+    if (destination != OpenDestination::Document
+        && (!document->findEntryPoint(ShaderStage::Vertex)
+            || !document->findEntryPoint(ShaderStage::Fragment))) {
+        statusBar()->showMessage(
+            QStringLiteral("Opened %1, but the selected tool slot requires vertex and fragment "
+                           "entry points.")
+                .arg(QFileInfo(path).fileName()),
+            5000);
+        return false;
+    }
+
+    QString result = QStringLiteral("Opened %1 as a document").arg(QFileInfo(path).fileName());
+    switch (destination) {
+    case OpenDestination::Document:
+        break;
+    case OpenDestination::RenderToyScene:
+        m_renderToySession->bindScene(document);
+        setActiveTool(QStringLiteral("render-toy"));
+        result = QStringLiteral("Opened %1 in Render Toy · Scene").arg(QFileInfo(path).fileName());
+        break;
+    case OpenDestination::RenderToyPost:
+        m_renderToySession->bindPost(document);
+        setActiveTool(QStringLiteral("render-toy"));
+        result = QStringLiteral("Opened %1 in Render Toy · Post").arg(QFileInfo(path).fileName());
+        break;
+    case OpenDestination::ShaderToy:
+        if (!m_shaderToySession->bindShader(document))
+            return false;
+        setActiveTool(QStringLiteral("shader-toy"));
+        result = QStringLiteral("Opened %1 in Shader Toy").arg(QFileInfo(path).fileName());
+        break;
+    }
+    statusBar()->showMessage(result, 3500);
+    return true;
 }
 
 } // namespace miskeyed::workbench::slang_rhi

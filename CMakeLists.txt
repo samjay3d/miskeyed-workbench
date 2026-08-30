@@ -157,6 +157,9 @@ if(BUILD_TESTING)
     add_executable(test_viewport_camera tests/test_viewport_camera.cpp)
     target_link_libraries(test_viewport_camera PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME viewport_camera_contract COMMAND test_viewport_camera)
+    add_executable(test_workbench_modules tests/test_workbench_modules.cpp)
+    target_link_libraries(test_workbench_modules PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME workbench_modules_contract COMMAND test_workbench_modules)
     add_executable(test_shader_workspace tests/test_shader_workspace.cpp)
     target_link_libraries(test_shader_workspace PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME shader_workspace_contract COMMAND test_shader_workspace)
@@ -181,7 +184,7 @@ if(BUILD_TESTING)
 
     # These contract tests intentionally use assert(). Keep them active in Release CI;
     # otherwise the executables run without checking any of their invariants.
-    foreach(_contract_test IN ITEMS test_viewport_camera test_shader_workspace
+    foreach(_contract_test IN ITEMS test_viewport_camera test_workbench_modules test_shader_workspace
             test_time_context test_render_toy_contract test_shader_toy_contract test_shader_dependencies
             test_rhi_backend_policy test_workbench_ui_hardening)
         target_compile_options(${_contract_test} PRIVATE

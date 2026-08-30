@@ -143,3 +143,5 @@ def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     assert workflow.count("contents: write") == 1
     assert "--site documentation-preview/site --publish-tree publish --channel dev" in workflow
     assert "[Public Dev Documentation]($url)" in workflow
+    assert 'grep -F "Workbench development documentation"' in workflow
+    assert 'grep -F "Workbench $version documentation"' not in workflow

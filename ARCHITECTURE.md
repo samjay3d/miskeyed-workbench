@@ -28,7 +28,9 @@ Workbench shell
   presentation only; Render Toy and Shader Toy sessions remain alive together.
 - Slang owns language semantics, module resolution, linking, reflection, entry-point
   compilation, and backend code generation. Workbench supplies packaged modules and
-  project search paths at the filesystem/session edge.
+  project search paths at the filesystem/session edge. Value-only Workbench module
+  descriptors relate host capability identity to the shader-facing contract for
+  discovery; they contain no providers and do not participate in resolution.
 - C++ owns application/resource lifetime, synchronization, command recording and
   submission, and Shiboken exposure. Python exposes native objects; it does not mirror
   the render core.
@@ -45,6 +47,7 @@ covered in [Tool sessions and contributions](src/docs/concepts/tool_sessions.rst
 authored source
   → ShaderDocument
   → in-process Slang module resolution / compile
+  → compiler-resolved imports compared with host/module descriptors for inspection
   → reflected entry points, parameters, resources, generated targets
   → DependencyGraph identity + dirty work
   → session-selected capabilities
