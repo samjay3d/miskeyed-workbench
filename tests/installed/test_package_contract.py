@@ -34,5 +34,8 @@ float4 psMain() : SV_Target0 { return float4(miskeyed_time_seconds, 0.0, 0.0, 1.
     document.compile()
 
     assert document.compileSucceeded(), document.diagnostics()
-    assert "miskeyed.time" in [dependency.identity for dependency in document.importedDependencies()]
+    dependency_ids = [
+        dependency.identity for dependency in document.importedDependencies()
+    ]
+    assert "miskeyed.time" in dependency_ids
     assert "HLSL" in document.generatedTargets()
