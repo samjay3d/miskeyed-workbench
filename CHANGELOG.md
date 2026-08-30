@@ -111,6 +111,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   release documentation before package publication.
 - Split fresh-wheel contracts from checkout-dependent tests and made each release lane
   report wheel, installation, contract, and actual QRhi runtime outcomes separately.
+- Added a concise repository status header and evidence-based platform matrix, readable
+  platform/backend job names, intentional wheel/docs artifact envelopes, an aggregate
+  partial-failure Actions summary, and user-facing PyPI/docs/support release links.
+- Isolated Windows fresh-wheel checks from the provisioned Slang SDK so installed-package
+  evidence proves the wheel's bundled runtime rather than an editable-build fallback.
 
 ## [0.2.1] — 2026-08-30
 

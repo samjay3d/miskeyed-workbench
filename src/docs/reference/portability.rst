@@ -8,6 +8,11 @@ runtime and compiled a representative shader using a packaged Workbench module.
 **Runtime** means the canonical native harness created the named QRhi device and
 pipeline and recorded a draw. A lower level never implies a higher one.
 
+**Supported** describes the intended product/platform contract. **Packaged** records
+that a wheel exists for the stated interpreter and architecture. **Tested** records
+fresh-wheel and native contract execution. **Runtime validated** is reserved for a
+successful draw through ``miskeyed-workbench --rhi <backend> --rhi-smoke-test``.
+
 The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
 runtime smoke execute once per platform on 3.11; the other Python lanes validate the
 wheel and installed-package contract without claiming another render result.
@@ -19,11 +24,11 @@ wheel and installed-package contract without claiming another render result.
      - Wheels
      - Default QRhi backend
      - Runtime validation status
-   * - Windows x86_64
+   * - Windows x64
      - CPython 3.11--3.13
      - D3D11
      - VALIDATED on Python 3.11: D3D11 and Vulkan/SwiftShader
-   * - Linux x86_64
+   * - Linux x64
      - CPython 3.11--3.13
      - Vulkan
      - VALIDATED on Python 3.11: Vulkan with the explicitly selected Mesa lavapipe ICD
@@ -44,3 +49,9 @@ runtime smoke ran in that lane; it is not a failure and is not a runtime pass.
 The latest release-candidate run is the source of truth for whether required evidence
 actually passed. Support wording in release notes must be updated from those results,
 not from the intended matrix or from wheel availability alone.
+
+The stable support definition is kept in ``ci/support-matrix.json``. Repository tests
+verify that its Python range agrees with ``pyproject.toml`` and that every documented
+wheel and runtime backend has a corresponding release-matrix lane. The workflow remains
+human-authored so runner and driver setup stays visible rather than hiding CI policy in
+a generator.
