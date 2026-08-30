@@ -59,6 +59,9 @@ float4 psMain(VSOut input) : SV_Target0 { return sampleScene(input.uv); }
     const QShaderKey spirvKey(QShader::SpirvShader, QShaderVersion(100), QShader::StandardShader);
     assert(document.vertexShader().shader(spirvKey).entryPoint() == QByteArrayLiteral("main"));
     assert(document.fragmentShader().shader(spirvKey).entryPoint() == QByteArrayLiteral("main"));
+    const QShaderKey metalKey(QShader::MslShader, QShaderVersion(23), QShader::StandardShader);
+    assert(!document.vertexShader().shader(metalKey).shader().isEmpty());
+    assert(!document.fragmentShader().shader(metalKey).shader().isEmpty());
     assert(document.generatedTargets().contains(QStringLiteral("Metal")));
     const auto dependencies = document.importedDependencies();
     assert(dependencies.size() == 3);

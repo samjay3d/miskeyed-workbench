@@ -162,3 +162,7 @@ def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
     assert "--rhi vulkan --rhi-smoke-test" in distributions
     assert "--rhi metal --rhi-smoke-test" in distributions
     assert "mesa-vulkan-drivers" in distributions
+    assert "VK_DRIVER_FILES" in distributions
+    assert "tests/installed" in distributions
+    assert "Summarize validation level" in distributions
+    assert "NOT VALIDATED" in distributions

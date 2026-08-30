@@ -79,6 +79,14 @@ the package release.
 Release work
 ------------
 
+Read release health by evidence level: **Package** is a produced wheel, **Installed**
+is a fresh-environment install/import, **Contracts** is the installed-package or native
+contract suite, and **Runtime** is an actual QRhi draw through
+``miskeyed-workbench --rhi <backend> --rhi-smoke-test``. A release support claim must
+have a passing lane at the claimed level. Checkout-dependent architecture tests stay
+in the source-tree suite; the installed-wheel suite must exercise only public package
+behavior and packaged resources. Runner and ICD setup belongs in the workflow.
+
 Keep ``CHANGELOG.md`` release-oriented, update the single package version in
 ``pyproject.toml``, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs

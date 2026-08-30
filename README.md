@@ -43,15 +43,16 @@ For a persistent command, use `pipx install miskeyed-workbench` or
 
 The distribution is `miskeyed-workbench`; the developer/library import is
 `miskeyed.workbench`. Wheels target CPython 3.11–3.13 on Windows x86_64, Linux
-x86_64, and macOS arm64/x86_64.
+x86_64, and macOS arm64/x86_64. The detailed
+[support matrix](src/docs/reference/portability.rst) distinguishes wheel, fresh-install,
+contract, and native-render validation instead of treating them as equivalent.
 
 ## Platform and backend status
 
 `Auto` selects D3D11 on Windows, Vulkan on Linux, and Metal on macOS; Windows may
-also request Vulkan with `--rhi vulkan`. Packaging/import validation covers all
-wheel platforms. Runtime draw smoke tests currently cover Windows D3D11 and Windows
-Vulkan (SwiftShader). Linux/macOS packaging or UI construction should not be read as
-full runtime-rendering validation. The active runtime backend is independent of the
+also request Vulkan with `--rhi vulkan`. The release matrix separately records whether
+each wheel built, installed in a fresh environment, passed installed-package contracts,
+and rendered through a QRhi backend. The active runtime backend is independent of the
 HLSL/GLSL/SPIR-V/Metal target selected in the Generated viewer.
 
 ## Build from source

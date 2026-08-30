@@ -132,6 +132,7 @@ jobs:
                   sccache --show-stats
 
             - name: Verify fresh wheel is not corrupt
+              id: package
               shell: pwsh
               # FATAL on purpose: (1) the wheel's ABI tag must match this matrix Python,
               # else the wrong interpreter built it and the tars would collide on publish;
@@ -147,16 +148,25 @@ jobs:
                   }
                   python ci\wheelzip.py inspect $whls
 
-            - name: Verify fresh wheel install, import, and Python contracts
+            - name: Verify fresh wheel install and import
+              id: installed
               shell: pwsh
               env:
                   QT_QPA_PLATFORM: offscreen
               run: |
                   $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
                   python -m venv "$env:RUNNER_TEMP\wheel-check"
-                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install $wheel pytest
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install $wheel
                   & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -c "import miskeyed.workbench as w; assert w.WorkbenchWindow"
-                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pytest tests -v
+
+            - name: Run installed-wheel contracts
+              id: contracts
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install pytest
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pytest tests\installed -v
 
             - name: Build canonical native contract and RHI smoke harness
               if: matrix.python-version == '3.11'
@@ -172,6 +182,7 @@ jobs:
                   cmake --build build-native --parallel 2
 
             - name: Run native contracts
+              id: native-contracts
               if: matrix.python-version == '3.11'
               shell: pwsh
               env:
@@ -181,6 +192,7 @@ jobs:
                   ctest --test-dir build-native --output-on-failure
 
             - name: Run D3D11 RHI smoke
+              id: d3d11
               if: matrix.python-version == '3.11'
               shell: pwsh
               run: |
@@ -188,6 +200,7 @@ jobs:
                   .\build-native\miskeyed-workbench.exe --rhi d3d11 --rhi-smoke-test
 
             - name: Run Vulkan RHI smoke with SwiftShader
+              id: vulkan
               if: matrix.python-version == '3.11'
               shell: pwsh
               run: |
@@ -205,6 +218,22 @@ jobs:
                   $env:VK_ICD_FILENAMES = $icd.FullName
                   $env:PATH = "$([IO.Path]::GetDirectoryName($driver));$env:SLANG_ROOT\bin;$env:PATH"
                   .\build-native\miskeyed-workbench.exe --rhi vulkan --rhi-smoke-test
+
+            - name: Summarize validation level
+              if: always()
+              shell: pwsh
+              run: |
+                  $runtime = if ('${{ matrix.python-version }}' -eq '3.11') {
+                      "D3D11 ${{ steps.d3d11.outcome }} / Vulkan ${{ steps.vulkan.outcome }}"
+                  } else { "NOT VALIDATED (covered by the Python 3.11 native lane)" }
+                  $contracts = if ('${{ matrix.python-version }}' -eq '3.11') {
+                      "installed ${{ steps.contracts.outcome }} / native ${{ steps.native-contracts.outcome }}"
+                  } else { "${{ steps.contracts.outcome }}" }
+                  @"
+                  | Platform | Python | Wheel | Installed | Contracts | Runtime |
+                  |---|---:|---|---|---|---|
+                  | Windows x64 | ${{ matrix.python-version }} | ${{ steps.package.outcome }} | ${{ steps.installed.outcome }} | $contracts | $runtime |
+                  "@ >> $env:GITHUB_STEP_SUMMARY
 
             - name: Bundle wheel for transport
               shell: pwsh
@@ -336,28 +365,36 @@ jobs:
                   rm wheelhouse/*.whl
                   mv repaired/*.whl wheelhouse/
 
-            - name: Verify wheel in a fresh environment
+            - name: Verify wheel artifact
+              id: package
               shell: bash
-              env:
-                  QT_QPA_PLATFORM: offscreen
               run: |
                   expected="cp${{ matrix.python-version }}"
                   expected="${expected/.}"
                   wheel="$(echo wheelhouse/*.whl)"
                   [[ "$(basename "$wheel")" == *"$expected"* ]]
                   python ci/wheelzip.py inspect "$wheel"
+
+            - name: Verify wheel in a fresh environment
+              id: installed
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  wheel="$(echo wheelhouse/*.whl)"
                   python -m venv "${RUNNER_TEMP}/wheel-check"
                   "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install "$wheel"
                   "${RUNNER_TEMP}/wheel-check/bin/python" -c \
                     "import miskeyed.workbench as w; assert w.WorkbenchWindow"
 
             - name: Run Python contracts from the fresh wheel environment
+              id: contracts
               shell: bash
               env:
                   QT_QPA_PLATFORM: offscreen
               run: |
                   "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install pytest
-                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pytest tests -v
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pytest tests/installed -v
 
             - name: Build canonical native contract and RHI smoke harness
               if: matrix.python-version == '3.11'
@@ -374,6 +411,7 @@ jobs:
                   cmake --build build-native --parallel 2
 
             - name: Run native contracts
+              id: native-contracts
               if: matrix.python-version == '3.11'
               shell: bash
               env:
@@ -381,6 +419,7 @@ jobs:
               run: ctest --test-dir build-native --output-on-failure
 
             - name: Run Linux Vulkan RHI smoke with Mesa lavapipe
+              id: vulkan
               if: matrix.python-version == '3.11' && matrix.platform == 'linux'
               shell: bash
               env:
@@ -388,19 +427,46 @@ jobs:
                   MESA_VK_DEVICE_SELECT: lavapipe
                   QT_LOGGING_RULES: qt.rhi.*=true
               run: |
-                  icd=$(find /usr/share/vulkan/icd.d -name '*lvp*json' -print -quit)
-                  test -n "$icd"
+                  set -euo pipefail
+                  icd=$(find /usr/share/vulkan/icd.d -type f -name '*lvp*.json' -print -quit)
+                  test -f "$icd"
+                  driver=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["ICD"]["library_path"])' "$icd")
+                  echo "Vulkan ICD: $icd"
+                  echo "Vulkan driver: $driver"
                   export VK_DRIVER_FILES="$icd"
                   export VK_ICD_FILENAMES="$icd"
                   xvfb-run -a ./build-native/miskeyed-workbench --rhi vulkan --rhi-smoke-test
 
             - name: Run macOS Metal RHI smoke
+              id: metal
               if: matrix.python-version == '3.11' && matrix.platform == 'macos'
               shell: bash
               env:
                   QT_QPA_PLATFORM: cocoa
                   QT_LOGGING_RULES: qt.rhi.*=true
               run: ./build-native/miskeyed-workbench --rhi metal --rhi-smoke-test
+
+            - name: Summarize validation level
+              if: always()
+              shell: bash
+              run: |
+                  if [[ '${{ matrix.python-version }}' != 3.11 ]]; then
+                    runtime='NOT VALIDATED (covered by the Python 3.11 native lane)'
+                  elif [[ '${{ matrix.platform }}' == linux ]]; then
+                    runtime='Vulkan ${{ steps.vulkan.outcome }}'
+                  else
+                    runtime='Metal ${{ steps.metal.outcome }}'
+                  fi
+                  if [[ '${{ matrix.python-version }}' == 3.11 ]]; then
+                    contracts='installed ${{ steps.contracts.outcome }} / native ${{ steps.native-contracts.outcome }}'
+                  else
+                    contracts='${{ steps.contracts.outcome }}'
+                  fi
+                  {
+                    echo '| Platform | Python | Wheel | Installed | Contracts | Runtime |'
+                    echo '|---|---:|---|---|---|---|'
+                    echo '| ${{ matrix.label }} | ${{ matrix.python-version }} | ${{ steps.package.outcome }} | ${{ steps.installed.outcome }} | '"$contracts"' | '"$runtime"' |'
+                  } >> "$GITHUB_STEP_SUMMARY"
 
             - name: Bundle wheel for transport
               shell: bash

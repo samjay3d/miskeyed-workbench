@@ -76,6 +76,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names for reflection and consumer selection.
 - Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
   Qt framework, and private-header search paths on Unix/macOS.
+- Labelled Slang 2026.14 Metal source as MSL 2.3 in its QShader package, matching the
+  language level required by the generated stage attributes on both macOS architectures.
 - Corrected Linux wheel handling of the versioned Slang shared library and kept native
   contract assertions enabled in release builds.
 - Deferred QRhi resource retirement across the maximum frame latency, avoiding D3D11
@@ -104,6 +106,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Made `/dev/` publication gate the generated `docs` branch push rather than eventual
   Pages/CDN propagation, while retaining strict public URL verification for immutable
   release documentation before package publication.
+- Split fresh-wheel contracts from checkout-dependent tests and made each release lane
+  report wheel, installation, contract, and actual QRhi runtime outcomes separately.
 
 ## [0.2.1] — 2026-08-30
 

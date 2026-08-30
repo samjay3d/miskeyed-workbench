@@ -10,5 +10,5 @@ Runtime backend reference
 ``Metal``
    Default policy on macOS.
 
-Evidence levels differ: wheels build/import on supported platforms; Windows D3D11
-and Vulkan additionally have native draw-recording smoke coverage.
+Backend availability is not itself evidence that a wheel rendered. See
+:doc:`portability` for the package, install, contract, and runtime validation matrix.
