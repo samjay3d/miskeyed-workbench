@@ -355,6 +355,10 @@ successful draw through <code class="docutils literal notranslate"><span class="
 <p>The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
 runtime smoke execute once per platform on 3.11; the other Python lanes validate the
 wheel and installed-package contract without claiming another render result.</p>
+<p>Release branches exercise the same build and smoke implementation with a stabilization
+subset: Python 3.11 and 3.13 on every platform. Main integration adds Python 3.12 and is
+the exhaustive final gate. This makes <code class="docutils literal notranslate"><span class="pre">release/*</span></code> an early cross-platform staging
+ground without duplicating the full main cost or granting publication permissions.</p>
 <div class="table-wrapper docutils container" id="id1">
 <table class="docutils align-default" id="id1">
 <caption><span class="caption-text">0.3.0 release validation</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>

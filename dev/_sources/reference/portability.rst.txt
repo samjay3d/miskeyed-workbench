@@ -17,6 +17,11 @@ The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
 runtime smoke execute once per platform on 3.11; the other Python lanes validate the
 wheel and installed-package contract without claiming another render result.
 
+Release branches exercise the same build and smoke implementation with a stabilization
+subset: Python 3.11 and 3.13 on every platform. Main integration adds Python 3.12 and is
+the exhaustive final gate. This makes ``release/*`` an early cross-platform staging
+ground without duplicating the full main cost or granting publication permissions.
+
 .. list-table:: 0.3.0 release validation
    :header-rows: 1
 
