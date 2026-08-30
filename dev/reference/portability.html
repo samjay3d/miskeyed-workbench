@@ -348,6 +348,10 @@ environment. <strong>Contracts</strong> means the installed public API loaded th
 runtime and compiled a representative shader using a packaged Workbench module.
 <strong>Runtime</strong> means the canonical native harness created the named QRhi device and
 pipeline and recorded a draw. A lower level never implies a higher one.</p>
+<p><strong>Supported</strong> describes the intended product/platform contract. <strong>Packaged</strong> records
+that a wheel exists for the stated interpreter and architecture. <strong>Tested</strong> records
+fresh-wheel and native contract execution. <strong>Runtime validated</strong> is reserved for a
+successful draw through <code class="docutils literal notranslate"><span class="pre">miskeyed-workbench</span> <span class="pre">--rhi</span> <span class="pre">&lt;backend&gt;</span> <span class="pre">--rhi-smoke-test</span></code>.</p>
 <p>The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
 runtime smoke execute once per platform on 3.11; the other Python lanes validate the
 wheel and installed-package contract without claiming another render result.</p>
@@ -362,12 +366,12 @@ wheel and installed-package contract without claiming another render result.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Windows x86_64</p></td>
+<tr class="row-even"><td><p>Windows x64</p></td>
 <td><p>CPython 3.11–3.13</p></td>
 <td><p>D3D11</p></td>
 <td><p>VALIDATED on Python 3.11: D3D11 and Vulkan/SwiftShader</p></td>
 </tr>
-<tr class="row-odd"><td><p>Linux x86_64</p></td>
+<tr class="row-odd"><td><p>Linux x64</p></td>
 <td><p>CPython 3.11–3.13</p></td>
 <td><p>Vulkan</p></td>
 <td><p>VALIDATED on Python 3.11: Vulkan with the explicitly selected Mesa lavapipe ICD</p></td>
@@ -392,6 +396,11 @@ runtime smoke ran in that lane; it is not a failure and is not a runtime pass.
 <p>The latest release-candidate run is the source of truth for whether required evidence
 actually passed. Support wording in release notes must be updated from those results,
 not from the intended matrix or from wheel availability alone.</p>
+<p>The stable support definition is kept in <code class="docutils literal notranslate"><span class="pre">ci/support-matrix.json</span></code>. Repository tests
+verify that its Python range agrees with <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> and that every documented
+wheel and runtime backend has a corresponding release-matrix lane. The workflow remains
+human-authored so runner and driver setup stays visible rather than hiding CI policy in
+a generator.</p>
 </section>
 
         </article>
