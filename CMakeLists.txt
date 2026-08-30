@@ -72,6 +72,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/editor/CodeEditor.cpp
     cpp/src/workbench/editor/ShaderHighlighter.cpp
     cpp/src/workbench/editor/LspClient.cpp
+    cpp/src/workbench/editor/WorkspaceEditor.cpp
     cpp/src/workbench/slang/ShaderParameterModel.cpp
     cpp/src/workbench/slang/SlangCompiler.cpp
     cpp/src/workbench/slang/Qt68ShaderBridge.cpp
@@ -94,6 +95,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/editor/CodeEditor.h
     cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
     cpp/include/miskeyed/workbench/editor/LspClient.h
+    cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h
     cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
     cpp/include/miskeyed/workbench/modes/render_toy/RenderToySession.h
     cpp/include/miskeyed/workbench/core/TimeContext.h

@@ -53,6 +53,12 @@ under a collapsed Advanced graph branch. Resolved project files are watched, so 
 an imported module recompiles the document and updates the same graph and inspector in
 place.
 
+`WorkspaceEditor` is the reusable document-editor group. It owns tabs, close/reorder and
+keyboard navigation, the reusable authored/generated editor widgets, view selection, and
+binding those widgets to `DocumentSession`. It observes `ShaderWorkspace`; it has no
+Render Toy slot or GPU ownership. `WorkbenchWindow` composes this editor group with the
+mode action bar, `RenderToySession`, viewports, inspector, and transport.
+
 The right-hand inspector is a single active-document surface: Parameters, Resources,
 Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
 change workspace focus to the document currently bound to that pass; Render Toy binding

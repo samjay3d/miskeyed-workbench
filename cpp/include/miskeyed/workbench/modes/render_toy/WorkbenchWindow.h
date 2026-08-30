@@ -33,6 +33,7 @@ class LspClient;
 class ShaderWorkspace;
 class ParameterInspector;
 class RenderToySession;
+class WorkspaceEditor;
 
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchWindow final : public QMainWindow {
     Q_OBJECT
@@ -63,9 +64,6 @@ private:
     void setFocusedDocument(ShaderDocument* document);
     void loadSample(const QString& name, int target, const QByteArray& source);
     void updateDocumentTabs();
-    void setEditorView(int mode);
-    void saveFocusedSession();
-    void restoreFocusedSession();
     void hookDocument(ShaderDocument* document);
     void reloadGeneratedTargets();
     void refreshGeneratedView();
@@ -86,6 +84,7 @@ private:
     SlangRhiWidget* m_sceneViewport = nullptr; // scene view
     CodeEditor* m_editor = nullptr;
     CodeEditor* m_generatedView = nullptr; // read-only compiled-output viewer
+    WorkspaceEditor* m_workspaceEditor = nullptr;
     QPlainTextEdit* m_diagnostics = nullptr;
     QTreeWidget* m_dependencyTree = nullptr;
     QTreeWidget* m_resourceTree = nullptr;
@@ -93,11 +92,6 @@ private:
     QPlainTextEdit* m_dependencySource = nullptr;
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
     ShaderWorkspace* m_workspace = nullptr;
-    QTabBar* m_documentTabs = nullptr;
-    QWidget* m_sourceSide = nullptr;
-    QWidget* m_generatedSide = nullptr;
-    QSplitter* m_editorSplit = nullptr;
-    QList<QPushButton*> m_viewButtons;
     QPushButton* m_bindScene = nullptr;
     QPushButton* m_bindPost = nullptr;
     QComboBox* m_sceneBinding = nullptr;

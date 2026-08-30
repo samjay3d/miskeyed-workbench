@@ -41,7 +41,9 @@ focused nested namespace such as `core` or `anari`.
   has no Scene/Post runtime policy.
 - `rendering` owns `RenderPass` and `SlangRhiWidget`, including QRhi resource lifetime
   and deferred retirement.
-- `editor` and `ui` contain reusable widgets; neither selects a product mode.
+- `editor` and `ui` contain reusable widgets. `WorkspaceEditor` owns tabs and binds
+  reusable editor views to workspace document sessions; neither layer selects a product
+  mode or runtime binding.
 - `modes/render_toy` owns `RenderToySession`, which explicitly binds open shader documents to the active Scene/Post passes and
   presents controls for `TimeTransport`. It does not define time semantics or own
   compiler and GPU implementations. Its inspector consumes only the workspace's focused
