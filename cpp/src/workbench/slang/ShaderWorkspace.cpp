@@ -2,6 +2,7 @@
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <miskeyed/workbench/core/TimeTransport.h>
 #include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <QFile>
 #include <QFileInfo>
 #include <utility>
 
@@ -71,7 +72,7 @@ ShaderDocument* ShaderWorkspace::openSource(
 ShaderDocument* ShaderWorkspace::openFile(const QString& path)
 {
     const QFileInfo info(path);
-    if (!info.exists())
+    if (!info.isFile())
         return nullptr;
     const QUrl identity = QUrl::fromLocalFile(info.absoluteFilePath());
     for (const DocumentSession& item : std::as_const(m_sessions)) {
@@ -80,9 +81,13 @@ ShaderDocument* ShaderWorkspace::openFile(const QString& path)
             return item.document;
         }
     }
-    auto* document = openSource(identity, info.fileName(), QString());
-    if (!document->load())
+    QFile file(info.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly))
         return nullptr;
+    // Read first so a failed open cannot leave an empty focused document behind. The
+    // local identity is installed by openSource before setSource starts live work, so
+    // compilation resolves imports relative to the project file rather than the launch CWD.
+    auto* document = openSource(identity, info.fileName(), QString::fromUtf8(file.readAll()));
     document->compile();
     return document;
 }

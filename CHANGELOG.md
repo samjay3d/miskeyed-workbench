@@ -66,6 +66,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Made the Open control name its destination explicitly and resolve/compile project
+  imports before binding a selected file to Render Toy or Shader Toy. Failed reads no
+  longer leave an empty focused document, and failed compiles preserve existing bindings.
 - Vulkan packages execute Slang's exported SPIR-V entry name while preserving authored
   names for reflection and consumer selection.
 - Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
