@@ -167,7 +167,9 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.11", "3.12", "3.13"]
+                # Focused source validation compiles once. Release stabilization and
+                # main integration own the cross-version wheel confidence levels.
+                python-version: ["3.11"]
         steps:
             - uses: actions/checkout@v7
 

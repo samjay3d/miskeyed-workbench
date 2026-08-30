@@ -88,8 +88,9 @@ in the source-tree suite; the installed-wheel suite must exercise only public pa
 behavior and packaged resources. Runner and ICD setup belongs in the workflow.
 
 Validation follows a three-level confidence ladder. Ordinary development PRs run the
-focused source checks. A push to, or PR targeting, any ``release/*`` branch additionally
-runs **Release Stabilization** across Windows, Linux, and both macOS architectures on
+focused Python 3.11 source/native checks. A push to, or PR targeting, any ``release/*``
+branch additionally runs **Release Stabilization** across Windows, Linux, and both macOS
+architectures on
 Python 3.11 and 3.13; Python 3.11 owns native contracts and runtime smoke, while 3.13
 proves the newest supported wheel and installed contracts. Any PR targeting ``main``
 and every push to ``main`` runs **Main Integration**, the exhaustive Python 3.11--3.13

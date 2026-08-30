@@ -191,3 +191,4 @@ def test_confidence_ladder_labels_focused_ci_by_destination():
     assert "level='Release Stabilization'" in workflow
     assert "level='Development CI'" in workflow
     assert "name: ${{ needs.changes.outputs.confidence }}" in workflow
+    assert 'python-version: ["3.11"]' in workflow
