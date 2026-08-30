@@ -26,7 +26,8 @@ struct CompileResult {
     QList<ParameterDescriptor> parameters;
     qsizetype parameterByteSize = 0;
     int parameterBinding = 0;
-    QByteArray reflectionDigest;
+    QByteArray parameterLayoutDigest;
+    QByteArray uiSchemaDigest;
 };
 
 class SlangCompilerPrivate;

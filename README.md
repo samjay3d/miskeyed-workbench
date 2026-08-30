@@ -65,6 +65,7 @@ and QRhi resources all remain native.
 pip install miskeyed-workbench
 workbench                 # launch the standalone app
 workbench eye.slang       # open a shader on start
+uvx miskeyed-workbench    # one-shot launch
 ```
 
 Then just start typing in the shader panel — edits recompile and re-render live.
@@ -240,7 +241,7 @@ Requirements:
 - PySide6 **6.8.x**
 - Shiboken6 **6.8.x** generator
 - Slang SDK (set `SLANG_ROOT` if CMake cannot find it)
-- Python 3.11+
+- Python 3.11–3.13
 - CMake 3.24+
 
 For VFX Platform 2026 deployments, build against the exact Qt/PySide toolchain
