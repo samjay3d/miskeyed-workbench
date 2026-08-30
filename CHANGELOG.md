@@ -55,6 +55,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   application target.
 - ANARI backend CI coverage using a pinned ANARI-SDK revision, candidate parser tests,
   and a load/query/create/commit/release smoke test against the SDK sink device.
+- A host-owned QRhi backend policy with `Auto`, D3D11, Vulkan, and Metal choices.
+  `Auto` keeps D3D11 as the Windows default, selects Vulkan on Linux, and selects
+  Metal on macOS; the native launcher also accepts `--rhi` without changing authored
+  Slang or the generated-code inspection target.
+- Native QRhi smoke-test instrumentation and Windows CI coverage for both the shipped
+  D3D11 path and Vulkan through SwiftShader. A smoke run only succeeds after device and
+  graphics-pipeline creation and draw recording.
+- Binary wheel builds for Linux x86_64 and macOS arm64/x86_64 across Python 3.11–3.13,
+  alongside the existing Windows x86_64 wheels. Every portable wheel is installed and
+  imported in a fresh environment before upload, and Linux wheels receive PEP 600 tags.
+- A reusable Workbench UI theme layer so future modes share product colors and control
+  metrics rather than inheriting different platform-native defaults.
 
 ### Changed
 
@@ -84,6 +96,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Converted the ANARI research plan into an implementation breakdown that records the
   completed backend foundation and the remaining Hydra, tracing, frame-handoff, and
   Island-device slices.
+- Centralized Slang runtime packaging for `slang.dll`, `libslang.so`, and
+  `libslang.dylib`, with loader-relative extension paths and platform-correct
+  PySide/Shiboken library discovery at the packaging boundary.
+- Moved the Render Toy stylesheet into the shared UI layer and replaced the hardcoded
+  D3D11 compilation diagnostic with runtime platform, Qt, and active-QRhi information.
+
+### Fixed
+
+- Vulkan pipelines now use Slang's exported SPIR-V entry-point name, `main`, instead of
+  the authored `vsMain`/`psMain` names stored in the HLSL and Metal variants.
+- Metal generation no longer requests the obsolete `metal_2_0` Slang profile.
+- Shiboken generation now receives Clang builtin headers on Unix and Qt framework and
+  private-header search paths on macOS.
+- Linux wheels package the real versioned Slang shared library rather than losing the
+  SDK's `libslang.so` symlink when creating the wheel archive.
+- Release-mode native contract tests keep assertions enabled, preventing CI from
+  silently running test executables without checking their invariants.
 
 ## [0.2.1] — 2026-08-30
 
