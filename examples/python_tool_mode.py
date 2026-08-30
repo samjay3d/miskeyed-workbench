@@ -5,9 +5,8 @@ tool can join the native selector while reusing the open documents, inspector, e
 timeline, and status bar owned by Workbench.
 """
 
-from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
-
 from miskeyed.workbench import WorkbenchWindow
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
 
 
 class StudioReviewTool(QWidget):
@@ -47,9 +46,7 @@ def main() -> int:
 
     # Keep the Python owner alive for as long as the native stack uses its QWidget.
     window.studio_review_tool = StudioReviewTool(window)
-    if not window.registerTool(
-        "studio-review", "Studio Review", window.studio_review_tool
-    ):
+    if not window.registerTool("studio-review", "Studio Review", window.studio_review_tool):
         raise RuntimeError("The studio-review tool id is already registered")
     window.setActiveTool("studio-review")
     window.show()
