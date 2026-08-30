@@ -15,7 +15,7 @@ env:
 
 jobs:
     build-wheels:
-        name: Windows wheel (py${{ matrix.python-version }})
+        name: Windows / Python ${{ matrix.python-version }} / ${{ matrix.python-version == '3.11' && 'Package + Contracts + Native D3D11 + Vulkan' || 'Package + Contracts' }}
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -147,6 +147,65 @@ jobs:
                   }
                   python ci\wheelzip.py inspect $whls
 
+            - name: Verify fresh wheel install, import, and Python contracts
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
+                  python -m venv "$env:RUNNER_TEMP\wheel-check"
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install $wheel pytest
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -c "import miskeyed.workbench as w; assert w.WorkbenchWindow"
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pytest tests -v
+
+            - name: Build canonical native contract and RHI smoke harness
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  cmake -S . -B build-native -G Ninja `
+                    -DCMAKE_BUILD_TYPE=Release `
+                    -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
+                    -DSLANG_ROOT="$env:SLANG_ROOT" `
+                    -DMISKEYED_WORKBENCH_BUILD_APP=ON `
+                    -DMISKEYED_WORKBENCH_BUILD_PYTHON=OFF `
+                    -DBUILD_TESTING=ON
+                  cmake --build build-native --parallel 2
+
+            - name: Run native contracts
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  ctest --test-dir build-native --output-on-failure
+
+            - name: Run D3D11 RHI smoke
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  .\build-native\miskeyed-workbench.exe --rhi d3d11 --rhi-smoke-test
+
+            - name: Run Vulkan RHI smoke with SwiftShader
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  $icd = Get-ChildItem "C:\Program Files\Google\Chrome\Application" `
+                    -Filter vk_swiftshader_icd.json -Recurse -ErrorAction SilentlyContinue `
+                    | Select-Object -First 1
+                  if (-not $icd) { throw "Chrome SwiftShader Vulkan ICD was not found" }
+                  $manifest = Get-Content $icd.FullName -Raw | ConvertFrom-Json
+                  $driver = $manifest.ICD.library_path
+                  if (-not [IO.Path]::IsPathRooted($driver)) {
+                      $driver = Join-Path $icd.DirectoryName $driver
+                  }
+                  if (-not (Test-Path $driver)) { throw "SwiftShader driver not found: $driver" }
+                  $env:VK_DRIVER_FILES = $icd.FullName
+                  $env:VK_ICD_FILENAMES = $icd.FullName
+                  $env:PATH = "$([IO.Path]::GetDirectoryName($driver));$env:SLANG_ROOT\bin;$env:PATH"
+                  .\build-native\miskeyed-workbench.exe --rhi vulkan --rhi-smoke-test
+
             - name: Bundle wheel for transport
               shell: pwsh
               # Ship one gzip'd tar instead of loose .whl files. upload-artifact@v4
@@ -161,7 +220,7 @@ jobs:
                   path: wheels-${{ matrix.python-version }}.tgz
 
     build-portable-wheels:
-        name: ${{ matrix.label }} wheel (py${{ matrix.python-version }})
+        name: ${{ matrix.label }} / Python ${{ matrix.python-version }} / ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Package + Contracts' }}
         strategy:
             fail-fast: false
             matrix:
@@ -170,18 +229,21 @@ jobs:
                 include:
                     - target: linux-x86_64
                       label: Linux x86_64
+                      runtime-label: Package + Contracts + Native Vulkan
                       os: ubuntu-22.04
                       platform: linux
                       qt-host: linux
                       qt-arch: linux_gcc_64
                     - target: macos-arm64
                       label: macOS arm64
+                      runtime-label: Package + Contracts + Native Metal
                       os: macos-14
                       platform: macos
                       qt-host: mac
                       qt-arch: clang_64
                     - target: macos-x86_64
                       label: macOS x86_64
+                      runtime-label: Package + Contracts + Native Metal
                       os: macos-15-intel
                       platform: macos
                       qt-host: mac
@@ -197,7 +259,7 @@ jobs:
               if: matrix.platform == 'linux'
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev
+                  sudo apt-get install -y libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev mesa-vulkan-drivers xvfb
 
             - name: Install Qt ${{ env.QT_VERSION }} dev SDK
               uses: jurplel/install-qt-action@v4
@@ -288,6 +350,57 @@ jobs:
                   "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install "$wheel"
                   "${RUNNER_TEMP}/wheel-check/bin/python" -c \
                     "import miskeyed.workbench as w; assert w.WorkbenchWindow"
+
+            - name: Run Python contracts from the fresh wheel environment
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install pytest
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pytest tests -v
+
+            - name: Build canonical native contract and RHI smoke harness
+              if: matrix.python-version == '3.11'
+              shell: bash
+              env:
+                  CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
+              run: |
+                  cmake -S . -B build-native -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DSLANG_ROOT="$SLANG_ROOT" \
+                    -DMISKEYED_WORKBENCH_BUILD_APP=ON \
+                    -DMISKEYED_WORKBENCH_BUILD_PYTHON=OFF \
+                    -DBUILD_TESTING=ON
+                  cmake --build build-native --parallel 2
+
+            - name: Run native contracts
+              if: matrix.python-version == '3.11'
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: ctest --test-dir build-native --output-on-failure
+
+            - name: Run Linux Vulkan RHI smoke with Mesa lavapipe
+              if: matrix.python-version == '3.11' && matrix.platform == 'linux'
+              shell: bash
+              env:
+                  LIBGL_ALWAYS_SOFTWARE: "1"
+                  MESA_VK_DEVICE_SELECT: lavapipe
+                  QT_LOGGING_RULES: qt.rhi.*=true
+              run: |
+                  icd=$(find /usr/share/vulkan/icd.d -name '*lvp*json' -print -quit)
+                  test -n "$icd"
+                  export VK_DRIVER_FILES="$icd"
+                  export VK_ICD_FILENAMES="$icd"
+                  xvfb-run -a ./build-native/miskeyed-workbench --rhi vulkan --rhi-smoke-test
+
+            - name: Run macOS Metal RHI smoke
+              if: matrix.python-version == '3.11' && matrix.platform == 'macos'
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: cocoa
+                  QT_LOGGING_RULES: qt.rhi.*=true
+              run: ./build-native/miskeyed-workbench --rhi metal --rhi-smoke-test
 
             - name: Bundle wheel for transport
               shell: bash
