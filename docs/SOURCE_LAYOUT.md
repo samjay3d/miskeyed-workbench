@@ -46,8 +46,8 @@ focused nested namespace such as `core` or `anari`.
 - `editor` and `ui` contain reusable widgets. `WorkspaceEditor` owns tabs and binds
   reusable editor views to workspace document sessions; neither layer selects a product
   mode or runtime binding.
-- `ui/WorkbenchToolFactory` is the native composition seam. Concrete tool UI sessions
-  own and data-bind their contributed surfaces; the shell consumes only an interface list.
+- `ui/WorkbenchToolFactory` is the native composition seam. Concrete contributions own
+  and data-bind reusable views around live sessions; layout presets choose view visibility.
 - `modes/render_toy` owns `RenderToySession`, which explicitly binds open shader documents to the active Scene/Post passes and
   presents controls for `TimeTransport`. It does not define time semantics or own
   compiler and GPU implementations. Its inspector consumes only the workspace's focused

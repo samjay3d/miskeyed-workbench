@@ -2,13 +2,13 @@
 #include <miskeyed/workbench/modes/render_toy/RenderToySession.h>
 #include <miskeyed/workbench/modes/shader_toy/ShaderToySession.h>
 #include <miskeyed/workbench/rendering/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <miskeyed/workbench/slang/ShaderWorkspace.h>
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
-#include <QSplitter>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -56,11 +56,11 @@ namespace {
         }
     }
 
-    class RenderToyUiSession final : public WorkbenchToolUiSession {
+    class RenderToyContribution final : public WorkbenchToolContribution {
     public:
-        RenderToyUiSession(QWidget* parent, ShaderWorkspace* workspace, RenderToySession* session,
-            QWidget* sceneViewport, QWidget* postViewport)
-            : WorkbenchToolUiSession(parent)
+        RenderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
+            RenderToySession* session, QWidget* sceneViewport, QWidget* postViewport)
+            : WorkbenchToolContribution(parent)
             , m_workspace(workspace)
             , m_session(session)
         {
@@ -70,11 +70,9 @@ namespace {
                 QStringLiteral("Use focused as Post"), postViewport);
             m_scene = scene.binding;
             m_post = post.binding;
-            auto* split = new QSplitter(Qt::Horizontal, parent);
-            split->setObjectName(QStringLiteral("RenderToySurface"));
-            split->addWidget(scene.surface);
-            split->addWidget(post.surface);
-            m_surface = split;
+            scene.surface->setObjectName(QStringLiteral("RenderToySceneView"));
+            post.surface->setObjectName(QStringLiteral("RenderToyPostView"));
+            m_views = { scene.surface, post.surface };
             connect(scene.bind, &QPushButton::clicked, this,
                 [this] { m_session->bindScene(m_workspace->focusedDocument()); });
             connect(post.bind, &QPushButton::clicked, this,
@@ -95,7 +93,8 @@ namespace {
         }
         QString toolId() const override { return QStringLiteral("render-toy"); }
         QString title() const override { return QStringLiteral("Render Toy"); }
-        QWidget* surface() const override { return m_surface; }
+        QObject* session() const override { return m_session; }
+        QList<QWidget*> primaryViews() const override { return m_views; }
         QString statusSummary() const override
         {
             return QStringLiteral("Scene: %1 · Post: %2")
@@ -106,39 +105,63 @@ namespace {
     private:
         ShaderWorkspace* m_workspace;
         RenderToySession* m_session;
-        QWidget* m_surface;
+        QList<QWidget*> m_views;
         QComboBox* m_scene;
         QComboBox* m_post;
     };
 
-    class ShaderToyUiSession final : public WorkbenchToolUiSession {
+    class ShaderToyContribution final : public WorkbenchToolContribution {
     public:
-        ShaderToyUiSession(QWidget* parent, ShaderWorkspace* workspace, ShaderToySession* session,
-            QWidget* viewport)
-            : WorkbenchToolUiSession(parent)
+        ShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
+            ShaderToySession* session, QWidget* viewport)
+            : WorkbenchToolContribution(parent)
             , m_workspace(workspace)
             , m_session(session)
         {
             const Panel p = panel(parent, QStringLiteral("ShaderToy"),
                 QStringLiteral("Use focused document"), viewport);
-            m_surface = p.surface;
-            m_surface->setObjectName(QStringLiteral("ShaderToySurface"));
+            p.surface->setObjectName(QStringLiteral("ShaderToyView"));
+            m_views = { p.surface };
             m_binding = p.binding;
             connect(p.bind, &QPushButton::clicked, this,
                 [this] { m_session->bindShader(m_workspace->focusedDocument()); });
-            connect(m_binding, QOverload<int>::of(&QComboBox::activated), this,
-                [this](int i) { m_session->bindShader(m_workspace->documentAt(i)); });
-            auto refresh
-                = [this] { repopulate(m_binding, m_workspace, m_session->shaderDocument()); };
+            connect(m_binding, QOverload<int>::of(&QComboBox::activated), this, [this](int i) {
+                m_session->bindShader(
+                    m_binding->itemData(i, Qt::UserRole).value<ShaderDocument*>());
+            });
+            auto refresh = [this] {
+                QSignalBlocker block(m_binding);
+                m_binding->clear();
+                for (int i = 0; i < m_workspace->documentCount(); ++i) {
+                    auto* document = m_workspace->documentAt(i);
+                    if (!m_session->canBindShader(document))
+                        continue;
+                    m_binding->addItem(
+                        m_workspace->displayName(document), QVariant::fromValue(document));
+                    if (document == m_session->shaderDocument())
+                        m_binding->setCurrentIndex(m_binding->count() - 1);
+                }
+            };
+            auto hookDocument = [this, refresh](ShaderDocument* document) {
+                connect(document, &ShaderDocument::compiled, this, refresh);
+                connect(document, &ShaderDocument::compileFailed, this, refresh);
+            };
             connect(session, &ShaderToySession::bindingChanged, this, refresh);
-            connect(workspace, &ShaderWorkspace::documentAdded, this, refresh);
+            connect(workspace, &ShaderWorkspace::documentAdded, this,
+                [hookDocument, refresh](ShaderDocument* document) {
+                    hookDocument(document);
+                    refresh();
+                });
             connect(workspace, &ShaderWorkspace::documentClosed, this, refresh);
             connect(workspace, &ShaderWorkspace::documentOrderChanged, this, refresh);
+            for (int i = 0; i < workspace->documentCount(); ++i)
+                hookDocument(workspace->documentAt(i));
             refresh();
         }
         QString toolId() const override { return QStringLiteral("shader-toy"); }
         QString title() const override { return QStringLiteral("ShaderToy"); }
-        QWidget* surface() const override { return m_surface; }
+        QObject* session() const override { return m_session; }
+        QList<QWidget*> primaryViews() const override { return m_views; }
         QString statusSummary() const override
         {
             return QStringLiteral("Shader: %1")
@@ -148,16 +171,20 @@ namespace {
     private:
         ShaderWorkspace* m_workspace;
         ShaderToySession* m_session;
-        QWidget* m_surface;
+        QList<QWidget*> m_views;
         QComboBox* m_binding;
     };
 } // namespace
 
-QList<WorkbenchToolUiSession*> createBuiltinToolUiSessions(QWidget* parent,
-    SlangRhiWidget* sceneViewport, SlangRhiWidget* postViewport, SlangRhiWidget* shaderToyViewport,
-    ShaderWorkspace* workspace, RenderToySession* renderToy, ShaderToySession* shaderToy)
+WorkbenchToolContribution* createRenderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
+    RenderToySession* session, SlangRhiWidget* sceneViewport, SlangRhiWidget* postViewport)
 {
-    return { new RenderToyUiSession(parent, workspace, renderToy, sceneViewport, postViewport),
-        new ShaderToyUiSession(parent, workspace, shaderToy, shaderToyViewport) };
+    return new RenderToyContribution(parent, workspace, session, sceneViewport, postViewport);
+}
+
+WorkbenchToolContribution* createShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
+    ShaderToySession* session, SlangRhiWidget* viewport)
+{
+    return new ShaderToyContribution(parent, workspace, session, viewport);
 }
 } // namespace miskeyed::workbench::slang_rhi

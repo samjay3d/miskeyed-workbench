@@ -2,6 +2,7 @@
 
 #include <miskeyed/workbench/Export.h>
 #include <QObject>
+#include <QString>
 
 namespace miskeyed::workbench::slang_rhi {
 class ShaderDocument;
@@ -14,11 +15,13 @@ public:
     explicit ShaderToySession(QObject* parent = nullptr);
 
     ShaderDocument* shaderDocument() const { return m_shader; }
-    void bindShader(ShaderDocument* document);
+    bool canBindShader(ShaderDocument* document) const;
+    bool bindShader(ShaderDocument* document);
     void removeDocument(ShaderDocument* document);
 
 signals:
     void bindingChanged(ShaderDocument* document);
+    void bindingRejected(ShaderDocument* document, const QString& reason);
 
 private:
     ShaderDocument* m_shader = nullptr;

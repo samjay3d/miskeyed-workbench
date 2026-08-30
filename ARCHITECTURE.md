@@ -70,9 +70,10 @@ contributions rather than an application-wide mode enum or switch. A studio inte
 register another titled `QWidget` contribution surface and keep its own session state at that
 edge; unregistering it removes only that contribution and activates the next registered tool.
 The shipped-tool composition lives in `WorkbenchToolFactory`, not in `WorkbenchWindow`:
-mode adapters implement `WorkbenchToolUiSession`, build and data-bind their own surface, and
-the shell only enumerates the resulting interface list. A studio can provide sessions that
-implement the same interface from its own composition root.
+mode adapters implement `WorkbenchToolContribution`, build and data-bind reusable primary
+views around a still-live runtime session, and the shell only enumerates contributions.
+The current selector swaps layout presets containing those views; it does not activate or
+destroy sessions. A studio can provide contributions from its own composition root.
 
 The right-hand inspector is a single active-document surface: Parameters, Resources,
 Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks

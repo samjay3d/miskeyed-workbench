@@ -19,15 +19,15 @@ examples/python_tool_mode.py                              unshipped Python examp
 For a shipped native tool:
 
 1. Add a runtime session under `modes/<tool>`. It owns bindings, never Workspace documents.
-2. Implement `WorkbenchToolUiSession`. Build and data-bind the mode-specific surface inside
+2. Implement `WorkbenchToolContribution`. Build and data-bind the mode-specific views inside
    that implementation—not in `WorkbenchWindow`.
-3. Add the implementation to `createBuiltinToolUiSessions()`. That is the only built-in
-   composition list; `WorkbenchWindow` merely enumerates the returned interface values.
+3. Add a small per-mode `create...Contribution()` function. Do not add arguments for the new
+   mode to a central all-tools factory; the shell merely enumerates contribution values.
 4. Keep editor, inspector, diagnostics, and timeline controls out of the tool surface.
 5. Add a contract test proving bindings survive focus and active-tool changes.
 
 There is intentionally no global mode enum. A studio-native composition root can construct
-its own `WorkbenchToolUiSession` and pass it to `registerToolSession()`.
+its own `WorkbenchToolContribution` and pass it to `registerToolContribution()`.
 
 ## Python example
 

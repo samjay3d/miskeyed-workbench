@@ -37,7 +37,7 @@ class ParameterInspector;
 class RenderToySession;
 class ShaderToySession;
 class WorkspaceEditor;
-class WorkbenchToolUiSession;
+class WorkbenchToolContribution;
 
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchWindow final : public QMainWindow {
     Q_OBJECT
@@ -67,7 +67,7 @@ public:
     // can dispose or reuse it. Shared documents, focus, inspector, editor and time stay here.
     Q_INVOKABLE bool registerTool(
         const QString& toolId, const QString& title, QWidget* contributionSurface);
-    bool registerToolSession(WorkbenchToolUiSession* session);
+    bool registerToolContribution(WorkbenchToolContribution* contribution);
     Q_INVOKABLE bool unregisterTool(const QString& toolId);
     Q_INVOKABLE void setToolStatus(const QString& toolId, const QString& status);
 

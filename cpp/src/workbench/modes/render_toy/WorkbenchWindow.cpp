@@ -190,11 +190,22 @@ bool WorkbenchWindow::registerTool(
     return true;
 }
 
-bool WorkbenchWindow::registerToolSession(WorkbenchToolUiSession* session)
+bool WorkbenchWindow::registerToolContribution(WorkbenchToolContribution* contribution)
 {
-    if (!session || !registerTool(session->toolId(), session->title(), session->surface()))
+    if (!contribution || contribution->primaryViews().isEmpty())
         return false;
-    setToolSummaryProvider(session->toolId(), [session] { return session->statusSummary(); });
+    // This is a layout preset, not session ownership: all sessions and views remain alive
+    // when another preset becomes visible, and a contribution may expose multiple views.
+    auto* preset = new QWidget(this);
+    auto* row = new QHBoxLayout(preset);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(3);
+    for (QWidget* view : contribution->primaryViews())
+        row->addWidget(view, 1);
+    if (!registerTool(contribution->toolId(), contribution->title(), preset))
+        return false;
+    setToolSummaryProvider(
+        contribution->toolId(), [contribution] { return contribution->statusSummary(); });
     return true;
 }
 
@@ -331,10 +342,13 @@ void WorkbenchWindow::buildUi()
 
     m_toolStack = new QStackedWidget(this);
     m_toolStack->setObjectName(QStringLiteral("ToolSurface"));
-    const auto toolSessions = createBuiltinToolUiSessions(this, m_sceneViewport, m_viewport,
-        m_shaderToyViewport, m_workspace, m_renderToySession, m_shaderToySession);
-    for (WorkbenchToolUiSession* tool : toolSessions)
-        registerToolSession(tool);
+    const QList<WorkbenchToolContribution*> contributions {
+        createRenderToyContribution(
+            this, m_workspace, m_renderToySession, m_sceneViewport, m_viewport),
+        createShaderToyContribution(this, m_workspace, m_shaderToySession, m_shaderToyViewport),
+    };
+    for (WorkbenchToolContribution* contribution : contributions)
+        registerToolContribution(contribution);
     m_sceneViewport->setToolTip(QStringLiteral(
         "Scene pass. Rendered into an offscreen color texture (the G-buffer) that the\n"
         "post-process pass reads. Drag to move the camera (Houdini nav):\n"
@@ -553,7 +567,7 @@ void WorkbenchWindow::buildUi()
     m_toolSelectorLayout = new QHBoxLayout(toolSelector);
     m_toolSelectorLayout->setContentsMargins(2, 2, 8, 2);
     m_toolSelectorLayout->setSpacing(0);
-    m_toolSelectorLayout->addWidget(new QLabel(QStringLiteral("Tool"), toolSelector));
+    m_toolSelectorLayout->addWidget(new QLabel(QStringLiteral("Workspace"), toolSelector));
     rebuildToolSelector();
     tb->addWidget(toolSelector);
     tb->addSeparator();

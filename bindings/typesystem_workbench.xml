@@ -36,7 +36,7 @@
         <object-type name="WorkbenchWindow">
             <!-- Native factories pass the abstract session interface. Python studios use
                  registerTool(id, title, QWidget) and keep their session object in Python. -->
-            <modify-function signature="registerToolSession(WorkbenchToolUiSession*)" remove="all" />
+            <modify-function signature="registerToolContribution(WorkbenchToolContribution*)" remove="all" />
         </object-type>
        </namespace-type>
       </namespace-type>
