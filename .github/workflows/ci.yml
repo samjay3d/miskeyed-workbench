@@ -90,7 +90,7 @@ jobs:
                   python-version: ${{ matrix.python-version }}
 
             - name: Cache pip downloads
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('.github/workflows/ci.yml') }}
@@ -124,7 +124,7 @@ jobs:
               uses: mozilla-actions/sccache-action@v0.0.6
 
             - name: Cache sccache objects
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ${{ runner.temp }}\sccache
                   key: sccache-${{ runner.os }}-py${{ matrix.python-version }}-${{ github.sha }}
@@ -133,7 +133,7 @@ jobs:
 
             - name: Cache Slang SDK
               id: slang-cache
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ${{ runner.temp }}\slang
                   key: slang-${{ runner.os }}-${{ env.SLANG_VERSION }}
