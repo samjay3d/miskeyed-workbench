@@ -37,6 +37,8 @@
 #include <QTabBar>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTreeWidget>
+#include <QHeaderView>
 #include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -79,7 +81,8 @@ namespace {
 
     QString renderToyPrelude(bool scenePass)
     {
-        QByteArray source = workbenchModuleSource(QStringLiteral("ui"));
+        QByteArray source = "import miskeyed.time;\n";
+        source += workbenchModuleSource(QStringLiteral("ui"));
         source += '\n';
         if (scenePass) {
             source += workbenchModuleSource(QStringLiteral("viewport-camera"));
@@ -189,6 +192,20 @@ void WorkbenchWindow::buildUi()
     m_diagnostics->setReadOnly(true);
     m_diagnostics->setFont(monospaceFont(10));
     m_diagnostics->setPlaceholderText(QStringLiteral("No diagnostics — shader compiled cleanly."));
+    auto* dependencyPanel = new QSplitter(Qt::Vertical, this);
+    m_dependencyTree = new QTreeWidget(dependencyPanel);
+    m_dependencyTree->setHeaderLabels({ QStringLiteral("Kind"), QStringLiteral("Identity / path"),
+        QStringLiteral("Hash"), QStringLiteral("State") });
+    m_dependencyTree->header()->setStretchLastSection(false);
+    m_dependencyTree->header()->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_dependencySource = new QPlainTextEdit(dependencyPanel);
+    m_dependencySource->setReadOnly(true);
+    m_dependencySource->setFont(monospaceFont(10));
+    m_dependencySource->setPlaceholderText(
+        QStringLiteral("Select an imported module to inspect its resolved source."));
+    dependencyPanel->addWidget(m_dependencyTree);
+    dependencyPanel->addWidget(m_dependencySource);
+    dependencyPanel->setSizes({ 220, 180 });
 
     auto labelled = [this](const QString& title, QWidget* w) {
         auto* box = new QWidget(this);
@@ -230,7 +247,8 @@ void WorkbenchWindow::buildUi()
     tabs->addTab(postInspector, QStringLiteral("Post parameters"));
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
-    m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Diagnostics"));
+    tabs->addTab(dependencyPanel, QStringLiteral("Imports / Dependencies"));
+    m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Compilation"));
     m_tabs = tabs;
     tabs->setMinimumWidth(380);
 
@@ -609,6 +627,11 @@ void WorkbenchWindow::connectUi()
     });
     connect(m_generatedTarget, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
         [this] { refreshGeneratedView(); });
+    connect(
+        m_dependencyTree, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* item) {
+            m_dependencySource->setPlainText(
+                item ? item->data(0, Qt::UserRole).toString() : QString());
+        });
     connect(m_sceneViewport, &SlangRhiWidget::activated, this,
         [this] { m_workspace->focusDocument(m_workspace->activeSceneDocument()); });
     connect(m_viewport, &SlangRhiWidget::activated, this,
@@ -617,6 +640,9 @@ void WorkbenchWindow::connectUi()
 
 void WorkbenchWindow::hookDocument(ShaderDocument* doc)
 {
+    const ShaderRole role = m_workspace->role(doc);
+    if (role == ShaderRole::Scene || role == ShaderRole::Post)
+        doc->setSystemPrelude(renderToyPrelude(role == ShaderRole::Scene));
     connect(doc, &ShaderDocument::sourceChanged, this, [this, doc] {
         if (doc == m_editorDoc && m_editor->toPlainText() != doc->source()) {
             QSignalBlocker block(m_editor);
@@ -627,6 +653,10 @@ void WorkbenchWindow::hookDocument(ShaderDocument* doc)
     connect(doc, &ShaderDocument::diagnosticsChanged, this, [this, doc] {
         if (doc == m_editorDoc)
             m_diagnostics->setPlainText(doc->diagnostics());
+    });
+    connect(doc, &ShaderDocument::dependenciesChanged, this, [this, doc] {
+        if (doc == m_editorDoc)
+            refreshDependencyInspector();
     });
     connect(doc, &ShaderDocument::compilingChanged, this, [this, doc] {
         if (doc == m_editorDoc && doc->compiling()) {
@@ -667,6 +697,7 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     m_editor->setPlainText(m_editorDoc->source());
     m_editor->blockSignals(false);
     m_diagnostics->setPlainText(m_editorDoc->diagnostics());
+    refreshDependencyInspector();
     if (m_lsp) {
         const QString uri = documentUri(m_editorDoc);
         m_editor->setLanguageClient(m_lsp, uri);
@@ -804,8 +835,8 @@ void WorkbenchWindow::updateCompileStatus()
 
     if (m_tabs && m_diagTabIndex >= 0) {
         m_tabs->setTabText(m_diagTabIndex,
-            m_editorErrors > 0 ? QStringLiteral("Diagnostics (%1)").arg(m_editorErrors)
-                               : QStringLiteral("Diagnostics"));
+            m_editorErrors > 0 ? QStringLiteral("Compilation (%1)").arg(m_editorErrors)
+                               : QStringLiteral("Compilation"));
     }
 }
 
@@ -894,6 +925,32 @@ void WorkbenchWindow::reloadGeneratedTargets()
         m_generatedTarget->setCurrentIndex(idx);
     block.unblock();
     refreshGeneratedView();
+}
+
+void WorkbenchWindow::refreshDependencyInspector()
+{
+    m_dependencyTree->clear();
+    m_dependencySource->clear();
+    if (!m_editorDoc)
+        return;
+
+    auto* graph = m_editorDoc->dependencyGraph();
+    const NodeId sourceNode = graph->nodeId(QStringLiteral("source:user"));
+    auto* sourceItem = new QTreeWidgetItem(m_dependencyTree,
+        { QStringLiteral("Source"), documentUri(m_editorDoc), graph->digestHex(sourceNode).left(12),
+            graph->dirtyFlags(sourceNode) ? QStringLiteral("dirty") : QStringLiteral("clean") });
+    sourceItem->setData(0, Qt::UserRole, m_editorDoc->source());
+
+    for (const SourceDependency& dependency : m_editorDoc->importedDependencies()) {
+        const NodeId node = graph->nodeId(QStringLiteral("module:") + dependency.identity);
+        auto* item = new QTreeWidgetItem(m_dependencyTree,
+            { QStringLiteral("Import"), dependency.identity,
+                QString::fromLatin1(dependency.digest.toHex().left(12)),
+                graph->dirtyFlags(node) ? QStringLiteral("dirty") : QStringLiteral("clean") });
+        item->setToolTip(1, dependency.path);
+        item->setData(0, Qt::UserRole, QString::fromUtf8(dependency.source));
+    }
+    m_dependencyTree->expandAll();
 }
 
 void WorkbenchWindow::refreshGeneratedView()

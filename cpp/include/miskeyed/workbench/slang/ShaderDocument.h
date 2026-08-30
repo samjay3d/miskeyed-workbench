@@ -36,6 +36,8 @@ public:
     QString diagnostics() const { return m_diagnostics; }
     bool dirty() const { return m_dirty; }
     QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
+    QList<SourceDependency> importedDependencies() const { return m_importedDependencies; }
+    void setSystemPrelude(const QString& source) { m_compiler.setSystemPrelude(source); }
 
     ShaderParameterModel* parameters() { return &m_parameters; }
     DependencyGraph* dependencyGraph() { return &m_graph; }
@@ -64,6 +66,7 @@ signals:
     void liveChanged();
     void compilingChanged();
     void diagnosticsChanged();
+    void dependenciesChanged();
     void compiled();
     void compileFailed(QString diagnostics);
     void shaderPackageChanged();
@@ -92,6 +95,8 @@ private:
     int m_lastCompileMs = -1;
     QMap<QString, QString> m_generated;
     QStringList m_generatedTargets;
+    QList<SourceDependency> m_importedDependencies;
+    QList<NodeId> m_moduleNodes;
     NodeId m_sourceNode = 0;
     NodeId m_entryNode = 0;
     NodeId m_uiNode = 0;

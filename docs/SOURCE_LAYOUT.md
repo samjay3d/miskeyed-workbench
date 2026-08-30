@@ -59,7 +59,9 @@ A mode is a composition root, not a new owner of shared services:
 
 `ShaderWorkspace` retains cheap authoring/compile products for open tabs. Only the
 active Scene/Post bindings are consumed by `SlangRhiWidget`, so tabs do not each own a
-QRhi pipeline or render target.
+QRhi pipeline or render target. Each successful compiler filesystem load is represented
+as a module node feeding the document entry-point node; the inspector can therefore show
+resolved import identity, content hash, dirtiness, path, and source.
 
 ## Dependency direction
 

@@ -17,6 +17,7 @@
         <enum-type name="NodeKind" />
         <enum-type name="DirtyFlag" flags="yes" />
         <enum-type name="ParameterType" />
+        <value-type name="SourceDependency" />
 
         <object-type name="DependencyGraph" />
         <object-type name="ShaderParameterModel">

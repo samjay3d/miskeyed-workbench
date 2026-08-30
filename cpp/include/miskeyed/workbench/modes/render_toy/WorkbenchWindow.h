@@ -15,6 +15,7 @@ class QTabBar;
 class QStackedWidget;
 class QSplitter;
 class QTimer;
+class QTreeWidget;
 
 namespace miskeyed::workbench::core {
 class TimeContext;
@@ -60,6 +61,7 @@ private:
     void hookDocument(ShaderDocument* document);
     void reloadGeneratedTargets();
     void refreshGeneratedView();
+    void refreshDependencyInspector();
     void mirrorParameter(ShaderDocument* target, const QString& name, const QVariant& value);
 
     // Compile-status feedback: a persistent, color-coded pill in the editor bar.
@@ -76,6 +78,8 @@ private:
     CodeEditor* m_editor = nullptr;
     CodeEditor* m_generatedView = nullptr; // read-only compiled-output viewer
     QPlainTextEdit* m_diagnostics = nullptr;
+    QTreeWidget* m_dependencyTree = nullptr;
+    QPlainTextEdit* m_dependencySource = nullptr;
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
     ShaderWorkspace* m_workspace = nullptr;
     QTabBar* m_documentTabs = nullptr;

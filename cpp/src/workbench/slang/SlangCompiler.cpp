@@ -62,6 +62,19 @@ namespace {
                 return static_cast<ISlangFileSystem*>(this);
             return nullptr;
         }
+        QList<SourceDependency> dependencies() const
+        {
+            QList<SourceDependency> result;
+            for (auto it = m_loaded.cbegin(); it != m_loaded.cend(); ++it) {
+                const QByteArray bytes = it.value();
+                result.push_back({ it.key() == QLatin1String("miskeyed/time.slang")
+                        ? QStringLiteral("miskeyed.time")
+                        : it.key(),
+                    it.key(), bytes, Digest::hash(bytes).bytes() });
+            }
+            return result;
+        }
+
         SlangResult SLANG_MCALL loadFile(const char* path, ISlangBlob** outBlob) override
         {
             if (!path || !outBlob)
@@ -80,6 +93,7 @@ namespace {
             }
             if (bytes.isEmpty())
                 return SLANG_FAIL;
+            m_loaded.insert(fileName, bytes);
             *outBlob = slang_createBlob(bytes.constData(), size_t(bytes.size()));
             return *outBlob ? SLANG_OK : SLANG_FAIL;
         }
@@ -87,6 +101,7 @@ namespace {
     private:
         std::atomic<uint32_t> m_refs { 1 };
         QByteArray m_timeSource;
+        QMap<QString, QByteArray> m_loaded;
     };
 
     QString blobText(slang::IBlob* blob)
@@ -394,8 +409,9 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     sessionDesc.searchPathCount = searchPtrs.size();
 
     Slang::ComPtr<ISlangFileSystem> moduleFileSystem;
-    moduleFileSystem.attach(
-        new WorkbenchModuleFileSystem(workbenchModuleSource(QStringLiteral("time"))));
+    auto* workbenchFileSystem
+        = new WorkbenchModuleFileSystem(workbenchModuleSource(QStringLiteral("time")));
+    moduleFileSystem.attach(workbenchFileSystem);
     sessionDesc.fileSystem = moduleFileSystem.get();
 
     Slang::ComPtr<slang::ISession> session;
@@ -432,6 +448,7 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     auto* module = session->loadModuleFromSourceString(
         moduleName.constData(), path.constData(), effectiveSrc.constData(), diagnostics.writeRef());
     result.diagnostics += blobText(diagnostics);
+    result.dependencies = workbenchFileSystem->dependencies();
     if (!module)
         return result;
 

@@ -42,7 +42,10 @@ and Post bindings. Each `ShaderDocument` retains source, dependency-graph identi
 reflection, diagnostics, and generated targets. `SlangRhiWidget` consumes only the two
 active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
 pipelines or textures. Source, generated output, and compare are views of the focused
-document, while reflection remains an inspector concern.
+document, while reflection remains an inspector concern. The structured **Imports /
+Dependencies** view reads the focused document's compiler-resolved module inputs and
+DependencyGraph identities; selecting an import shows the exact resolved source instead
+of requiring users to infer the import stack from compiler text.
 
 ### Time and deterministic evaluation
 

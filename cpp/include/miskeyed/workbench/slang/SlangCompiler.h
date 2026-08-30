@@ -18,6 +18,13 @@ struct CompiledStage {
     QMap<QString, QString> generated;
 };
 
+struct SourceDependency {
+    QString identity;
+    QString path;
+    QByteArray source;
+    QByteArray digest;
+};
+
 struct CompileResult {
     bool ok = false;
     QString diagnostics;
@@ -28,6 +35,7 @@ struct CompileResult {
     int parameterBinding = 0;
     QByteArray parameterLayoutDigest;
     QByteArray uiSchemaDigest;
+    QList<SourceDependency> dependencies;
 };
 
 class SlangCompilerPrivate;

@@ -135,6 +135,18 @@ void ShaderDocument::compileNow()
     m_compiling = false;
     emit compilingChanged();
     setDiagnostics(r.diagnostics);
+    m_importedDependencies = r.dependencies;
+    m_moduleNodes.clear();
+    for (const SourceDependency& dependency : r.dependencies) {
+        const NodeId node
+            = m_graph.ensureNode(QStringLiteral("module:") + dependency.identity, NodeKind::Module);
+        m_graph.setPayload(node, dependency.source);
+        m_moduleNodes.push_back(node);
+    }
+    QList<NodeId> entryDependencies { m_sourceNode };
+    entryDependencies.append(m_moduleNodes);
+    m_graph.setDependencies(m_entryNode, entryDependencies);
+    emit dependenciesChanged();
     if (!r.ok) {
         emit compileFailed(r.diagnostics);
         return;
