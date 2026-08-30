@@ -37,23 +37,30 @@ int main(int argc, char** argv)
     const QString shader = parser.positionalArguments().value(0);
     miskeyed::workbench::slang_rhi::WorkbenchWindow window(shader);
     if (parser.isSet(QStringLiteral("rhi-smoke-test"))) {
-        const auto viewports
-            = window.findChildren<miskeyed::workbench::slang_rhi::SlangRhiWidget*>();
-        if (viewports.isEmpty()) {
+        // Smoke the primary viewport of the initially visible Render Toy layout. QObject
+        // child order is not a visibility contract: after adding ShaderToy, findChildren()
+        // could return its hidden stacked-page viewport first and wait forever for a frame.
+        auto* viewport = window.sceneViewport();
+        if (!viewport) {
             QTextStream(stderr) << "RHI_SMOKE_FAIL no viewport\n";
             return 3;
         }
-        QObject::connect(viewports.front(),
-            &miskeyed::workbench::slang_rhi::SlangRhiWidget::frameRendered, &app,
-            [&app](const QString& active, const QString& gpu) {
+        QObject::connect(viewport,
+            &miskeyed::workbench::slang_rhi::SlangRhiWidget::backendInitialized, &app,
+            [](const QString& active, const QString& gpu) {
+                QTextStream(stdout)
+                    << "RHI_SMOKE_INITIALIZED backend=" << active << " gpu=" << gpu << '\n';
+                std::fflush(nullptr);
+            });
+        QObject::connect(viewport, &miskeyed::workbench::slang_rhi::SlangRhiWidget::frameRendered,
+            &app, [&app](const QString& active, const QString& gpu) {
                 QTextStream(stdout) << "RHI_SMOKE_OK backend=" << active << " gpu=" << gpu << '\n';
                 // This mode has proved device creation, pipeline creation, and draw
                 // recording. Avoid normal UI/LSP teardown from inside render's callback.
                 std::fflush(nullptr);
                 std::_Exit(0);
             });
-        QObject::connect(viewports.front(),
-            &miskeyed::workbench::slang_rhi::SlangRhiWidget::gpuError, &app,
+        QObject::connect(viewport, &miskeyed::workbench::slang_rhi::SlangRhiWidget::gpuError, &app,
             [&app](const QString& message) {
                 QTextStream(stderr) << "RHI_SMOKE_FAIL " << message << '\n';
                 app.exit(4);
@@ -62,6 +69,7 @@ int main(int argc, char** argv)
             QTextStream(stderr) << "RHI_SMOKE_FAIL initialization timeout\n";
             app.exit(5);
         });
+        viewport->update();
     }
     window.show();
     return app.exec();

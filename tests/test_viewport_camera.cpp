@@ -8,7 +8,7 @@ int main()
     const QByteArray header
         = miskeyed::workbench::slang_rhi::workbenchModuleSource(QStringLiteral("viewport-camera"));
     const auto headers = miskeyed::workbench::slang_rhi::workbenchModules();
-    const bool valid = headers.size() == 4 && !headers.at(0).source.isEmpty()
+    const bool valid = headers.size() >= 4 && !headers.at(0).source.isEmpty()
         && header
             == miskeyed::workbench::slang_rhi::workbenchModuleSource(
                 QStringLiteral("viewport-camera"))

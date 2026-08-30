@@ -40,13 +40,15 @@ public:
     QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
     QList<SourceDependency> importedDependencies() const { return m_importedDependencies; }
     QList<ResourceDescriptor> resources() const { return m_resources; }
+    QList<CompiledEntryPoint> entryPoints() const { return m_entryPoints; }
+    const CompiledEntryPoint* findEntryPoint(ShaderStage stage, const QString& name = {}) const;
     void setSystemPrelude(const QString& source) { m_compiler.setSystemPrelude(source); }
 
     ShaderParameterModel* parameters() { return &m_parameters; }
     DependencyGraph* dependencyGraph() { return &m_graph; }
 
-    const QShader& vertexShader() const { return m_vertexShader; }
-    const QShader& fragmentShader() const { return m_fragmentShader; }
+    const QShader& vertexShader() const;
+    const QShader& fragmentShader() const;
     int parameterBinding() const { return m_parameterBinding; }
 
     // Wall-clock duration of the last compile in milliseconds (-1 if never compiled).
@@ -94,8 +96,7 @@ private:
     SlangCompiler m_compiler;
     ShaderParameterModel m_parameters;
     DependencyGraph m_graph;
-    QShader m_vertexShader;
-    QShader m_fragmentShader;
+    QList<CompiledEntryPoint> m_entryPoints;
     int m_parameterBinding = 0;
     int m_lastCompileMs = -1;
     QMap<QString, QString> m_generated;

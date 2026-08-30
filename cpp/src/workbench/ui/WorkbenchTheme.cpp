@@ -17,9 +17,13 @@ void WorkbenchTheme::apply(QWidget& root)
         QLabel#InspectorDocument { color: #e6e6e6; font-weight: 600; }
         QLabel#InspectorContext { color: #9aa0ac; }
         QLabel#BindingSummary { color: #aab0bc; padding-left: 8px; }
-        #SceneViewport[documentFocus="true"], #PostViewport[documentFocus="true"] {
+        #SceneViewport[documentFocus="true"], #PostViewport[documentFocus="true"],
+        #ShaderToyViewport[documentFocus="true"] {
             border: 2px solid #7c5ce7;
         }
+        QWidget#ToolSelector { background: #15161a; border: 1px solid #343741; border-radius: 7px; }
+        QWidget#ToolSelector QLabel { color: #8f96a3; padding: 0 8px; }
+        QWidget#ToolSelector QComboBox { min-width: 130px; font-weight: 600; }
         QWidget#DocumentViewBar {
             background: #22242b; border-top: 1px solid #2f323b;
             border-bottom: 1px solid #2f323b;
@@ -28,6 +32,13 @@ void WorkbenchTheme::apply(QWidget& root)
             background: #1d1f25; border-top: 1px solid #2f323b;
             border-bottom: 1px solid #2f323b;
         }
+        QLabel#TimelineFrameReadout {
+            color: #ffffff; background: #263a5c; border-radius: 4px;
+            font-weight: 700; padding: 3px 9px;
+        }
+        QLabel#TimelineTimeReadout { color: #9fb9df; padding: 3px 7px; }
+        QPushButton#TransportButton { padding: 3px 7px; }
+        QScrollArea#ParameterScrollArea { background: #1b1c22; border: none; }
         QPlainTextEdit {
             background: #1b1c22; color: #c8ccd4; border: none;
             selection-background-color: #33467c; selection-color: #ffffff;

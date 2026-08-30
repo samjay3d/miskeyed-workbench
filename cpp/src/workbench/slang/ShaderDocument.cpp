@@ -6,6 +6,41 @@
 
 namespace miskeyed::workbench::slang_rhi {
 
+const CompiledEntryPoint* ShaderDocument::findEntryPoint(
+    ShaderStage stage, const QString& name) const
+{
+    if (!name.isEmpty()) {
+        for (const CompiledEntryPoint& entry : m_entryPoints)
+            if (entry.stage == stage && entry.name == name)
+                return &entry;
+        return nullptr;
+    }
+    const QString preferred = stage == ShaderStage::Vertex ? QStringLiteral("vsMain")
+        : stage == ShaderStage::Fragment                   ? QStringLiteral("psMain")
+                                                           : QString();
+    for (const CompiledEntryPoint& entry : m_entryPoints)
+        if (entry.stage == stage && entry.name == preferred)
+            return &entry;
+    for (const CompiledEntryPoint& entry : m_entryPoints)
+        if (entry.stage == stage)
+            return &entry;
+    return nullptr;
+}
+
+const QShader& ShaderDocument::vertexShader() const
+{
+    static const QShader invalid;
+    const auto* entry = findEntryPoint(ShaderStage::Vertex);
+    return entry ? entry->shader : invalid;
+}
+
+const QShader& ShaderDocument::fragmentShader() const
+{
+    static const QShader invalid;
+    const auto* entry = findEntryPoint(ShaderStage::Fragment);
+    return entry ? entry->shader : invalid;
+}
+
 ShaderDocument::ShaderDocument(QObject* parent)
     : QObject(parent)
     , m_compiler(this)
@@ -138,7 +173,7 @@ void ShaderDocument::compileNow()
         m_compiler.setSearchPaths({ QFileInfo(virtualPath).absolutePath() });
     QElapsedTimer timer;
     timer.start();
-    const CompileResult r = m_compiler.compileFullscreen(m_source, virtualPath);
+    const CompileResult r = m_compiler.compileProgram(m_source, virtualPath);
     m_compileSucceeded = r.ok;
     m_lastCompileMs = int(timer.elapsed());
     m_compiling = false;
@@ -191,27 +226,33 @@ void ShaderDocument::compileNow()
         m_graph.setPayload(m_valuesNode, m_parameters.packedBytes());
     }
 
-    m_vertexShader = r.vertex.shader;
-    m_fragmentShader = r.fragment.shader;
+    m_entryPoints = r.entryPoints;
     m_parameterBinding = r.parameterBinding;
 
-    // Collect generated backend code (vertex + fragment) for the editor's output viewer.
+    // Collect generated backend code for every reflected entry point.
     m_generated.clear();
     m_generatedTargets.clear();
     for (const QString& name : { QStringLiteral("HLSL"), QStringLiteral("GLSL"),
              QStringLiteral("SPIR-V"), QStringLiteral("Metal") }) {
-        const QString vs = r.vertex.generated.value(name);
-        const QString fs = r.fragment.generated.value(name);
-        if (vs.isEmpty() && fs.isEmpty())
-            continue;
         QString combined;
-        combined += QStringLiteral("// ===== Vertex entry: vsMain =====\n\n") + vs;
-        combined += QStringLiteral("\n\n// ===== Fragment entry: psMain =====\n\n") + fs;
+        for (const CompiledEntryPoint& entry : r.entryPoints) {
+            const QString code = entry.generated.value(name);
+            if (code.isEmpty())
+                continue;
+            combined += QStringLiteral("// ===== %1 entry: %2 =====\n\n")
+                            .arg(shaderStageName(entry.stage), entry.name)
+                + code + QStringLiteral("\n\n");
+        }
+        if (combined.isEmpty())
+            continue;
         m_generated.insert(name, combined);
         m_generatedTargets.push_back(name);
     }
 
-    m_graph.setPayload(m_entryNode, r.vertex.entryPointHash + r.fragment.entryPointHash);
+    QByteArray entryIdentity;
+    for (const CompiledEntryPoint& entry : r.entryPoints)
+        entryIdentity += entry.identity;
+    m_graph.setPayload(m_entryNode, entryIdentity);
     m_graph.setPayload(m_pipelineNode, QByteArray("graphics"));
     emit shaderPackageChanged();
     emit compiled();

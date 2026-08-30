@@ -57,21 +57,24 @@ jobs:
                           - '.github/workflows/ci.yml'
 
     lint:
-        name: Lint (ruff)
-        # Pure-Python check: no Qt/Slang toolchain needed, so it runs in seconds on Linux
-        # in parallel with the heavy Windows build below.
+        name: Python checks
+        # Pure-Python checks: no Qt/Slang toolchain needed, so they run in seconds on
+        # Linux in parallel with the heavy Windows build below. Keep the example contract
+        # here because examples/** intentionally does not trigger three native builds.
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-python@v5
               with:
                   python-version: "3.12"
-            - name: Install ruff
-              run: python -m pip install "ruff==0.8.*"
+            - name: Install check dependencies
+              run: python -m pip install "ruff==0.8.*" pytest
             - name: Lint
               run: ruff check .
             - name: Format check
               run: ruff format --check .
+            - name: Check Python tool example
+              run: python -m pytest tests/test_python_tool_example.py -q
 
     anari-backend:
         name: ANARI backend
@@ -244,8 +247,17 @@ jobs:
                     -DSLANG_ROOT="$env:SLANG_ROOT" `
                     -DMISKEYED_WORKBENCH_BUILD_APP=ON `
                     -DMISKEYED_WORKBENCH_BUILD_PYTHON=OFF `
-                    -DBUILD_TESTING=OFF
+                    -DBUILD_TESTING=ON
                   cmake --build build-rhi-smoke --parallel 2
+
+            - name: Run native contract tests
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  ctest --test-dir build-rhi-smoke --output-on-failure
 
             - name: Smoke test QRhi D3D11
               if: matrix.python-version == '3.11'

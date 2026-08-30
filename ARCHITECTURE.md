@@ -35,15 +35,19 @@ lane before ANARI Device UI work begins.
 - **DependencyGraph** is a shader-specific persistent Merkle DAG. Hashes answer identity; dirty flags answer work scheduling.
 - **SlangRhiWidget** is the embeddable native viewport used by both the standalone executable and PySide6.
 
-### Render Toy documents and views
+### Workspace documents and tool sessions
 
 `ShaderWorkspace` owns open authoring documents, exactly one focused document, and cheap
 per-document editor sessions (cursor, selection, scroll, view mode, and generated target).
-It does not infer or mutate runtime bindings when a document opens. `RenderToySession`
-separately owns the active Scene/Post bindings and transport. Each `ShaderDocument`
+It does not infer or mutate runtime bindings when a document opens. It also owns the
+shared `TimeContext` and `TimeTransport`. `RenderToySession` separately owns the active
+Scene/Post bindings; `ShaderToySession` owns one fullscreen-shader binding. These sessions
+are contributions rather than exclusive application modes: both can bind the same
+`ShaderDocument` and remain alive at the same time. Each `ShaderDocument`
 retains source, dependency-graph identity, reflection, diagnostics, and generated
-targets. `SlangRhiWidget` consumes only the two
-active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
+targets. `SlangRhiWidget` is the QRhi render-provider/presentation seam. A Render Toy
+instance consumes Scene/Post bindings while a Shader Toy instance consumes one document
+with no scene pre-pass; neither owns the tab list, and inactive tabs do not allocate QRhi
 pipelines or textures. Source, generated output, and compare are views of the focused
 document, while reflection remains an inspector concern. The structured **Dependencies**
 view presents the focused shader and compiler-resolved imports as the default hierarchy,
@@ -57,7 +61,26 @@ place.
 keyboard navigation, the reusable authored/generated editor widgets, view selection, and
 binding those widgets to `DocumentSession`. It observes `ShaderWorkspace`; it has no
 Render Toy slot or GPU ownership. `WorkbenchWindow` composes this editor group with the
-mode action bar, `RenderToySession`, viewports, inspector, and transport.
+coexisting sessions, viewports, inspector, and transport. A persistent tool selector swaps
+only a stacked contribution surface: Render Toy contributes its Scene/Post split and local
+binding actions, while Shader Toy contributes one larger viewport and its local binding
+action. The editor, inspector, timeline, toolbar, status bar, focus, and session objects are
+not rebuilt or rebound by this switch. The selector is populated from registered tool
+contributions rather than an application-wide mode enum or switch. A studio integration can
+register another titled `QWidget` contribution surface and keep its own session state at that
+edge; unregistering it removes only that contribution and activates the next registered tool.
+The shipped-tool composition lives in `WorkbenchToolFactory`, not in `WorkbenchWindow`:
+mode adapters implement `WorkbenchToolContribution`, build and data-bind reusable primary
+views around a still-live runtime session, and the shell only enumerates contributions.
+The current selector swaps layout presets containing those views; it does not activate or
+destroy sessions. A studio can provide contributions from its own composition root.
+
+`ToolViewSelector` presents those layout presets through one compact combo box, so adding
+contributions does not widen the global toolbar. `TimelineWidget` presents the shared time
+model as a transport/readout row plus a temporal ruler/scrubber row; it owns only the UI
+clock adapter, never the `TimeContext` or `TimeTransport`. `ParameterInspector` places its
+generated controls in a widget-resizable scroll area so reflection size does not impose a
+minimum height on the Workbench shell.
 
 The right-hand inspector is a single active-document surface: Parameters, Resources,
 Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
@@ -74,6 +97,19 @@ compiler and renderer DAG products remain collapsed under an Advanced graph bran
 Compilation presents status, elapsed compile time, entry points, generated targets,
 profile, and diagnostics as structured document information.
 
+Entry points are reflected from the Slang module into `CompiledEntryPoint` records (name,
+stage, source identity, semantic identity, generated targets, and optional live `QShader`).
+`ShaderDocument` owns that program-shaped result. Runtime sessions retain their selected
+vertex/fragment names, so two consumers may choose different entry points from the same
+document without recompiling or copying it. The familiar `vsMain`/`psMain` names are only
+preferences when a consumer has not made an explicit selection.
+
+`RhiBackendPolicy` is host/workbench policy and is captured once when the viewport set is
+composed; Scene, Post, and Shader Toy therefore use the same QRhi API. This is orthogonal to
+session entry-point selection. The QShader bridge preserves authored names for reflection
+and consumer bindings while packaging the standardized executable entry name required by
+the SPIR-V backend.
+
 ### Time and deterministic evaluation
 
 `core::TimeValue` carries a floating-point coordinate and its units-per-second rate;
@@ -81,15 +117,15 @@ profile, and diagnostics as structured document information.
 only the current value, delta, and a monotonic evaluation index. It has no playback
 range, playing state, stepping, or looping behavior.
 
-`core::TimeTransport` is the replaceable playback controller used by Render Toy's small
-timeline. It owns range and loop policy and drives the shared context consumed by both
-active passes. USD, OTIO, an offline renderer, or another host can instead set the same
+`core::TimeTransport` is the replaceable playback controller used by the Workbench's small
+timeline. It owns range and loop policy and drives the workspace context consumed by all
+active tool sessions. USD, OTIO, an offline renderer, or another host can instead set the same
 context directly without translating through an integer frame. Context changes upload
 host-managed uniform bytes without changing shader or dependency identity.
 Rate changes rescale current/range coordinates to preserve seconds. Realtime controllers
 advance it with elapsed monotonic seconds, while explicit seek/step remains deterministic.
 
-The packaged `miskeyed.ui` and `miskeyed.time` modules provide host contracts. Authored
+The packaged `miskeyed.ui`, `miskeyed.time`, and `miskeyed.shader_toy` modules provide host contracts. Authored
 shaders explicitly import the contracts they use; Render Toy samples import `miskeyed.viewport_camera` and
 `miskeyed.render_toy` according to their role. An `ISlangFileSystem` edge supplies these
 packaged modules to the Slang session, while project and user imports continue through

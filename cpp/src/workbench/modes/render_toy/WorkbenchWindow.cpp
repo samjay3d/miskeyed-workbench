@@ -1,8 +1,12 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
 #include <miskeyed/workbench/ui/WorkbenchTheme.h>
+#include <miskeyed/workbench/ui/TimelineWidget.h>
+#include <miskeyed/workbench/ui/ToolViewSelector.h>
 #include <miskeyed/workbench/modes/render_toy/RenderToySession.h>
+#include <miskeyed/workbench/modes/shader_toy/ShaderToySession.h>
 #include <miskeyed/workbench/ui/ParameterInspector.h>
+#include <miskeyed/workbench/ui/WorkbenchToolFactory.h>
 #include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <miskeyed/workbench/rendering/SlangRhiWidget.h>
 #include <miskeyed/workbench/editor/CodeEditor.h>
@@ -12,6 +16,7 @@
 #include <miskeyed/workbench/core/ViewportCamera.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <miskeyed/workbench/core/TimeTransport.h>
+#include "../../platform/SlangToolLocator.h"
 #include <QAction>
 #include <QClipboard>
 #include <QComboBox>
@@ -29,11 +34,9 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSplitter>
-#include <QSlider>
-#include <QDoubleSpinBox>
-#include <QElapsedTimer>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QSysInfo>
 #include <QTabWidget>
@@ -42,11 +45,12 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QHeaderView>
-#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QVector>
 #include <QWidget>
+#include <algorithm>
+#include <utility>
 
 namespace miskeyed::workbench::slang_rhi {
 
@@ -92,6 +96,11 @@ namespace {
         return renderToySource(":/miskeyed/workbench/render_toy/post_default.slang");
     }
 
+    QByteArray shaderToySource()
+    {
+        return readShaderResource(":/miskeyed/workbench/shader_toy/default.slang");
+    }
+
     struct SampleShader {
         const char* title;
         int target;
@@ -120,9 +129,10 @@ WorkbenchWindow::WorkbenchWindow(QWidget* parent)
     connectUi();
     updateDocumentTabs();
     setupLanguageServer();
-    setFocusedDocument(m_document);
+    m_workspace->focusDocument(m_document);
     m_sceneDocument->compile();
     m_document->compile();
+    m_shaderToySession->shaderDocument()->compile();
 }
 WorkbenchWindow::WorkbenchWindow(const QString& shaderPath, QWidget* parent)
     : WorkbenchWindow(parent)
@@ -131,14 +141,122 @@ WorkbenchWindow::WorkbenchWindow(const QString& shaderPath, QWidget* parent)
         openShader(shaderPath);
 }
 
-WorkbenchWindow::~WorkbenchWindow()
-{
-    delete m_playbackClock;
-}
+WorkbenchWindow::~WorkbenchWindow() = default;
 
 ShaderDocument* WorkbenchWindow::focusedDocument() const
 {
     return m_workspace ? m_workspace->focusedDocument() : nullptr;
+}
+
+ShaderDocument* WorkbenchWindow::shaderToyDocument() const
+{
+    return m_shaderToySession ? m_shaderToySession->shaderDocument() : nullptr;
+}
+
+void WorkbenchWindow::setActiveTool(const QString& toolId)
+{
+    auto it = std::find_if(m_toolContributions.begin(), m_toolContributions.end(),
+        [&toolId](const ToolContribution& tool) { return tool.id == toolId; });
+    if (it == m_toolContributions.end() || !m_toolStack)
+        return;
+    const bool changed = m_activeTool != toolId;
+    m_activeTool = toolId;
+    m_toolStack->setCurrentWidget(it->surface);
+    if (m_toolSelector)
+        m_toolSelector->setCurrentView(toolId);
+    updateDocumentTabs();
+    if (changed)
+        emit activeToolChanged(toolId);
+}
+
+bool WorkbenchWindow::registerTool(
+    const QString& toolId, const QString& title, QWidget* contributionSurface)
+{
+    if (toolId.isEmpty() || title.isEmpty() || !contributionSurface || !m_toolStack)
+        return false;
+    const auto duplicate = std::find_if(m_toolContributions.cbegin(), m_toolContributions.cend(),
+        [&toolId](const ToolContribution& tool) { return tool.id == toolId; });
+    if (duplicate != m_toolContributions.cend())
+        return false;
+
+    m_toolStack->addWidget(contributionSurface);
+    m_toolContributions.push_back({ toolId, title, contributionSurface, {}, {} });
+    rebuildToolSelector();
+    if (m_activeTool.isEmpty())
+        setActiveTool(toolId);
+    return true;
+}
+
+bool WorkbenchWindow::registerToolContribution(WorkbenchToolContribution* contribution)
+{
+    if (!contribution || contribution->primaryViews().isEmpty())
+        return false;
+    // This is a layout preset, not session ownership: all sessions and views remain alive
+    // when another preset becomes visible, and a contribution may expose multiple views.
+    auto* preset = new QWidget(this);
+    auto* row = new QHBoxLayout(preset);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(3);
+    for (QWidget* view : contribution->primaryViews())
+        row->addWidget(view, 1);
+    if (!registerTool(contribution->toolId(), contribution->title(), preset))
+        return false;
+    setToolSummaryProvider(
+        contribution->toolId(), [contribution] { return contribution->statusSummary(); });
+    return true;
+}
+
+void WorkbenchWindow::setToolStatus(const QString& toolId, const QString& status)
+{
+    const auto it = std::find_if(m_toolContributions.begin(), m_toolContributions.end(),
+        [&toolId](const ToolContribution& tool) { return tool.id == toolId; });
+    if (it == m_toolContributions.end())
+        return;
+    it->status = status;
+    if (m_activeTool == toolId)
+        updateDocumentTabs();
+}
+
+bool WorkbenchWindow::unregisterTool(const QString& toolId)
+{
+    const auto it = std::find_if(m_toolContributions.begin(), m_toolContributions.end(),
+        [&toolId](const ToolContribution& tool) { return tool.id == toolId; });
+    if (it == m_toolContributions.end())
+        return false;
+    QWidget* surface = it->surface;
+    const bool wasActive = m_activeTool == toolId;
+    m_toolContributions.erase(it);
+    m_toolStack->removeWidget(surface);
+    surface->hide();
+    surface->setParent(nullptr);
+    rebuildToolSelector();
+    if (wasActive) {
+        m_activeTool.clear();
+        if (!m_toolContributions.isEmpty())
+            setActiveTool(m_toolContributions.constFirst().id);
+        else
+            updateDocumentTabs();
+    }
+    return true;
+}
+
+void WorkbenchWindow::setToolSummaryProvider(
+    const QString& toolId, std::function<QString()> provider)
+{
+    const auto it = std::find_if(m_toolContributions.begin(), m_toolContributions.end(),
+        [&toolId](const ToolContribution& tool) { return tool.id == toolId; });
+    if (it != m_toolContributions.end())
+        it->summary = std::move(provider);
+}
+
+void WorkbenchWindow::rebuildToolSelector()
+{
+    if (!m_toolSelector)
+        return;
+    m_toolSelector->clear();
+    for (const ToolContribution& tool : std::as_const(m_toolContributions))
+        m_toolSelector->addView(tool.id, tool.title);
+    m_toolSelector->setCurrentView(m_activeTool);
 }
 
 void WorkbenchWindow::buildUi()
@@ -146,12 +264,11 @@ void WorkbenchWindow::buildUi()
     setWindowTitle(QStringLiteral("Workbench"));
     resize(1600, 950);
     m_renderToySession = new RenderToySession(this);
-    m_timeContext = m_renderToySession->timeContext();
-    m_timeTransport = m_renderToySession->timeTransport();
-    m_playbackTimer = new QTimer(this);
-    m_playbackTimer->setTimerType(Qt::PreciseTimer);
-    m_playbackClock = new QElapsedTimer;
+    m_shaderToySession = new ShaderToySession(this);
     m_workspace = new ShaderWorkspace(this);
+    m_timeContext = m_workspace->timeContext();
+    m_timeTransport = m_workspace->timeTransport();
+    m_renderToySession->setEvaluationContext(m_timeContext, m_timeTransport);
     m_sceneDocument
         = m_workspace->openSource(QUrl(QStringLiteral("workbench:/samples/scene_default.slang")),
             QStringLiteral("scene_default.slang"), QString::fromUtf8(sceneShaderSource()));
@@ -160,18 +277,29 @@ void WorkbenchWindow::buildUi()
             QStringLiteral("post_default.slang"), QString::fromUtf8(postShaderSource()));
     m_renderToySession->bindScene(m_sceneDocument);
     m_renderToySession->bindPost(m_document);
+    auto* shaderToyDocument = m_workspace->openSource(
+        QUrl(QStringLiteral("workbench:/samples/shader_toy_default.slang")),
+        QStringLiteral("shader_toy_default.slang"), QString::fromUtf8(shaderToySource()));
+    m_shaderToySession->bindShader(shaderToyDocument);
 
-    m_sceneViewport = new SlangRhiWidget(this);
+    // Backend selection is Workbench-host policy. Capture it once so every contributed
+    // viewport uses the same QRhi API even if process configuration changes later.
+    const auto backend = rendering::RhiBackendPolicy::defaultBackend();
+    m_sceneViewport = new SlangRhiWidget(backend, this);
     m_sceneViewport->setObjectName(QStringLiteral("SceneViewport"));
     m_sceneViewport->setTimeContext(m_timeContext);
     m_sceneViewport->setDocument(m_sceneDocument);
-    m_viewport = new SlangRhiWidget(this);
+    m_viewport = new SlangRhiWidget(backend, this);
     m_viewport->setObjectName(QStringLiteral("PostViewport"));
     m_viewport->setTimeContext(m_timeContext);
     m_viewport->setDocument(m_document);
     // The post viewport runs a real two-pass pipeline: it renders the scene document into
     // an offscreen texture (G-buffer), then its own document grades that texture on top.
     m_viewport->setScenePass(m_sceneDocument);
+    m_shaderToyViewport = new SlangRhiWidget(backend, this);
+    m_shaderToyViewport->setObjectName(QStringLiteral("ShaderToyViewport"));
+    m_shaderToyViewport->setTimeContext(m_timeContext);
+    m_shaderToyViewport->setDocument(shaderToyDocument);
     m_workspaceEditor = new WorkspaceEditor(this);
     m_workspaceEditor->setWorkspace(m_workspace);
     m_editor = m_workspaceEditor->sourceEditor();
@@ -199,32 +327,15 @@ void WorkbenchWindow::buildUi()
     dependencyPanel->addWidget(m_dependencySource);
     dependencyPanel->setSizes({ 220, 180 });
 
-    auto viewportPanel = [this](const QString& slot, QComboBox*& binding, QWidget* w) {
-        auto* box = new QWidget(this);
-        auto* v = new QVBoxLayout(box);
-        v->setContentsMargins(0, 0, 0, 0);
-        v->setSpacing(0);
-        auto* header = new QWidget(box);
-        header->setObjectName(QStringLiteral("PanelHeader"));
-        auto* h = new QHBoxLayout(header);
-        h->setContentsMargins(8, 3, 8, 3);
-        auto* lbl = new QLabel(slot, header);
-        lbl->setObjectName(QStringLiteral("PanelHeaderInline"));
-        h->addWidget(lbl);
-        binding = new QComboBox(header);
-        binding->setToolTip(QStringLiteral("Document bound to the %1 runtime slot").arg(slot));
-        h->addWidget(binding, 1);
-        h->addWidget(new QLabel(QStringLiteral("linked"), header));
-        v->addWidget(header);
-        v->addWidget(w, 1);
-        return box;
+    m_toolStack = new QStackedWidget(this);
+    m_toolStack->setObjectName(QStringLiteral("ToolSurface"));
+    const QList<WorkbenchToolContribution*> contributions {
+        createRenderToyContribution(
+            this, m_workspace, m_renderToySession, m_sceneViewport, m_viewport),
+        createShaderToyContribution(this, m_workspace, m_shaderToySession, m_shaderToyViewport),
     };
-
-    auto* views = new QSplitter(Qt::Horizontal, this);
-    views->addWidget(viewportPanel(QStringLiteral("Scene"), m_sceneBinding, m_sceneViewport));
-    views->addWidget(viewportPanel(QStringLiteral("Post"), m_postBinding, m_viewport));
-    views->setStretchFactor(0, 1);
-    views->setStretchFactor(1, 1);
+    for (WorkbenchToolContribution* contribution : contributions)
+        registerToolContribution(contribution);
     m_sceneViewport->setToolTip(QStringLiteral(
         "Scene pass. Rendered into an offscreen color texture (the G-buffer) that the\n"
         "post-process pass reads. Drag to move the camera (Houdini nav):\n"
@@ -237,6 +348,9 @@ void WorkbenchWindow::buildUi()
         "G-buffer texture (`sceneColor`) and grades it (exposure / tint / vignette), then\n"
         "draws on top. Click this viewport to focus the Post-bound document tab below.\n"
         "Camera drag here still moves the shared scene camera."));
+    m_shaderToyViewport->setToolTip(QStringLiteral(
+        "Fullscreen Shader Toy provider. It consumes a Workspace document directly, with no "
+        "scene or post pass, and shares the Workbench time context."));
 
     auto* inspector = new QWidget(this);
     inspector->setObjectName(QStringLiteral("InspectorPanel"));
@@ -278,7 +392,7 @@ void WorkbenchWindow::buildUi()
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
     m_diagTabIndex = tabs->addTab(compilationPanel, QStringLiteral("Compilation"));
     m_tabs = tabs;
-    tabs->setMinimumWidth(380);
+    tabs->setMinimumWidth(280);
     inspectorLayout->addWidget(tabs, 1);
 
     auto* editorBox = new QWidget(this);
@@ -286,127 +400,13 @@ void WorkbenchWindow::buildUi()
     ev->setContentsMargins(0, 0, 0, 0);
     ev->setSpacing(2);
 
-    auto* timeline = new QWidget(editorBox);
-    timeline->setObjectName(QStringLiteral("Timeline"));
-    auto* th = new QHBoxLayout(timeline);
-    th->setContentsMargins(8, 3, 8, 3);
-    auto transportButton = [timeline, th](const QString& text, const QString& tip) {
-        auto* button = new QPushButton(text, timeline);
-        button->setToolTip(tip);
-        button->setFixedWidth(34);
-        th->addWidget(button);
-        return button;
-    };
-    auto* firstFrame = transportButton(QStringLiteral("|<"), QStringLiteral("First frame"));
-    auto* previousFrame = transportButton(QStringLiteral("<"), QStringLiteral("Previous frame"));
-    auto* playPause = transportButton(QStringLiteral("▶"), QStringLiteral("Play / pause"));
-    auto* nextFrame = transportButton(QStringLiteral(">"), QStringLiteral("Next frame"));
-    auto* lastFrame = transportButton(QStringLiteral(">|"), QStringLiteral("Last frame"));
-    auto* frameSpin = new QDoubleSpinBox(timeline);
-    auto* startSpin = new QDoubleSpinBox(timeline);
-    auto* endSpin = new QDoubleSpinBox(timeline);
-    auto* fpsSpin = new QDoubleSpinBox(timeline);
-    auto* timeLabel = new QLabel(timeline);
-    auto* frameSlider = new QSlider(Qt::Horizontal, timeline);
-    for (QDoubleSpinBox* spin : { frameSpin, startSpin, endSpin }) {
-        spin->setRange(-1000000, 1000000);
-        spin->setDecimals(3);
-        spin->setSingleStep(1.0);
-    }
-    auto syncTransportRange = [this, frameSpin, frameSlider, startSpin, endSpin, fpsSpin] {
-        QSignalBlocker frameBlock(frameSpin);
-        QSignalBlocker sliderBlock(frameSlider);
-        QSignalBlocker startBlock(startSpin);
-        QSignalBlocker endBlock(endSpin);
-        QSignalBlocker fpsBlock(fpsSpin);
-        const double start = m_timeTransport->startValue();
-        const double end = m_timeTransport->endValue();
-        frameSpin->setRange(start, end);
-        frameSlider->setRange(qFloor(start), qCeil(end));
-        startSpin->setValue(start);
-        endSpin->setValue(end);
-        fpsSpin->setValue(m_timeTransport->rate());
-    };
-    fpsSpin->setRange(0.001, 1000.0);
-    fpsSpin->setDecimals(3);
-    syncTransportRange();
-    th->addWidget(new QLabel(QStringLiteral("Frame"), timeline));
-    th->addWidget(frameSpin);
-    th->addWidget(timeLabel);
-    th->addWidget(new QLabel(QStringLiteral("FPS"), timeline));
-    th->addWidget(fpsSpin);
-    th->addWidget(new QLabel(QStringLiteral("Range"), timeline));
-    th->addWidget(startSpin);
-    th->addWidget(new QLabel(QStringLiteral("to"), timeline));
-    th->addWidget(endSpin);
-    th->addWidget(frameSlider, 1);
+    m_timeline = new miskeyed::workbench::ui::TimelineWidget(editorBox);
+    m_timeline->setTimeModel(m_timeContext, m_timeTransport);
 
-    connect(firstFrame, &QPushButton::clicked, this, [this] {
-        m_timeTransport->seek(
-            core::TimeValue(m_timeTransport->startValue(), m_timeTransport->rate()));
-    });
-    connect(previousFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(-1.0); });
-    connect(nextFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(1.0); });
-    connect(lastFrame, &QPushButton::clicked, this, [this] {
-        m_timeTransport->seek(
-            core::TimeValue(m_timeTransport->endValue(), m_timeTransport->rate()));
-    });
-    connect(playPause, &QPushButton::clicked, this,
-        [this] { m_timeTransport->setPlaying(!m_timeTransport->playing()); });
-    connect(frameSpin, &QDoubleSpinBox::valueChanged, this, [this](double frame) {
-        m_timeTransport->seek(core::TimeValue(frame, m_timeTransport->rate()));
-    });
-    connect(frameSlider, &QSlider::valueChanged, this, [this](int frame) {
-        m_timeTransport->seek(core::TimeValue(double(frame), m_timeTransport->rate()));
-    });
-    connect(fpsSpin, &QDoubleSpinBox::valueChanged, m_timeTransport, &core::TimeTransport::setRate);
-    auto setRange = [this, startSpin, endSpin] {
-        m_timeTransport->setPlaybackRange(
-            core::TimeValue(startSpin->value(), m_timeTransport->rate()),
-            core::TimeValue(endSpin->value(), m_timeTransport->rate()));
-    };
-    connect(startSpin, &QDoubleSpinBox::valueChanged, this, setRange);
-    connect(endSpin, &QDoubleSpinBox::valueChanged, this, setRange);
-    connect(m_timeTransport, &core::TimeTransport::playingChanged, this,
-        [this, playPause](bool playing) {
-            playPause->setText(playing ? QStringLiteral("❚❚") : QStringLiteral("▶"));
-            if (playing) {
-                m_playbackClock->restart();
-                m_playbackTimer->start(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
-            } else {
-                m_playbackTimer->stop();
-            }
-        });
-    connect(m_playbackTimer, &QTimer::timeout, this, [this] {
-        const double elapsedSeconds = double(m_playbackClock->restart()) / 1000.0;
-        m_timeTransport->advanceSeconds(elapsedSeconds);
-    });
-    connect(m_timeTransport, &core::TimeTransport::playbackChanged, this, syncTransportRange);
-    connect(m_timeContext, &core::TimeContext::changed, this,
-        [this, frameSpin, frameSlider, timeLabel] {
-            QSignalBlocker frameBlock(frameSpin);
-            QSignalBlocker sliderBlock(frameSlider);
-            frameSpin->setValue(m_timeContext->timeValue());
-            frameSlider->setValue(qRound(m_timeContext->timeValue()));
-            timeLabel->setText(
-                QStringLiteral("Time %1 s").arg(m_timeContext->timeSeconds(), 0, 'f', 3));
-            if (m_timeTransport->playing())
-                m_playbackTimer->setInterval(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
-        });
-    timeLabel->setText(QStringLiteral("Time 0.000 s"));
     auto* modeBar = new QWidget(editorBox);
-    modeBar->setObjectName(QStringLiteral("ModeActionBar"));
+    modeBar->setObjectName(QStringLiteral("EditorStatusBar"));
     auto* modeActions = new QHBoxLayout(modeBar);
     modeActions->setContentsMargins(8, 3, 8, 3);
-    modeActions->addWidget(new QLabel(QStringLiteral("Render Toy"), modeBar));
-    m_bindScene = new QPushButton(QStringLiteral("Use as Scene"), modeBar);
-    m_bindPost = new QPushButton(QStringLiteral("Use as Post"), modeBar);
-    m_bindScene->setToolTip(
-        QStringLiteral("Explicitly bind the focused document to the Scene runtime slot."));
-    m_bindPost->setToolTip(
-        QStringLiteral("Explicitly bind the focused document to the Post runtime slot."));
-    modeActions->addWidget(m_bindScene);
-    modeActions->addWidget(m_bindPost);
 
     m_compileStatus = new QPushButton(modeBar);
     m_compileStatus->setObjectName(QStringLiteral("CompileStatus"));
@@ -414,19 +414,14 @@ void WorkbenchWindow::buildUi()
     m_compileStatus->setFocusPolicy(Qt::NoFocus);
     modeActions->addWidget(m_compileStatus);
     modeActions->addStretch(1);
-    auto* navHint = new QLabel(
-        QStringLiteral("Camera: drag = orbit · middle = pan · right/wheel = zoom"), modeBar);
-    navHint->setObjectName(QStringLiteral("HintLabel"));
-    modeActions->addWidget(navHint);
 
     ev->addWidget(modeBar);
     ev->addWidget(m_workspaceEditor, 1);
-    // Transport is a persistent controller for the active Render Toy evaluation,
-    // independent of whichever authoring document currently has focus.
-    ev->addWidget(timeline);
+    // Transport remains in the shared shell while the tool surface above changes.
+    ev->addWidget(m_timeline);
 
     auto* documentWorkspace = new QSplitter(Qt::Vertical, this);
-    documentWorkspace->addWidget(views);
+    documentWorkspace->addWidget(m_toolStack);
     documentWorkspace->addWidget(editorBox);
     documentWorkspace->setStretchFactor(0, 3);
     documentWorkspace->setStretchFactor(1, 2);
@@ -448,6 +443,12 @@ void WorkbenchWindow::buildUi()
 
     auto* tb = addToolBar(QStringLiteral("Shader"));
     tb->setMovable(false);
+    m_toolSelector = new miskeyed::workbench::ui::ToolViewSelector(tb);
+    connect(m_toolSelector, &miskeyed::workbench::ui::ToolViewSelector::viewSelected, this,
+        &WorkbenchWindow::setActiveTool);
+    rebuildToolSelector();
+    tb->addWidget(m_toolSelector);
+    tb->addSeparator();
     auto* open = tb->addAction(QStringLiteral("Open"));
     open->setShortcut(QKeySequence::Open);
     auto* save = tb->addAction(QStringLiteral("Save"));
@@ -533,6 +534,7 @@ void WorkbenchWindow::buildUi()
 
 void WorkbenchWindow::connectUi()
 {
+    connect(m_timeContext, &core::TimeContext::changed, this, [this] { updateDocumentTabs(); });
     connect(m_workspaceEditor, &WorkspaceEditor::sourceEdited, this,
         [this](ShaderDocument*, const QString&) { setCompileState(CompileState::Dirty); });
 
@@ -570,8 +572,18 @@ void WorkbenchWindow::connectUi()
                 setFocusedDocument(m_workspace->focusedDocument());
             updateDocumentTabs();
         });
+    connect(m_shaderToySession, &ShaderToySession::bindingChanged, this,
+        [this](ShaderDocument* document) {
+            m_shaderToyViewport->setDocument(document);
+            if (m_workspace->focusedDocument())
+                setFocusedDocument(m_workspace->focusedDocument());
+            updateDocumentTabs();
+        });
     connect(m_workspace, &ShaderWorkspace::documentAboutToClose, this,
-        [this](ShaderDocument* document) { m_renderToySession->removeDocument(document); });
+        [this](ShaderDocument* document) {
+            m_renderToySession->removeDocument(document);
+            m_shaderToySession->removeDocument(document);
+        });
     connect(m_workspace, &ShaderWorkspace::documentClosed, this, [this] { updateDocumentTabs(); });
     connect(m_workspace, &ShaderWorkspace::documentOrderChanged, this,
         [this] { updateDocumentTabs(); });
@@ -580,15 +592,9 @@ void WorkbenchWindow::connectUi()
         [this](const QString& e) { m_diagnostics->appendPlainText(e); });
     connect(m_viewport, &SlangRhiWidget::gpuError, this,
         [this](const QString& e) { m_diagnostics->appendPlainText(e); });
+    connect(m_shaderToyViewport, &SlangRhiWidget::gpuError, this,
+        [this](const QString& e) { m_diagnostics->appendPlainText(e); });
 
-    connect(m_bindScene, &QPushButton::clicked, this,
-        [this] { m_renderToySession->bindScene(m_workspace->focusedDocument()); });
-    connect(m_bindPost, &QPushButton::clicked, this,
-        [this] { m_renderToySession->bindPost(m_workspace->focusedDocument()); });
-    connect(m_sceneBinding, QOverload<int>::of(&QComboBox::activated), this,
-        [this](int index) { m_renderToySession->bindScene(m_workspace->documentAt(index)); });
-    connect(m_postBinding, QOverload<int>::of(&QComboBox::activated), this,
-        [this](int index) { m_renderToySession->bindPost(m_workspace->documentAt(index)); });
     connect(
         m_dependencyTree, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem* item) {
             if (!item || !m_workspace->focusedDocument()) {
@@ -603,6 +609,8 @@ void WorkbenchWindow::connectUi()
         [this] { m_workspace->focusDocument(m_renderToySession->sceneDocument()); });
     connect(m_viewport, &SlangRhiWidget::activated, this,
         [this] { m_workspace->focusDocument(m_renderToySession->postDocument()); });
+    connect(m_shaderToyViewport, &SlangRhiWidget::activated, this,
+        [this] { m_workspace->focusDocument(m_shaderToySession->shaderDocument()); });
 }
 
 void WorkbenchWindow::hookDocument(ShaderDocument* doc)
@@ -673,10 +681,13 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     m_parameterInspector->setModel(document->parameters());
     const bool boundScene = document == m_renderToySession->sceneDocument();
     const bool boundPost = document == m_renderToySession->postDocument();
-    const QString binding = boundScene && boundPost ? QStringLiteral("Bound as Scene and Post")
-        : boundScene                                ? QStringLiteral("Bound as Scene")
-        : boundPost                                 ? QStringLiteral("Bound as Post")
-                                                    : QStringLiteral("Not bound to Render Toy");
+    const bool boundShaderToy = document == m_shaderToySession->shaderDocument();
+    QString binding = boundScene && boundPost ? QStringLiteral("Bound as Scene and Post")
+        : boundScene                          ? QStringLiteral("Bound as Scene")
+        : boundPost                           ? QStringLiteral("Bound as Post")
+                                              : QStringLiteral("Not bound to Render Toy");
+    if (boundShaderToy)
+        binding += QStringLiteral(" · Shader Toy");
     m_inspectorDocument->setText(m_workspace->displayName(document));
     m_inspectorContext->setText(binding);
     m_diagnostics->setPlainText(m_workspace->focusedDocument()->diagnostics());
@@ -691,12 +702,6 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     m_lastCompileOk = m_workspace->focusedDocument()->compileSucceeded();
     setCompileState(m_lastCompileOk ? (m_editorWarnings > 0 ? CompileState::Warn : CompileState::Ok)
                                     : CompileState::Error);
-    m_bindScene->setText(
-        boundScene ? QStringLiteral("Bound as Scene") : QStringLiteral("Use as Scene"));
-    m_bindPost->setText(
-        boundPost ? QStringLiteral("Bound as Post") : QStringLiteral("Use as Post"));
-    m_bindScene->setEnabled(!boundScene);
-    m_bindPost->setEnabled(!boundPost);
     auto markViewportActive = [](QWidget* viewport, bool active) {
         viewport->setProperty("documentFocus", active);
         viewport->style()->unpolish(viewport);
@@ -704,36 +709,27 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     };
     markViewportActive(m_sceneViewport, boundScene);
     markViewportActive(m_viewport, boundPost);
+    markViewportActive(m_shaderToyViewport, boundShaderToy);
     updateDocumentTabs();
 }
 
 void WorkbenchWindow::updateDocumentTabs()
 {
-    if (!m_workspace || !m_sceneBinding || !m_postBinding)
+    if (!m_workspace)
         return;
     if (m_bindingSummary) {
-        const QString scene = m_workspace->displayName(m_renderToySession->sceneDocument());
-        const QString post = m_workspace->displayName(m_renderToySession->postDocument());
-        m_bindingSummary->setText(QStringLiteral("Scene: %1    ·    Post: %2").arg(scene, post));
+        const QString focus = m_workspace->displayName(m_workspace->focusedDocument());
+        const auto active = std::find_if(m_toolContributions.cbegin(), m_toolContributions.cend(),
+            [this](const ToolContribution& tool) { return tool.id == m_activeTool; });
+        const QString title = active == m_toolContributions.cend() ? QString() : active->title;
+        const QString detail = active == m_toolContributions.cend() ? QString()
+            : active->summary                                       ? active->summary()
+                                                                    : active->status;
+        m_bindingSummary->setText(
+            QStringLiteral("Tool: %1    ·    %2    ·    Focus: %3    ·    Time: %4 s")
+                .arg(title, detail, focus)
+                .arg(m_timeContext->timeSeconds(), 0, 'f', 3));
     }
-    QSignalBlocker sceneBlock(m_sceneBinding);
-    QSignalBlocker postBlock(m_postBinding);
-    m_sceneBinding->clear();
-    m_postBinding->clear();
-    int sceneIndex = -1;
-    int postIndex = -1;
-    for (int i = 0; i < m_workspace->documentCount(); ++i) {
-        ShaderDocument* doc = m_workspace->documentAt(i);
-        const QString name = m_workspace->displayName(doc);
-        m_sceneBinding->addItem(name);
-        m_postBinding->addItem(name);
-        if (doc == m_renderToySession->sceneDocument())
-            sceneIndex = i;
-        if (doc == m_renderToySession->postDocument())
-            postIndex = i;
-    }
-    m_sceneBinding->setCurrentIndex(sceneIndex);
-    m_postBinding->setCurrentIndex(postIndex);
 }
 
 void WorkbenchWindow::loadSample(const QString& name, int target, const QByteArray& source)
@@ -872,22 +868,7 @@ void WorkbenchWindow::jumpToFirstError()
 
 void WorkbenchWindow::setupLanguageServer()
 {
-    QString exe = qEnvironmentVariable("SLANGD_PATH");
-    if (exe.isEmpty() || !QFileInfo::exists(exe))
-        exe = QStandardPaths::findExecutable(QStringLiteral("slangd"));
-    if (exe.isEmpty()) {
-        QStringList candidates;
-        const QString slangRoot = qEnvironmentVariable("SLANG_ROOT");
-        if (!slangRoot.isEmpty())
-            candidates << slangRoot + QStringLiteral("/bin/slangd.exe");
-        candidates << QCoreApplication::applicationDirPath() + QStringLiteral("/slangd.exe");
-        for (const QString& candidate : candidates) {
-            if (QFileInfo::exists(candidate)) {
-                exe = candidate;
-                break;
-            }
-        }
-    }
+    const QString exe = platform::findSlangLanguageServer();
     if (exe.isEmpty()) {
         statusBar()->showMessage(
             QStringLiteral("Slang language server (slangd) not found — IDE features disabled"),
@@ -911,6 +892,10 @@ void WorkbenchWindow::setupLanguageServer()
     m_lsp->start(exe);
     m_lsp->openDocument(documentUri(m_sceneDocument), m_sceneDocument->source());
     m_lsp->openDocument(documentUri(m_document), m_document->source());
+    if (m_shaderToySession->shaderDocument()) {
+        m_lsp->openDocument(documentUri(m_shaderToySession->shaderDocument()),
+            m_shaderToySession->shaderDocument()->source());
+    }
 }
 
 void WorkbenchWindow::reloadGeneratedTargets()
@@ -1042,8 +1027,39 @@ void WorkbenchWindow::refreshSemanticInspector()
                 : QStringLiteral("—") });
     auto* entryPoints
         = new QTreeWidgetItem(m_compilationTree, { QStringLiteral("Entry points"), QString() });
-    new QTreeWidgetItem(entryPoints, { QStringLiteral("Vertex"), QStringLiteral("vsMain") });
-    new QTreeWidgetItem(entryPoints, { QStringLiteral("Fragment"), QStringLiteral("psMain") });
+    for (const CompiledEntryPoint& entry : m_workspace->focusedDocument()->entryPoints()) {
+        auto* item = new QTreeWidgetItem(entryPoints, { entry.name, shaderStageName(entry.stage) });
+        item->setToolTip(0,
+            QStringLiteral("Source: %1\nIdentity: %2")
+                .arg(entry.sourceIdentity, QString::fromLatin1(entry.identity.toHex())));
+    }
+    auto* compatibility = new QTreeWidgetItem(
+        m_compilationTree, { QStringLiteral("Bindings / compatibility"), QString() });
+    ShaderDocument* document = m_workspace->focusedDocument();
+    const bool graphics = document->findEntryPoint(ShaderStage::Vertex)
+        && document->findEntryPoint(ShaderStage::Fragment);
+    new QTreeWidgetItem(compatibility,
+        { QStringLiteral("ShaderToy"),
+            graphics ? QStringLiteral("Compatible · expects Vertex + Fragment")
+                     : QStringLiteral("Incompatible · missing Vertex or Fragment") });
+    if (document == m_shaderToySession->shaderDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("ShaderToy using"),
+                QStringLiteral("%1 + %2").arg(
+                    m_shaderToySession->vertexEntry(), m_shaderToySession->fragmentEntry()) });
+    }
+    if (document == m_renderToySession->sceneDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("Render Toy Scene using"),
+                QStringLiteral("%1 + %2").arg(m_renderToySession->sceneVertexEntry(),
+                    m_renderToySession->sceneFragmentEntry()) });
+    }
+    if (document == m_renderToySession->postDocument()) {
+        new QTreeWidgetItem(compatibility,
+            { QStringLiteral("Render Toy Post using"),
+                QStringLiteral("%1 + %2").arg(m_renderToySession->postVertexEntry(),
+                    m_renderToySession->postFragmentEntry()) });
+    }
     auto* targets
         = new QTreeWidgetItem(m_compilationTree, { QStringLiteral("Targets"), QString() });
     for (const QString& target : m_workspace->focusedDocument()->generatedTargets())

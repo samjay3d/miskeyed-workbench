@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QVector2D>
 #include <limits>
 #include <cmath>
 #include <vector>
@@ -67,8 +68,13 @@ public:
 };
 
 SlangRhiWidget::SlangRhiWidget(QWidget* parent)
+    : SlangRhiWidget(rendering::RhiBackendPolicy::defaultBackend(), parent)
+{
+}
+
+SlangRhiWidget::SlangRhiWidget(rendering::RhiBackend backend, QWidget* parent)
     : QRhiWidget(parent)
-    , m_backend(rendering::RhiBackendPolicy::defaultBackend())
+    , m_backend(backend)
     , d(std::make_unique<SlangRhiWidgetPrivate>())
 {
     setApi(rendering::RhiBackendPolicy::api(m_backend));
@@ -105,6 +111,17 @@ void SlangRhiWidget::setDocument(ShaderDocument* document)
     update();
 }
 
+void SlangRhiWidget::setEntryPoints(const QString& vertex, const QString& fragment)
+{
+    if (m_vertexEntry == vertex && m_fragmentEntry == fragment)
+        return;
+    m_vertexEntry = vertex;
+    m_fragmentEntry = fragment;
+    d->retire(std::move(d->main.pipeline));
+    d->main.pipelineDirty = true;
+    update();
+}
+
 void SlangRhiWidget::setScenePass(ShaderDocument* sceneDocument)
 {
     if (m_scenePass == sceneDocument)
@@ -127,6 +144,17 @@ void SlangRhiWidget::setScenePass(ShaderDocument* sceneDocument)
     d->retire(std::move(d->main.pipeline));
     d->main.pipelineDirty = true;
     applyTimeContext();
+    update();
+}
+
+void SlangRhiWidget::setSceneEntryPoints(const QString& vertex, const QString& fragment)
+{
+    if (m_sceneVertexEntry == vertex && m_sceneFragmentEntry == fragment)
+        return;
+    m_sceneVertexEntry = vertex;
+    m_sceneFragmentEntry = fragment;
+    d->retire(std::move(d->scene.pipeline));
+    d->scene.pipelineDirty = true;
     update();
 }
 
@@ -178,6 +206,7 @@ void SlangRhiWidget::setExposure(float value)
 void SlangRhiWidget::onShaderChanged()
 {
     applyTimeContext();
+    d->retire(std::move(d->main.pipeline));
     d->main.pipelineDirty = true;
     d->main.pendingUniforms = m_document ? m_document->parameters()->packedBytes() : QByteArray();
     d->main.uniformsDirty = true;
@@ -196,6 +225,7 @@ void SlangRhiWidget::onParameterRangeChanged(int, int)
 void SlangRhiWidget::onScenePassChanged()
 {
     applyTimeContext();
+    d->retire(std::move(d->scene.pipeline));
     d->scene.pipelineDirty = true;
     d->scene.pendingUniforms
         = m_scenePass ? m_scenePass->parameters()->packedBytes() : QByteArray();
@@ -220,7 +250,8 @@ namespace {
     // Replaced resources are retired into `priv`'s graveyard rather than freed immediately,
     // so an in-flight command buffer never binds a destroyed buffer/SRB/pipeline.
     bool buildPass(QRhi* r, SlangRhiWidgetPrivate& priv, RenderPass& pass, ShaderDocument* doc,
-        QRhiRenderPassDescriptor* rp, QRhiTexture* sampleTex, QRhiSampler* sampler)
+        const QString& vertexName, const QString& fragmentName, QRhiRenderPassDescriptor* rp,
+        QRhiTexture* sampleTex, QRhiSampler* sampler)
     {
         const int uniformSize = qMax(16, int(pass.pendingUniforms.size()));
         if (!pass.uniforms || pass.uniforms->size() != uniformSize) {
@@ -258,12 +289,15 @@ namespace {
                 return false;
         }
 
-        if (pass.pipelineDirty && doc && doc->vertexShader().isValid()
-            && doc->fragmentShader().isValid()) {
+        const auto* vertex = doc ? doc->findEntryPoint(ShaderStage::Vertex, vertexName) : nullptr;
+        const auto* fragment
+            = doc ? doc->findEntryPoint(ShaderStage::Fragment, fragmentName) : nullptr;
+        if (pass.pipelineDirty && vertex && fragment && vertex->shader.isValid()
+            && fragment->shader.isValid()) {
             auto pipeline = std::unique_ptr<QRhiGraphicsPipeline>(r->newGraphicsPipeline());
             pipeline->setShaderStages({
-                { QRhiShaderStage::Vertex, doc->vertexShader() },
-                { QRhiShaderStage::Fragment, doc->fragmentShader() },
+                { QRhiShaderStage::Vertex, vertex->shader },
+                { QRhiShaderStage::Fragment, fragment->shader },
             });
             pipeline->setVertexInputLayout(QRhiVertexInputLayout());
             pipeline->setShaderResourceBindings(pass.srb.get());
@@ -289,8 +323,26 @@ void SlangRhiWidget::initialize(QRhiCommandBuffer*)
     if (!r || !renderTarget())
         return;
 
-    const bool twoPass = m_scenePass && m_scenePass->vertexShader().isValid()
-        && m_scenePass->fragmentShader().isValid();
+    // Resolution is presentation state, so the surface supplies it to any provider
+    // document that declares the Shader Toy contract rather than storing it in a session.
+    const QSize pixelSize = renderTarget()->pixelSize();
+    auto applyResolution = [&pixelSize](ShaderDocument* document) {
+        if (!document)
+            return;
+        document->parameters()->setValue(QStringLiteral("shaderToy.resolution"),
+            QVector2D(float(pixelSize.width()), float(pixelSize.height())));
+    };
+    applyResolution(m_scenePass);
+    applyResolution(m_document);
+
+    const auto* sceneVertex = m_scenePass
+        ? m_scenePass->findEntryPoint(ShaderStage::Vertex, m_sceneVertexEntry)
+        : nullptr;
+    const auto* sceneFragment = m_scenePass
+        ? m_scenePass->findEntryPoint(ShaderStage::Fragment, m_sceneFragmentEntry)
+        : nullptr;
+    const bool twoPass = sceneVertex && sceneFragment && sceneVertex->shader.isValid()
+        && sceneFragment->shader.isValid();
 
     // (Re)create the offscreen G-buffer target when it is needed and out of date.
     if (twoPass) {
@@ -330,12 +382,13 @@ void SlangRhiWidget::initialize(QRhiCommandBuffer*)
                 return;
             }
         }
-        if (!buildPass(r, *d, d->scene, m_scenePass, d->sceneRp.get(), nullptr, nullptr)) {
+        if (!buildPass(r, *d, d->scene, m_scenePass, m_sceneVertexEntry, m_sceneFragmentEntry,
+                d->sceneRp.get(), nullptr, nullptr)) {
             emit gpuError(QStringLiteral("Failed to build scene pass."));
             return;
         }
-        if (!buildPass(r, *d, d->main, m_document, renderTarget()->renderPassDescriptor(),
-                d->sceneTex.get(), d->sampler.get())) {
+        if (!buildPass(r, *d, d->main, m_document, m_vertexEntry, m_fragmentEntry,
+                renderTarget()->renderPassDescriptor(), d->sceneTex.get(), d->sampler.get())) {
             emit gpuError(QStringLiteral("Failed to build post-process pass."));
             return;
         }
@@ -344,8 +397,8 @@ void SlangRhiWidget::initialize(QRhiCommandBuffer*)
         d->retire(std::move(d->sceneRt));
         d->retire(std::move(d->sceneRp));
         d->offscreenSize = {};
-        if (!buildPass(r, *d, d->main, m_document, renderTarget()->renderPassDescriptor(), nullptr,
-                nullptr)) {
+        if (!buildPass(r, *d, d->main, m_document, m_vertexEntry, m_fragmentEntry,
+                renderTarget()->renderPassDescriptor(), nullptr, nullptr)) {
             emit gpuError(QStringLiteral("Failed to build pass."));
             return;
         }

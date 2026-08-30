@@ -1,4 +1,6 @@
 #include <miskeyed/workbench/slang/ShaderWorkspace.h>
+#include <miskeyed/workbench/core/TimeContext.h>
+#include <miskeyed/workbench/core/TimeTransport.h>
 #include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QFileInfo>
 #include <utility>
@@ -7,7 +9,10 @@ namespace miskeyed::workbench::slang_rhi {
 
 ShaderWorkspace::ShaderWorkspace(QObject* parent)
     : QObject(parent)
+    , m_timeContext(new core::TimeContext(this))
+    , m_timeTransport(new core::TimeTransport(this))
 {
+    m_timeTransport->setContext(m_timeContext);
 }
 
 int ShaderWorkspace::indexOf(ShaderDocument* document) const

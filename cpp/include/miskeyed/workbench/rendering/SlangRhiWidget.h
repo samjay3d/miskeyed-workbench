@@ -26,19 +26,24 @@ class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT SlangRhiWidget final : public QRhiWidg
 
 public:
     explicit SlangRhiWidget(QWidget* parent = nullptr);
+    explicit SlangRhiWidget(
+        miskeyed::workbench::rendering::RhiBackend backend, QWidget* parent = nullptr);
     ~SlangRhiWidget() override;
 
     ShaderDocument* document() const { return m_document; }
     void setDocument(ShaderDocument* document);
+    void setEntryPoints(const QString& vertex, const QString& fragment);
     float exposure() const { return m_exposure; }
     void setExposure(float value);
     QString backendName() const;
+    miskeyed::workbench::rendering::RhiBackend backend() const { return m_backend; }
 
     // Optional scene pre-pass. When set, this widget renders the scene document into an
     // offscreen color texture (the "G-buffer") first, then runs its own document as a
     // post-process that samples that texture (bound at SRB slot 1 -> HLSL t1/s1).
     ShaderDocument* scenePass() const { return m_scenePass; }
     void setScenePass(ShaderDocument* sceneDocument);
+    void setSceneEntryPoints(const QString& vertex, const QString& fragment);
     miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
     void setTimeContext(miskeyed::workbench::core::TimeContext* context);
 
@@ -76,6 +81,10 @@ private:
 
     ShaderDocument* m_document = nullptr;
     ShaderDocument* m_scenePass = nullptr;
+    QString m_vertexEntry;
+    QString m_fragmentEntry;
+    QString m_sceneVertexEntry;
+    QString m_sceneFragmentEntry;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     float m_exposure = 1.0f;
     QPointF m_lastDragPos;

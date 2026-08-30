@@ -59,6 +59,10 @@ There is no `slangc` subprocess, no `qsb` subprocess, and no Python-owned render
 Qt ownership, signals/slots, parameter buffers, dependency tracking, Slang sessions,
 and QRhi resources all remain native.
 
+Tools such as Render Toy and Shader Toy are session contributions inside the same shell,
+not separate applications. See [Adding a Workbench tool](docs/ADDING_TOOLS.md) for the
+native layout and an intentionally unshipped Python example mode.
+
 ## Install
 
 ```powershell

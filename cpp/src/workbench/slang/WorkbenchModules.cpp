@@ -39,6 +39,9 @@ QList<WorkbenchModule> workbenchModules()
         { QStringLiteral("render-toy"), QStringLiteral("Render Toy pass"),
             QStringLiteral("miskeyed.render_toy"), QStringLiteral("miskeyed/render_toy.slang"), {},
             readHeader(":/miskeyed/workbench/headers/render_toy.slang") },
+        { QStringLiteral("shader-toy"), QStringLiteral("Shader Toy inputs"),
+            QStringLiteral("miskeyed.shader_toy"), QStringLiteral("miskeyed/shader_toy.slang"), {},
+            readHeader(":/miskeyed/workbench/headers/shader_toy.slang") },
     };
 }
 

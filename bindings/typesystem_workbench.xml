@@ -13,6 +13,11 @@
         <enum-type name="LoopMode" />
         <object-type name="TimeTransport" />
        </namespace-type>
+       <namespace-type name="rendering">
+        <!-- Host backend selection is intentional public policy. GPU/QRhi implementation
+             details remain native. -->
+        <enum-type name="RhiBackend" />
+       </namespace-type>
        <namespace-type name="slang_rhi">
         <enum-type name="NodeKind" />
         <enum-type name="DirtyFlag" flags="yes" />
@@ -26,6 +31,8 @@
         </object-type>
         <object-type name="ParameterInspector" />
         <object-type name="ShaderDocument" />
+        <enum-type name="ShaderStage" />
+        <value-type name="CompiledEntryPoint" />
         <object-type name="SlangRhiWidget">
             <!-- Protected overrides use QRhiCommandBuffer, a Qt private-rhi type not
                  exposed by PySide6; they are C++-only and must not be wrapped. -->
@@ -33,7 +40,11 @@
             <modify-function signature="render(QRhiCommandBuffer*)" remove="all" />
             <modify-function signature="releaseResources()" remove="all" />
         </object-type>
-        <object-type name="WorkbenchWindow" />
+        <object-type name="WorkbenchWindow">
+            <!-- Native factories pass the abstract session interface. Python studios use
+                 registerTool(id, title, QWidget) and keep their session object in Python. -->
+            <modify-function signature="registerToolContribution(WorkbenchToolContribution*)" remove="all" />
+        </object-type>
        </namespace-type>
       </namespace-type>
     </namespace-type>

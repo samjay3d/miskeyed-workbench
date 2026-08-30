@@ -15,6 +15,20 @@
 #include <cstring>
 
 namespace miskeyed::workbench::slang_rhi {
+
+QString shaderStageName(ShaderStage stage)
+{
+    switch (stage) {
+    case ShaderStage::Vertex:
+        return QStringLiteral("Vertex");
+    case ShaderStage::Fragment:
+        return QStringLiteral("Fragment");
+    case ShaderStage::Compute:
+        return QStringLiteral("Compute");
+    default:
+        return QStringLiteral("Unknown");
+    }
+}
 namespace {
 
     bool sameUuid(const SlangUUID& lhs, const SlangUUID& rhs)
@@ -417,8 +431,7 @@ QString SlangCompiler::systemPrelude() const
     return d->systemPrelude;
 }
 
-CompileResult SlangCompiler::compileFullscreen(const QString& source, const QString& virtualPath,
-    const QString& vertexEntry, const QString& fragmentEntry)
+CompileResult SlangCompiler::compileProgram(const QString& source, const QString& virtualPath)
 {
     CompileResult result;
     if (!d->global) {
@@ -495,25 +508,64 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     if (!module)
         return result;
 
-    Slang::ComPtr<slang::IEntryPoint> vs, fs;
-    diagnostics.setNull();
-    if (SLANG_FAILED(module->findAndCheckEntryPoint(vertexEntry.toUtf8().constData(),
-            SLANG_STAGE_VERTEX, vs.writeRef(), diagnostics.writeRef()))) {
-        result.diagnostics += blobText(diagnostics);
-        return result;
+    auto stageFromSlang = [](SlangStage stage) {
+        switch (stage) {
+        case SLANG_STAGE_VERTEX:
+            return ShaderStage::Vertex;
+        case SLANG_STAGE_FRAGMENT:
+            return ShaderStage::Fragment;
+        case SLANG_STAGE_COMPUTE:
+            return ShaderStage::Compute;
+        default:
+            return ShaderStage::Unknown;
+        }
+    };
+    auto stageToQShader = [](ShaderStage stage) {
+        switch (stage) {
+        case ShaderStage::Vertex:
+            return QShader::VertexStage;
+        case ShaderStage::Fragment:
+            return QShader::FragmentStage;
+        case ShaderStage::Compute:
+            return QShader::ComputeStage;
+        default:
+            return QShader::VertexStage;
+        }
+    };
+
+    QVector<Slang::ComPtr<slang::IEntryPoint>> entryComponents;
+    QVector<slang::IComponentType*> parts { module };
+    const SlangInt32 entryPointCount = module->getDefinedEntryPointCount();
+    for (SlangInt32 i = 0; i < entryPointCount; ++i) {
+        Slang::ComPtr<slang::IEntryPoint> entry;
+        if (SLANG_FAILED(module->getDefinedEntryPoint(i, entry.writeRef())) || !entry)
+            continue;
+        slang::ProgramLayout* entryLayout = entry->getLayout(0);
+        auto* reflection = entryLayout && entryLayout->getEntryPointCount() > 0
+            ? entryLayout->getEntryPointByIndex(0)
+            : nullptr;
+        if (!reflection)
+            continue;
+        const QString name = QString::fromUtf8(reflection->getName());
+        const ShaderStage stage = stageFromSlang(reflection->getStage());
+        if (stage == ShaderStage::Unknown)
+            continue;
+        CompiledEntryPoint compiled { name, stage, virtualPath };
+        compiled.identity
+            = Digest::hash(src + name.toUtf8() + QByteArray::number(int(stage))).bytes();
+        result.entryPoints.push_back(std::move(compiled));
+        entryComponents.push_back(entry);
+        parts.push_back(entry.get());
     }
-    diagnostics.setNull();
-    if (SLANG_FAILED(module->findAndCheckEntryPoint(fragmentEntry.toUtf8().constData(),
-            SLANG_STAGE_FRAGMENT, fs.writeRef(), diagnostics.writeRef()))) {
-        result.diagnostics += blobText(diagnostics);
+    if (result.entryPoints.isEmpty()) {
+        result.diagnostics += QStringLiteral("No shader entry points were discovered.\n");
         return result;
     }
 
-    slang::IComponentType* parts[] = { module, vs.get(), fs.get() };
     Slang::ComPtr<slang::IComponentType> composite;
     diagnostics.setNull();
     if (SLANG_FAILED(session->createCompositeComponentType(
-            parts, 3, composite.writeRef(), diagnostics.writeRef()))) {
+            parts.data(), parts.size(), composite.writeRef(), diagnostics.writeRef()))) {
         result.diagnostics += blobText(diagnostics);
         return result;
     }
@@ -546,8 +598,7 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     result.parameterLayoutDigest = Digest::hash(layoutBytes).bytes();
     result.uiSchemaDigest = Digest::hash(uiSchemaBytes).bytes();
 
-    auto compileStage
-        = [&](int epIndex, QShader::Stage stage, const QString& entry, CompiledStage& out) -> bool {
+    auto compileEntry = [&](int epIndex, CompiledEntryPoint& out) -> bool {
         QByteArray codes[3];
         int produced = 0;
         // Target index -> display name for the generated-code viewer (index 0 is SPIR-V
@@ -581,17 +632,16 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
             return false;
         Slang::ComPtr<slang::IBlob> hash;
         linked->getEntryPointHash(epIndex, 0, hash.writeRef());
-        out.entryPointHash = blobBytes(hash);
-        out.shader = qt68::buildQShader(
-            stage, entry, codes[0], codes[1], codes[2], layout, result.parameters);
+        out.identity = blobBytes(hash);
+        out.shader = qt68::buildQShader(stageToQShader(out.stage), out.name, codes[0], codes[1],
+            codes[2], layout, result.parameters);
         return out.shader.isValid();
     };
 
-    if (!compileStage(0, QShader::VertexStage, vertexEntry, result.vertex))
-        return result;
-    if (!compileStage(1, QShader::FragmentStage, fragmentEntry, result.fragment))
-        return result;
-    result.ok = true;
+    bool compiledAny = false;
+    for (int i = 0; i < result.entryPoints.size(); ++i)
+        compiledAny = compileEntry(i, result.entryPoints[i]) || compiledAny;
+    result.ok = compiledAny;
     return result;
 }
 

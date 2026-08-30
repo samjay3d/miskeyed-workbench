@@ -25,6 +25,7 @@ Each wheel is installed and imported in a new virtual environment before upload.
 The policy contract is covered without creating a GPU device. The Windows CI build also
 launches the native executable through D3D11 and Vulkan (using SwiftShader when the
 hosted worker has no physical Vulkan device) and only passes after pipeline creation and
-draw recording. Linux Vulkan is validated with the same smoke mode; Metal should use it
-on a macOS GPU-capable worker. CPU/reflection tests remain separate so a missing CI GPU
-is not mistaken for a compiler or workspace failure.
+draw recording. Linux wheels are built/imported and macOS wheels are built/imported, but
+those hosted jobs do not currently validate Vulkan or Metal rendering. A future reliable
+lavapipe or GPU-capable macOS job should run the same smoke mode. CPU/reflection tests
+remain separate so a missing CI GPU is not mistaken for a compiler or workspace failure.
