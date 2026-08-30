@@ -28,7 +28,7 @@ Slang module reference
    ``SlangRhiWidget.cpp``, and ``WorkbenchModules.cpp``.
 
 ``miskeyed.viewport_camera``
----------------------------
+-----------------------------
 
 :Kind: Host contract
 :Purpose: Reflected camera state for viewport-aware scene programs.
