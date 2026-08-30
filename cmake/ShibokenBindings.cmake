@@ -37,6 +37,11 @@ function(workbench_add_shiboken_module)
     endif()
     foreach(dir IN LISTS qt_core_includes qt_gui_includes qt_widgets_includes)
         list(APPEND generator_includes "-I${dir}")
+        if(APPLE AND dir MATCHES "^(.*)/[^/]+\\.framework(/Headers)?$")
+            # Framework-style includes such as <QtCore/qglobal.h> are resolved by the
+            # framework search root, not by adding QtCore.framework/Headers as -I.
+            list(APPEND generator_includes "-F${CMAKE_MATCH_1}")
+        endif()
     endforeach()
     # QShader ships in Qt's private "rhi" tree. GuiPrivate exposes those dirs only via
     # generator expressions, which execute_process cannot evaluate, so derive the
@@ -44,6 +49,9 @@ function(workbench_add_shiboken_module)
     foreach(dir IN LISTS qt_gui_includes)
         if(dir MATCHES "/QtGui$")
             list(APPEND generator_includes "-I${dir}/${Qt6_VERSION}" "-I${dir}/${Qt6_VERSION}/QtGui")
+        elseif(APPLE AND dir MATCHES "/QtGui\\.framework/Headers$")
+            list(APPEND generator_includes
+                "-I${dir}/${Qt6_VERSION}" "-I${dir}/${Qt6_VERSION}/QtGui")
         endif()
     endforeach()
 
