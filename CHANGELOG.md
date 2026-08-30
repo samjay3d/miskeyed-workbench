@@ -98,6 +98,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   arm64/x86_64. Fresh-wheel install/import and Python contracts validate packaging on
   every target; the explicit 3.11 native lanes separately exercise D3D11 and Vulkan on
   Windows, Vulkan on Linux, and Metal on macOS through the same draw-submission harness.
+- Validated the 0.3.0 native runtime lanes: Windows x86_64 rendered with D3D11 and
+  Vulkan/SwiftShader, Linux x86_64 rendered with Vulkan/lavapipe, and macOS arm64 and
+  x86_64 rendered with Metal. Python 3.12/3.13 remain fresh-wheel contract lanes.
 - Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
   review-only release artifacts without publishing permissions.
 - Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for

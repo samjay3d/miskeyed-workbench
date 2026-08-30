@@ -12,29 +12,29 @@ The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
 runtime smoke execute once per platform on 3.11; the other Python lanes validate the
 wheel and installed-package contract without claiming another render result.
 
-.. list-table:: Release validation scope
+.. list-table:: 0.3.0 release validation
    :header-rows: 1
 
    * - Platform
      - Wheels
      - Default QRhi backend
-     - Runtime evidence required for release
+     - Runtime validation status
    * - Windows x86_64
      - CPython 3.11--3.13
      - D3D11
-     - Python 3.11: D3D11 and Vulkan/SwiftShader smoke
+     - VALIDATED on Python 3.11: D3D11 and Vulkan/SwiftShader
    * - Linux x86_64
      - CPython 3.11--3.13
      - Vulkan
-     - Python 3.11: Vulkan smoke with the explicitly selected Mesa lavapipe ICD
+     - VALIDATED on Python 3.11: Vulkan with the explicitly selected Mesa lavapipe ICD
    * - macOS arm64
      - CPython 3.11--3.13
      - Metal
-     - Python 3.11: Metal smoke
+     - VALIDATED on Python 3.11: Metal
    * - macOS x86_64
      - CPython 3.11--3.13
      - Metal
-     - Python 3.11: Metal smoke
+     - VALIDATED on Python 3.11: Metal
 
 The workflow writes a per-lane Actions summary from actual step outcomes. Read
 ``success`` as evidence only for that column and lane. ``NOT VALIDATED`` means no
