@@ -45,9 +45,9 @@ classifiers = [
   "Topic :: Multimedia :: Graphics :: 3D Rendering",
 ]
 
-# Replace samjay3d once the repository is published on GitHub.
 [project.urls]
 Homepage = "https://github.com/samjay3d/miskeyed-workbench"
+Documentation = "https://samjay3d.github.io/miskeyed-workbench/"
 Repository = "https://github.com/samjay3d/miskeyed-workbench"
 Issues = "https://github.com/samjay3d/miskeyed-workbench/issues"
 Changelog = "https://github.com/samjay3d/miskeyed-workbench/blob/main/CHANGELOG.md"

@@ -12,33 +12,38 @@ Teaching documentation
 ----------------------
 
 Authored text lives in ``src/docs``. Screenshots and Sphinx HTML are generated
-artifacts: neither belongs in Git. Build in dependency order from a native,
-installable Windows Workbench::
+artifacts: neither belongs in Git. A single command performs the required native
+capture, image-manifest validation, and warning-as-error Sphinx build::
 
    python -m pip install -r src/docs/requirements.txt
-   python ci/capture_workbench.py --all --output src/docs/images
-   python ci/verify_doc_images.py src/docs/images
-   sphinx-build -W --keep-going -b html src/docs build/documentation/docs/dev/local
+   python -m ci.build_docs --output build/documentation/site
 
-``src/docs/images`` and ``docs`` are ignored output locations. Each scenario
-configures size, tool, focus, bindings, inspector, document view, generated target,
-timeline, and layout before asserting semantic state and grabbing the real window.
-The Sphinx build therefore cannot pass against stale or missing captures.
+The helper writes temporary captures to ignored ``src/docs/images`` before Sphinx
+copies the same verified files into the site. Pull requests upload that complete
+site for review and have read-only repository permission.
 
-Deployment channels
--------------------
+Publication and versioning
+--------------------------
 
-CI computes a Pages-relative output from the Git ref rather than committing the
-site. The stable channels are::
+The canonical public entry point is
+``https://samjay3d.github.io/miskeyed-workbench/``. Generated output is committed
+only to the disposable ``docs`` deployment branch. A release publishes an immutable
+version directory such as ``/0.3.0/`` and updates the root redirect to that version.
+Existing version directories are preserved.
 
-   main branch       -> docs/prod/main
-   v0.3.0 tag        -> docs/prod/0.3.0
-   release/0.3.0     -> docs/dev/release/0.3.0
-   another branch    -> docs/dev/branch/<branch>
+One-time maintainer setup is required **before publishing the package**. Ensure a
+``docs`` branch exists, then open **Settings → Pages**, choose **Deploy from a
+branch**, select the ``docs`` branch and the ``/ (root)`` folder. The workflow can
+create the branch on its first attempt, but Pages must then be configured and the
+release rerun. Ordinary pull-request jobs never receive content-write permission.
+Repository branch rules must allow ``GITHUB_TOKEN`` to update the generated branch.
 
-The release-branch path is a review artifact: it requires no release or Pages write
-permission. Promotion/deployment can later publish the exact artifact after review.
-``ci/docs_destination.py`` owns this mapping so local and CI staging agree.
+The 0.3.0 gate runs in this order: detect the release; build distributions; install
+the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
+verify the ``docs`` branch and retry the public URL while Pages propagates; publish
+TestPyPI; publish PyPI; then create the tag and GitHub Release with a link to
+``/0.3.0/``. A documentation failure therefore blocks
+the package release.
 
 Release work
 ------------

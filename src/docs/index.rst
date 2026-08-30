@@ -10,6 +10,8 @@ This site teaches those boundaries rather than listing every public method. Star
 with :doc:`getting_started/index`, then follow the architecture chapters before
 reading the Slang and rendering sections.
 
+You are reading the Workbench |workbench_release| documentation.
+
 .. image:: images/workbench_overview.png
    :alt: Workbench overview with result surface, document editor, inspector, and timeline
    :align: center

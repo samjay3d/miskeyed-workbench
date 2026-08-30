@@ -42,7 +42,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   discovery, extension/status reporting, and deterministic lifecycle testing. It is
   not exposed as an application mode.
 - Sphinx teaching documentation and deterministic native screenshot scenarios for
-  the shell, tools, Inspector, compilation, Compare editor, and timeline.
+  the shell, tools, Inspector, compilation, Compare editor, and timeline, plus a
+  version-preserving GitHub Pages publication path for stable and release docs.
 
 ### Changed
 
@@ -81,8 +82,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Linux/macOS by wheel success.
 - Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
   review-only release artifacts without publishing permissions.
-- Added a warning-as-error Sphinx check, required-image verification, and canonical
-  Windows capture artifacts without documentation deployment permissions.
+- Added read-only PR documentation previews and a trusted release gate that publishes
+  the validated site to the generated `docs` branch before TestPyPI/PyPI publication.
 
 ## [0.2.1] — 2026-08-30
 

@@ -17,23 +17,29 @@ REQUIRED = (
 )
 
 
+def verify(directory: Path) -> list[str]:
+    missing = [name for name in REQUIRED if not (directory / name).is_file()]
+    empty = [
+        name
+        for name in REQUIRED
+        if (directory / name).is_file() and not (directory / name).stat().st_size
+    ]
+    problems = []
+    if missing:
+        problems.append("missing documentation images: " + ", ".join(missing))
+    if empty:
+        problems.append("empty documentation images: " + ", ".join(empty))
+    return problems
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", nargs="?", type=Path, default=Path("src/docs/images"))
     args = parser.parse_args()
-    missing = [name for name in REQUIRED if not (args.directory / name).is_file()]
-    empty = [
-        name
-        for name in REQUIRED
-        if (args.directory / name).is_file() and not (args.directory / name).stat().st_size
-    ]
-    if missing or empty:
-        if missing:
-            print("missing documentation images: " + ", ".join(missing))
-        if empty:
-            print("empty documentation images: " + ", ".join(empty))
-        return 1
-    return 0
+    problems = verify(args.directory)
+    for problem in problems:
+        print(problem)
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":

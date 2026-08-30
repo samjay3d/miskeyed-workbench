@@ -10,8 +10,9 @@ name: release
 # One-time maintainer setup:
 #   1. PyPI + TestPyPI -> add a GitHub trusted publisher (owner, repo, workflow
 #      `release.yml`, environments `pypi` / `testpypi`).
-#   2. Repo -> Settings -> Environments -> create `pypi` and `testpypi`.
-#   3. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
+#   2. Repo -> Settings -> Environments -> create `documentation`, `pypi`, and `testpypi`.
+#   3. Repo -> Settings -> Pages -> deploy the `docs` branch from `/ (root)`.
+#   4. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
 #
 # Windows wheels default to D3D11, Linux wheels to Vulkan, and macOS wheels to Metal.
 
@@ -23,8 +24,8 @@ on:
         branches: [main]
     workflow_dispatch:
 
-# Default to read-only. Publishing opts into OIDC per job, and only the final tag job
-# receives repository write access.
+# Default to read-only. Publishing opts into OIDC per job; only the trusted documentation
+# and final tag jobs receive the minimal repository write permission they require.
 permissions:
     contents: read
 
@@ -71,9 +72,111 @@ jobs:
         permissions:
             contents: read
 
+    build-documentation:
+        name: Build release documentation
+        needs: [detect, build-distributions]
+        if: needs.detect.outputs.release == 'true'
+        runs-on: windows-2022
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+            - uses: actions/download-artifact@v8
+              with:
+                  name: dist-wheels-windows-3.11
+                  path: incoming
+            - name: Install the release wheel and documentation tools
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force wheelhouse | Out-Null
+                  tar -xzf incoming\wheels-3.11.tgz -C wheelhouse
+                  $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
+                  python -m pip install $wheel
+                  python -m pip install -r src/docs/requirements.txt
+            - name: Capture, verify, and build the release documentation
+              shell: pwsh
+              run: |
+                  $metadataVersion = python ci\docs_metadata.py --field version
+                  if ($metadataVersion -ne "${{ needs.detect.outputs.version }}") {
+                      throw "Documentation version $metadataVersion does not match release version"
+                  }
+                  python -m ci.build_docs --output build\documentation-site
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: documentation-site
+                  path: build/documentation-site
+
+    publish-documentation:
+        name: Publish versioned documentation
+        needs: [detect, build-documentation]
+        if: needs.detect.outputs.release == 'true'
+        runs-on: ubuntu-latest
+        environment:
+            name: documentation
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/download-artifact@v8
+              with:
+                  name: documentation-site
+                  path: generated-site
+            - name: Prepare the generated docs branch
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  if git ls-remote --exit-code --heads origin docs >/dev/null 2>&1; then
+                      git fetch origin docs
+                      git worktree add -B docs publish origin/docs
+                  else
+                      git worktree add --detach publish
+                      git -C publish checkout --orphan docs
+                      git -C publish rm -rf . >/dev/null 2>&1 || true
+                  fi
+                  python3 -m ci.publish_docs \
+                    --site generated-site --publish-tree publish --version "$VERSION"
+                  test -f "publish/$VERSION/index.html"
+                  grep -F "/$VERSION/" publish/index.html
+            - name: Publish the generated site
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  git -C publish config user.name github-actions[bot]
+                  git -C publish config user.email 41898282+github-actions[bot]@users.noreply.github.com
+                  git -C publish add --all
+                  if git -C publish diff --cached --quiet; then
+                      echo "Documentation $VERSION is already published."
+                  else
+                      git -C publish commit -m "docs: publish Workbench $VERSION"
+                      git -C publish push origin docs
+                  fi
+                  git ls-remote --exit-code --heads origin docs
+            - name: Verify the public versioned documentation
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  url=$(python3 ci/docs_metadata.py --field versioned_url --version "$VERSION")
+                  for attempt in $(seq 1 20); do
+                      if page=$(curl --fail --silent --show-error --location "$url") && \
+                         grep -F "Workbench $VERSION documentation" <<<"$page"; then
+                          echo "Published documentation is live at $url"
+                          exit 0
+                      fi
+                      echo "Pages has not propagated yet (attempt $attempt/20); waiting 15 seconds."
+                      sleep 15
+                  done
+                  echo "Documentation did not become public at $url" >&2
+                  exit 1
+
     publish-testpypi:
         name: Publish to TestPyPI
-        needs: [detect, build-distributions]
+        needs: [detect, build-distributions, publish-documentation]
         if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         environment:
@@ -139,10 +242,9 @@ jobs:
     tag-release:
         name: Tag + GitHub Release
         needs: [detect, publish-pypi]
-        # Record the release AFTER publishing. Uses the default token; the tag it pushes
-        # deliberately does NOT re-trigger this workflow (we already published). Skipped on
-        # manual tag runs (the tag already exists).
-        if: needs.detect.outputs.release == 'true' && !startsWith(github.ref, 'refs/tags/')
+        # Record the release AFTER documentation and package publication. Uses the default
+        # token; an existing manual tag is reused rather than pushed again.
+        if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -165,5 +267,7 @@ jobs:
                       echo "Release $tag already exists."
                   else
                       notes=$(awk -v v="$v" '$0 ~ "^## \\["v"\\]"{f=1;next} /^## \[/{f=0} f' CHANGELOG.md)
-                      gh release create "$tag" --title "$tag" --notes "${notes:-Release $tag}"
+                      docs_url=$(python3 ci/docs_metadata.py --field versioned_url --version "$v")
+                      notes="${notes:-Release $tag}"$'\n\n'"[Documentation for $v]($docs_url)"
+                      gh release create "$tag" --title "$tag" --notes "$notes"
                   fi

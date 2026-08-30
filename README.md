@@ -60,7 +60,8 @@ the base dependencies alone are not enough for a source build.
 
 ## Learn and contribute
 
-- [Teaching documentation source](src/docs/index.rst) — deliberate learning path
+- **[Documentation](https://samjay3d.github.io/miskeyed-workbench/)** — current stable teaching site
+- [Authored documentation source](src/docs/index.rst) — contributor-facing reStructuredText
 - [Current architecture map](ARCHITECTURE.md)
 - [Product vision](VISION.md)
 - [0.3.0 release history](CHANGELOG.md)
@@ -72,14 +73,12 @@ than repository inputs. On a built Windows checkout, reproduce the complete site
 
 ```text
 python -m pip install -r src/docs/requirements.txt
-python ci/capture_workbench.py --all --output src/docs/images
-python ci/verify_doc_images.py src/docs/images
-sphinx-build -W --keep-going -b html src/docs build/documentation/docs/dev/local
+python -m ci.build_docs --output build/documentation/site
 ```
 
-CI packages review sites under `docs/dev/<ref>` without release permissions. The
-rolling main site is staged at `docs/prod/main`; a `v0.3.0` release is staged at
-`docs/prod/0.3.0`.
+Pull requests upload the complete site as a read-only review artifact. A trusted
+release run publishes the immutable `/0.3.0/` snapshot to the generated `docs` branch
+and updates the public root to redirect to that stable version.
 
 ## License
 
