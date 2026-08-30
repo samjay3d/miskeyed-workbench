@@ -35,6 +35,7 @@
 #include <QElapsedTimer>
 #include <QStandardPaths>
 #include <QStatusBar>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTabWidget>
 #include <QTabBar>
