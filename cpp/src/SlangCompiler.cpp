@@ -397,16 +397,23 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     slang::ProgramLayout* layout = linked->getLayout(0);
     result.parameters = reflectParameters(layout, result.parameterByteSize);
     result.parameterBinding = layout ? int(layout->getGlobalConstantBufferBinding()) : 0;
-    QByteArray reflectionBytes;
-    QDataStream reflectionStream(&reflectionBytes, QIODeviceBase::WriteOnly);
-    reflectionStream.setVersion(QDataStream::Qt_6_8);
+    QByteArray layoutBytes;
+    QDataStream layoutStream(&layoutBytes, QIODeviceBase::WriteOnly);
+    layoutStream.setVersion(QDataStream::Qt_6_8);
+    layoutStream << qint64(result.parameterByteSize) << result.parameterBinding;
+
+    QByteArray uiSchemaBytes;
+    QDataStream uiSchemaStream(&uiSchemaBytes, QIODeviceBase::WriteOnly);
+    uiSchemaStream.setVersion(QDataStream::Qt_6_8);
     for (const auto& p : result.parameters) {
-        // UI metadata is part of schema identity so annotation edits refresh the inspector.
-        reflectionStream << p.name << p.label << p.group << p.widget << p.tooltip << quint8(p.type)
-                         << qint64(p.offset) << qint64(p.size) << p.minimum << p.maximum << p.step
-                         << p.defaultValue << p.choices;
+        // GPU layout identity must not include presentation metadata: annotation-only
+        // edits refresh the inspector without invalidating bindings or the pipeline.
+        layoutStream << p.name << quint8(p.type) << qint64(p.offset) << qint64(p.size);
+        uiSchemaStream << p.name << p.label << p.group << p.widget << p.tooltip << p.minimum
+                       << p.maximum << p.step << p.defaultValue << p.choices;
     }
-    result.reflectionDigest = Digest::hash(reflectionBytes).bytes();
+    result.parameterLayoutDigest = Digest::hash(layoutBytes).bytes();
+    result.uiSchemaDigest = Digest::hash(uiSchemaBytes).bytes();
 
     auto compileStage
         = [&](int epIndex, QShader::Stage stage, const QString& entry, CompiledStage& out) -> bool {
