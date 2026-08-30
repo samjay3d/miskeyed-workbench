@@ -11,7 +11,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "miskeyed-workbench"
-version = "0.2.1"
+version = "0.3.0"
 description = "Workbench — a native Qt 6.8 / QRhi Slang shader workbench."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -45,9 +45,9 @@ classifiers = [
   "Topic :: Multimedia :: Graphics :: 3D Rendering",
 ]
 
-# Replace samjay3d once the repository is published on GitHub.
 [project.urls]
 Homepage = "https://github.com/samjay3d/miskeyed-workbench"
+Documentation = "https://samjay3d.github.io/miskeyed-workbench/"
 Repository = "https://github.com/samjay3d/miskeyed-workbench"
 Issues = "https://github.com/samjay3d/miskeyed-workbench/issues"
 Changelog = "https://github.com/samjay3d/miskeyed-workbench/blob/main/CHANGELOG.md"

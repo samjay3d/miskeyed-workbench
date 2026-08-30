@@ -1,0 +1,39 @@
+Common how-tos
+==============
+
+Add a reflected slider
+----------------------
+
+::
+
+   [UIName("Speed")]
+   [UIWidget("slider")]
+   [UIRange(0.0, 2.0)]
+   float speed;
+
+Use time in a shader
+--------------------
+
+::
+
+   import miskeyed.time;
+   float phase = workbenchTime.time * speed;
+
+Inspect dependencies
+--------------------
+
+Focus the document, open **Dependencies**, and select an imported module. A module
+file edit is watched and recompiles dependent documents.
+
+Choose an entry point
+---------------------
+
+Open **Compilation** to discover available stages, then use the binding controls in
+the consuming tool. Names are capabilities; ``vsMain`` and ``psMain`` are only
+fallback conventions.
+
+Change the runtime backend
+--------------------------
+
+Launch the native command with ``--rhi vulkan`` on Windows. Generated-viewer target
+selection does not change the runtime backend.

@@ -6,113 +6,85 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-30
+
+### Highlights
+
+- Reframed Workbench as a document-centric shell with persistent Render Toy and
+  Shader Toy sessions rather than a Render Toy-owned application.
+- Added deterministic evaluation time, explicit Slang module imports,
+  program-shaped entry-point reflection, and a reflection-driven semantic Inspector.
+- Separated dependency identity from required work and extended QRhi packaging and
+  backend policy beyond the original Windows-only package path.
+
 ### Added
 
-- A document-oriented workspace and reusable `WorkspaceEditor`. Scene and post-process
-  shaders can remain open in closeable/reorderable tabs; the focused document drives
-  editor, inspector, diagnostics, dependency, and compilation context. Per-document
-  cursor, selection, scroll, generated target, and view-mode state survive tab switches.
-- Source, generated, and side-by-side compare views for the focused shader document,
-  so generated code is available for inspection without permanently occupying a third
-  editor column.
-- Backend-neutral `TimeValue`, `TimeRange`, and `TimeContext` primitives plus a separate
-  `TimeTransport`. Floating-point/subframe samples carry their rate, rate conversion
-  preserves seconds, and playback policy no longer lives in evaluation state.
-- A minimal Render Toy transport bar with play/pause, deterministic stepping, scrubbing,
-  playback range, and frame-rate controls. Elapsed-time playback and explicit sample
-  evaluation both drive one context shared by the active Scene and Post passes.
-- A packaged `miskeyed.time` Slang module. Its host-managed `time`, `deltaTime`, `frame`,
-  and `frameRate` fields update through reflected uniforms without recompiling source.
-- Shared native `ViewportCamera` and `RenderPass` contracts. Camera parameter names are
-  centralized, while pass-local QRhi buffers, bindings, pipelines, and dirty state no
-  longer live directly on the viewport widget.
-- Authored Workbench Slang contracts for reflected UI attributes, viewport camera data,
-  Render Toy pass data, and time, embedded for installed applications and wheels and
-  resolved as ordinary `miskeyed.*` imports through Slang's filesystem/session APIs.
-- Live dependency inspection for the focused shader. The primary tree shows resolved
-  imports, paths, content hashes, source, and dirty state; the internal compiler/render
-  DAG remains available as a progressively disclosed Advanced view. Imported project
-  files are watched and recompile their dependent document in place.
-- Structured active-document inspector views for reflected parameters and resources,
-  import dependencies, entry points, generated targets, compile status/timing, and
-  diagnostics.
-- Authored, packaged Render Toy scene and post-process samples, including animated
-  examples that exercise the shared time contract and restoreable default samples.
-- Native contract tests for viewport-camera and pass bindings, workspace focus/session
-  behavior, module dependencies, and deterministic subframe/time-transport evaluation.
-- CI capture of a canonical native Workbench window image, published as the
-  `workbench-documentation` artifact for review.
-- Read-only wheel and source-distribution artifacts for pull requests targeting a
-  `release/*` branch, using the same reusable distribution build as release publishing
-  without granting review builds OIDC or repository-write permissions.
-- An opt-in, developer-facing ANARI backend foundation. With
-  `MISKEYED_WORKBENCH_WITH_ANARI=ON`, native Workbench code can load configured ANARI
-  libraries, enumerate device subtypes and extensions, collect status diagnostics, and
-  create device sessions with deterministic library/device teardown. The feature
-  remains off by default and is not exposed in the application UI yet.
-- A standalone `workbench-anari-probe` build under `spikes/anari_probe` for exercising
-  ANARI discovery and device lifecycle without Qt, Slang, Shiboken, or the Workbench
-  application target.
-- ANARI backend CI coverage using a pinned ANARI-SDK revision, candidate parser tests,
-  and a load/query/create/commit/release smoke test against the SDK sink device.
-- A host-owned QRhi backend policy with `Auto`, D3D11, Vulkan, and Metal choices.
-  `Auto` keeps D3D11 as the Windows default, selects Vulkan on Linux, and selects
-  Metal on macOS; the native launcher also accepts `--rhi` without changing authored
-  Slang or the generated-code inspection target.
-- Native QRhi smoke-test instrumentation and Windows CI coverage for both the shipped
-  D3D11 path and Vulkan through SwiftShader. A smoke run only succeeds after device and
-  graphics-pipeline creation and draw recording.
-- Binary wheel builds for Linux x86_64 and macOS arm64/x86_64 across Python 3.11–3.13,
-  alongside the existing Windows x86_64 wheels. Every portable wheel is installed and
-  imported in a fresh environment before upload, and Linux wheels receive PEP 600 tags.
-- A reusable Workbench UI theme layer so future modes share product colors and control
-  metrics rather than inheriting different platform-native defaults.
+- `ShaderWorkspace` and reusable `WorkspaceEditor` ownership for open/focused
+  documents, per-document cursor/scroll/view state, and Source, Generated, and Compare
+  presentation.
+- `TimeValue`, `TimeRange`, `TimeContext`, and `TimeTransport`, plus a shared timeline
+  with deterministic seek/step, subframes, rate conversion, elapsed-time playback,
+  range controls, and a monotonic evaluation index.
+- Packaged `miskeyed.ui`, `miskeyed.time`, `miskeyed.viewport_camera`,
+  `miskeyed.render_toy`, and `miskeyed.shader_toy` Slang modules resolved through the
+  Slang filesystem/session edge.
+- Reflected entry-point records and per-consumer entry selection, allowing one program
+  to expose multiple vertex, fragment, or compute capabilities without treating
+  `vsMain`/`psMain` as architectural requirements.
+- Active-document Inspector pages for parameters, resources, compiler-resolved
+  dependencies, compilation status/timing, diagnostics, entry points, and generated
+  targets. Imported project modules are watched and invalidate dependent documents.
+- Explicit `RenderToySession` Scene/Post bindings and a minimal `ShaderToySession`
+  fullscreen contribution; both remain alive while the view selector changes layout.
+- A shared UI theme, reusable viewport-camera/render-pass contracts, and authored
+  Render Toy/Shader Toy samples exercising metadata, imports, and shared time.
+- An opt-in ANARI host foundation and standalone probe for configured library/device
+  discovery, extension/status reporting, and deterministic lifecycle testing. It is
+  not exposed as an application mode.
+- Sphinx teaching documentation and deterministic native screenshot scenarios for
+  the shell, tools, Inspector, compilation, Compare editor, and timeline, plus a
+  version-preserving GitHub Pages publication path for stable and release docs.
 
 ### Changed
 
-- Reorganized native implementation and public headers by responsibility: core,
-  editor, Slang, rendering, reusable UI, mode composition, and ANARI integration.
-  Render Toy is now a composition root rather than the owner of shared services.
-- Separated generic workspace state from Render Toy runtime policy. Opening a document
-  only opens and focuses it; `RenderToySession` explicitly owns Scene/Post bindings and
-  the transport, while only the bound pair feeds live QRhi state.
-- Reworked the Render Toy UI around open shader documents and explicit Scene/Post
-  viewport bindings. Clicking a viewport focuses its bound document, while selecting a
-  tab reliably updates the editor and every active-document inspector section.
-- Moved host time updates through the existing reflected global-parameter upload path.
-  Time changes update active GPU evaluation state without changing shader or dependency
-  identity and without triggering Slang compilation.
-- Marked Workbench-provided time fields as host-managed so they do not appear as
-  authored parameter controls or collide with user uniforms that have common names.
-- Replaced the first-class Workbench Headers browser and concatenated shader contracts
-  with explicit Slang imports. Project/user locations remain session search paths, and
-  the small packaged-module filesystem seam can later be replaced without introducing
-  a second package resolver.
-- Updated the native CMake source registration, install layout, Shiboken declarations,
-  README, and architecture documentation to match the responsibility-oriented tree.
-- Defined Shader Toy, Render Toy, and the planned ANARI Device mode as separate product
-  boundaries. Device-neutral native code uses `miskeyed::workbench`, while the shipped
-  Slang/QRhi renderer retains its existing `slang_qrhi` namespace and behavior.
-- Converted the ANARI research plan into an implementation breakdown that records the
-  completed backend foundation and the remaining Hydra, tracing, frame-handoff, and
-  Island-device slices.
-- Centralized Slang runtime packaging for `slang.dll`, `libslang.so`, and
-  `libslang.dylib`, with loader-relative extension paths and platform-correct
-  PySide/Shiboken library discovery at the packaging boundary.
-- Moved the Render Toy stylesheet into the shared UI layer and replaced the hardcoded
-  D3D11 compilation diagnostic with runtime platform, Qt, and active-QRhi information.
+- Reorganized native code by core, editor, Slang, rendering, UI, mode, and optional
+  ANARI responsibilities. Device-neutral code uses `miskeyed::workbench`; the shipped
+  Slang/QRhi surface retains `miskeyed::workbench::slang_rhi`.
+- Replaced concatenated Workbench headers/private UI prelude behavior with explicit
+  imports. Slang owns module resolution; packaged modules and project paths enter at
+  its normal filesystem/session boundary.
+- Made generated output a per-document view instead of a permanent third editor and
+  made the Inspector follow workspace focus rather than Render Toy binding changes.
+- Routed host-managed time through reflected uniform uploads, keeping evaluation
+  changes out of compiler and dependency identity paths.
+- Added host-owned QRhi policy: Auto selects D3D11 on Windows, Vulkan on Linux, and
+  Metal on macOS. Runtime RHI selection remains independent of generated-code
+  inspection targets.
 
 ### Fixed
 
-- Vulkan pipelines now use Slang's exported SPIR-V entry-point name, `main`, instead of
-  the authored `vsMain`/`psMain` names stored in the HLSL and Metal variants.
-- Metal generation no longer requests the obsolete `metal_2_0` Slang profile.
-- Shiboken generation now receives Clang builtin headers on Unix and Qt framework and
-  private-header search paths on macOS.
-- Linux wheels package the real versioned Slang shared library rather than losing the
-  SDK's `libslang.so` symlink when creating the wheel archive.
-- Release-mode native contract tests keep assertions enabled, preventing CI from
-  silently running test executables without checking their invariants.
+- Vulkan packages execute Slang's exported SPIR-V entry name while preserving authored
+  names for reflection and consumer selection.
+- Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
+  Qt framework, and private-header search paths on Unix/macOS.
+- Corrected Linux wheel handling of the versioned Slang shared library and kept native
+  contract assertions enabled in release builds.
+- Deferred QRhi resource retirement across the maximum frame latency, avoiding D3D11
+  use-after-free during live pipeline replacement.
+
+### Developer / CI
+
+- Added Windows D3D11 and Vulkan/SwiftShader draw-recording smoke tests, native
+  workspace/time/module/tool contracts, and a pinned ANARI SDK lifecycle check.
+- Added CPython 3.11–3.13 wheel builds for Windows x86_64, Linux x86_64, and macOS
+  arm64/x86_64. Fresh-wheel install/import validates packaging on every target;
+  runtime rendering validation remains stronger on Windows and is not implied for
+  Linux/macOS by wheel success.
+- Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
+  review-only release artifacts without publishing permissions.
+- Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for
+  same-repository PRs and trusted `main`/`release/**` pushes, and a release gate that
+  publishes the immutable versioned site before TestPyPI/PyPI publication.
 
 ## [0.2.1] — 2026-08-30
 
