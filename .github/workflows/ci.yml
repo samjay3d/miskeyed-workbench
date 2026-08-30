@@ -317,7 +317,9 @@ jobs:
               run: |
                   python -m pip install -r src/docs/requirements.txt
                   $siteRoot = "$env:RUNNER_TEMP\workbench-documentation"
+                  New-Item -ItemType Directory -Force -Path $siteRoot | Out-Null
                   python -m ci.build_docs --output "$siteRoot\site"
+                  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                   Set-Content -Path "$siteRoot\source-ref.txt" -Value "${{ github.head_ref }}"
 
             - name: Upload Documentation Preview Artifact

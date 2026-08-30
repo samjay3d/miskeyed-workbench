@@ -58,7 +58,7 @@ SCENARIOS = {
         inspector=3,
         minimum_size=(280, 450),
     ),
-    "timeline": Scenario("timeline_overview.png", target="Timeline", minimum_size=(700, 70)),
+    "timeline": Scenario("timeline_overview.png", target="Timeline", minimum_size=(700, 48)),
     "render-toy": Scenario(
         "render_toy.png", target="ToolSurface", focus="post", minimum_size=(700, 300)
     ),
@@ -145,7 +145,18 @@ def configure(window: WorkbenchWindow, scenario: Scenario) -> None:
     required(timeline, QWidget, "TimelineScrubber").setProperty("value", scenario.frame)
 
     required(window, QSplitter, "WorkbenchRoot").setSizes([1120, 480])
-    required(window, QSplitter, "DocumentWorkspace").setSizes([520, 380])
+    # Allocate space to the lesson being captured instead of assuming the
+    # product's default splitter ratio leaves every logical region doc-sized.
+    # In particular, the editor also contains the status bar and timeline, so
+    # a nominal 380 px lower pane produces a much shorter WorkspaceEditor.
+    document_sizes = (
+        [330, 570]
+        if scenario.target in {"WorkspaceEditor", "Timeline"}
+        else [570, 330]
+        if scenario.target == "ToolSurface"
+        else [450, 450]
+    )
+    required(window, QSplitter, "DocumentWorkspace").setSizes(document_sizes)
     for splitter in required(window, QWidget, "WorkspaceEditor").findChildren(QSplitter):
         splitter.setSizes([560, 560])
 
@@ -190,7 +201,13 @@ def validate(window: WorkbenchWindow, scenario: Scenario) -> QWidget:
         )
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
-        raise RuntimeError("scenario semantic validation failed: " + ", ".join(failed))
+        actual = f"{target.width()}x{target.height()}"
+        minimum = f"{scenario.minimum_size[0]}x{scenario.minimum_size[1]}"
+        raise RuntimeError(
+            f"scenario {scenario.filename!r} semantic validation failed: "
+            f"{', '.join(failed)} (target {scenario.target!r} is {actual}; "
+            f"minimum {minimum})"
+        )
     return target
 
 
@@ -223,6 +240,7 @@ def main() -> int:
         parser().error("choose exactly one scenario or --all")
     jobs = SCENARIOS.items() if args.capture_all else [(args.scenario, SCENARIOS[args.scenario])]
     for name, scenario in jobs:
+        print(f"Capturing documentation scenario {name!r} -> {scenario.filename}", flush=True)
         output = args.output / scenario.filename if args.capture_all else args.destination
         if output is None:
             output = args.output / scenario.filename

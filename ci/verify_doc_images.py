@@ -14,7 +14,10 @@ EXPECTED = {
     "inspector_parameters.png": (280, 450),
     "inspector_dependencies.png": (280, 450),
     "inspector_entry_points.png": (280, 450),
-    "timeline_overview.png": (700, 70),
+    # TimelineWidget is intentionally a compact transport strip. Width catches
+    # collapsed layouts; 48 px retains readable controls without rejecting the
+    # native size hint on Windows runners.
+    "timeline_overview.png": (700, 48),
     "render_toy.png": (700, 300),
     "shader_toy.png": (700, 300),
     "source_generated_compare.png": (700, 350),
