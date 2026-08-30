@@ -55,8 +55,8 @@ therefore combine dependency, parameter, resource, and time-sample identities wi
 making time part of authored source identity.
 
 The packaged `miskeyed.time` Slang module supplies `workbenchTime`; the compiler imports
-that standard host contract automatically. Built-in module registration is an edge of
-the Slang session, while project and user imports continue to use session search paths.
+that standard host contract automatically. An `ISlangFileSystem` edge supplies the packaged module to the Slang session, while project
+and user imports continue to use Slang session search paths.
 
 ## Merkle DAG rule
 

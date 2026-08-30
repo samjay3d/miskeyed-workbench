@@ -3,6 +3,7 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <miskeyed/workbench/core/TimeContext.h>
 #include <QDataStream>
+#include <QFile>
 #include "Qt68ShaderBridge.h"
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -10,9 +11,83 @@
 #include <QVector3D>
 #include <QVector4D>
 #include <algorithm>
+#include <atomic>
+#include <cstring>
 
 namespace miskeyed::workbench::slang_rhi {
 namespace {
+
+    bool sameUuid(const SlangUUID& lhs, const SlangUUID& rhs)
+    {
+        return std::memcmp(&lhs, &rhs, sizeof(SlangUUID)) == 0;
+    }
+
+    // Slang remains the module resolver. This filesystem edge only supplies packaged
+    // Workbench modules and delegates ordinary paths to the host filesystem; project
+    // search locations still come from SessionDesc.searchPaths.
+    class WorkbenchModuleFileSystem final : public ISlangFileSystem {
+    public:
+        explicit WorkbenchModuleFileSystem(QByteArray timeSource)
+            : m_timeSource(std::move(timeSource))
+        {
+        }
+
+        SlangResult SLANG_MCALL queryInterface(const SlangUUID& uuid, void** outObject) override
+        {
+            if (!outObject)
+                return SLANG_FAIL;
+            if (sameUuid(uuid, ISlangUnknown::getTypeGuid())
+                || sameUuid(uuid, ISlangCastable::getTypeGuid())
+                || sameUuid(uuid, ISlangFileSystem::getTypeGuid())) {
+                *outObject = static_cast<ISlangFileSystem*>(this);
+                addRef();
+                return SLANG_OK;
+            }
+            *outObject = nullptr;
+            return SLANG_E_NO_INTERFACE;
+        }
+        uint32_t SLANG_MCALL addRef() override { return ++m_refs; }
+        uint32_t SLANG_MCALL release() override
+        {
+            const uint32_t refs = --m_refs;
+            if (!refs)
+                delete this;
+            return refs;
+        }
+        void* SLANG_MCALL castAs(const SlangUUID& uuid) override
+        {
+            if (sameUuid(uuid, ISlangUnknown::getTypeGuid())
+                || sameUuid(uuid, ISlangCastable::getTypeGuid())
+                || sameUuid(uuid, ISlangFileSystem::getTypeGuid()))
+                return static_cast<ISlangFileSystem*>(this);
+            return nullptr;
+        }
+        SlangResult SLANG_MCALL loadFile(const char* path, ISlangBlob** outBlob) override
+        {
+            if (!path || !outBlob)
+                return SLANG_FAIL;
+            *outBlob = nullptr;
+            QByteArray bytes;
+            const QString fileName
+                = QString::fromUtf8(path).replace(QLatin1Char('\\'), QLatin1Char('/'));
+            if (fileName == QLatin1String("miskeyed/time.slang")) {
+                bytes = m_timeSource;
+            } else {
+                QFile file(QString::fromUtf8(path));
+                if (!file.open(QIODevice::ReadOnly))
+                    return SLANG_E_NOT_FOUND;
+                bytes = file.readAll();
+            }
+            if (bytes.isEmpty())
+                return SLANG_FAIL;
+            *outBlob = slang_createBlob(bytes.constData(), size_t(bytes.size()));
+            return *outBlob ? SLANG_OK : SLANG_FAIL;
+        }
+
+    private:
+        std::atomic<uint32_t> m_refs { 1 };
+        QByteArray m_timeSource;
+    };
 
     QString blobText(slang::IBlob* blob)
     {
@@ -318,23 +393,14 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     sessionDesc.searchPaths = searchPtrs.data();
     sessionDesc.searchPathCount = searchPtrs.size();
 
+    Slang::ComPtr<ISlangFileSystem> moduleFileSystem;
+    moduleFileSystem.attach(
+        new WorkbenchModuleFileSystem(workbenchModuleSource(QStringLiteral("time"))));
+    sessionDesc.fileSystem = moduleFileSystem.get();
+
     Slang::ComPtr<slang::ISession> session;
     if (SLANG_FAILED(d->global->createSession(sessionDesc, session.writeRef())) || !session) {
         result.diagnostics = QStringLiteral("Failed to create Slang session.");
-        return result;
-    }
-
-    // Register the packaged module in Slang's session, then let the ordinary `import
-    // miskeyed.time` in the small system contract resolve it. Project/user modules still
-    // resolve through SessionDesc.searchPaths; an ISlangFileSystem can replace this
-    // embedded-source edge later without changing authored shaders.
-    const QByteArray timeSource = workbenchModuleSource(QStringLiteral("time"));
-    Slang::ComPtr<slang::IBlob> moduleDiagnostics;
-    auto* timeModule = session->loadModuleFromSourceString("miskeyed.time", "miskeyed/time.slang",
-        timeSource.constData(), moduleDiagnostics.writeRef());
-    result.diagnostics += blobText(moduleDiagnostics);
-    if (!timeModule) {
-        result.diagnostics += QStringLiteral("Failed to load the built-in miskeyed.time module.\n");
         return result;
     }
 

@@ -50,9 +50,8 @@ private:
     bool m_playing = false;
 };
 
-// Names in the Workbench-owned shader contract. The declaration is currently part
-// of the small compiler contract; this boundary can be served by Slang's filesystem
-// hook when embedded modules move behind ISlangFileSystem.
+// Names in the Workbench-owned shader contract. The declaration is supplied by the
+// packaged `miskeyed.time` module through the compiler's Slang filesystem edge.
 struct TimeBinding final {
     static constexpr const char* time = "workbenchTime.time";
     static constexpr const char* deltaTime = "workbenchTime.deltaTime";

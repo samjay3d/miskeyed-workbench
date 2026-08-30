@@ -75,8 +75,9 @@ or render core.
 Workbench-owned `.slang` contracts are authored under `shaders/workbench`, embedded for
 wheel/application packaging, and loaded at the Slang session edge. `miskeyed.time` is a
 normal module consumed through Slang import resolution. Project/user module locations
-continue through `SessionDesc.searchPaths`; a future `ISlangFileSystem` can expose
-package-backed modules without changing `core` or inventing a second resolver.
+continue through `SessionDesc.searchPaths`. A small `ISlangFileSystem` edge exposes embedded
+Workbench sources while delegating ordinary paths to the host filesystem; Slang still owns
+module-name and search-path resolution.
 
 This organization establishes ownership boundaries only. It does not add a speculative
 mode interface, scene abstraction, animation system, or compatibility facade.
