@@ -97,6 +97,12 @@ vertex/fragment names, so two consumers may choose different entry points from t
 document without recompiling or copying it. The familiar `vsMain`/`psMain` names are only
 preferences when a consumer has not made an explicit selection.
 
+`RhiBackendPolicy` is host/workbench policy and is captured once when the viewport set is
+composed; Scene, Post, and Shader Toy therefore use the same QRhi API. This is orthogonal to
+session entry-point selection. The QShader bridge preserves authored names for reflection
+and consumer bindings while packaging the standardized executable entry name required by
+the SPIR-V backend.
+
 ### Time and deterministic evaluation
 
 `core::TimeValue` carries a floating-point coordinate and its units-per-second rate;

@@ -447,7 +447,6 @@ CompileResult SlangCompiler::compileProgram(const QString& source, const QString
     targets[1].format = SLANG_HLSL;
     targets[1].profile = d->global->findProfile("sm_5_0");
     targets[2].format = SLANG_METAL;
-    targets[2].profile = d->global->findProfile("metal_2_0");
     targets[3].format = SLANG_GLSL;
     targets[3].profile = d->global->findProfile("glsl_450");
     targets[4].format = SLANG_SPIRV_ASM;

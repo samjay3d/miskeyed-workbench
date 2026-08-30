@@ -13,6 +13,11 @@
         <enum-type name="LoopMode" />
         <object-type name="TimeTransport" />
        </namespace-type>
+       <namespace-type name="rendering">
+        <!-- Host backend selection is intentional public policy. GPU/QRhi implementation
+             details remain native. -->
+        <enum-type name="RhiBackend" />
+       </namespace-type>
        <namespace-type name="slang_rhi">
         <enum-type name="NodeKind" />
         <enum-type name="DirtyFlag" flags="yes" />

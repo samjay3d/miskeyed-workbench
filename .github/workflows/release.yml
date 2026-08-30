@@ -1,6 +1,6 @@
 name: release
 
-# Builds Windows binary wheels + an sdist on GitHub-hosted runners, and publishes them to
+# Builds Windows, Linux, and macOS binary wheels plus an sdist on GitHub-hosted runners, and publishes them to
 # PyPI via Trusted Publishing (OIDC — no stored tokens). Publishing is automatic: when a
 # version bump lands on `main` (the pyproject version isn't on PyPI yet), this run builds
 # and publishes, then records the `vX.Y.Z` tag + a GitHub Release. Pushing a `v*` tag by
@@ -13,7 +13,7 @@ name: release
 #   2. Repo -> Settings -> Environments -> create `pypi` and `testpypi`.
 #   3. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
 #
-# This project is Windows / Direct3D 11. macOS/Linux wheels are future work.
+# Windows wheels default to D3D11, Linux wheels to Vulkan, and macOS wheels to Metal.
 
 on:
     push:

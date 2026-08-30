@@ -237,6 +237,62 @@ jobs:
                   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                   sccache --show-stats
 
+            - name: Build native RHI smoke executable
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  cmake -S . -B build-rhi-smoke -G Ninja `
+                    -DCMAKE_BUILD_TYPE=Release `
+                    -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
+                    -DSLANG_ROOT="$env:SLANG_ROOT" `
+                    -DMISKEYED_WORKBENCH_BUILD_APP=ON `
+                    -DMISKEYED_WORKBENCH_BUILD_PYTHON=OFF `
+                    -DBUILD_TESTING=ON
+                  cmake --build build-rhi-smoke --parallel 2
+
+            - name: Run native contract tests
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  ctest --test-dir build-rhi-smoke --output-on-failure
+
+            - name: Smoke test QRhi D3D11
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  .\build-rhi-smoke\miskeyed-workbench.exe --rhi d3d11 --rhi-smoke-test
+
+            - name: Smoke test QRhi Vulkan
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: |
+                  # GitHub's Windows image ships Chrome's CPU Vulkan implementation.
+                  # Point the Vulkan loader at its ICD so this is deterministic and does
+                  # not depend on the hosted runner exposing a physical GPU.
+                  $icd = Get-ChildItem "C:\Program Files\Google\Chrome\Application" `
+                    -Filter vk_swiftshader_icd.json -Recurse -ErrorAction SilentlyContinue `
+                    | Select-Object -First 1
+                  if (-not $icd) { throw "Chrome SwiftShader Vulkan ICD was not found" }
+                  $manifest = Get-Content $icd.FullName -Raw | ConvertFrom-Json
+                  $driver = $manifest.ICD.library_path
+                  if (-not [IO.Path]::IsPathRooted($driver)) {
+                      $driver = Join-Path $icd.DirectoryName $driver
+                  }
+                  if (-not (Test-Path $driver)) { throw "SwiftShader driver not found: $driver" }
+                  $env:VK_DRIVER_FILES = $icd.FullName
+                  # VK_ICD_FILENAMES is the equivalent understood by older loaders.
+                  $env:VK_ICD_FILENAMES = $icd.FullName
+                  # Chrome's ICD manifest names vk_swiftshader.dll relatively. The
+                  # Windows Vulkan loader searches PATH (not necessarily the manifest's
+                  # directory), so make the ICD directory explicit.
+                  $env:PATH = "$([IO.Path]::GetDirectoryName($driver));$env:SLANG_ROOT\bin;$env:PATH"
+                  $env:QT_LOGGING_RULES = "qt.rhi.*=true"
+                  .\build-rhi-smoke\miskeyed-workbench.exe --rhi vulkan --rhi-smoke-test
+
             - name: Run tests
               shell: pwsh
               env:

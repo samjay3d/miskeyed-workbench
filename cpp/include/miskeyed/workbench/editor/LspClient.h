@@ -27,7 +27,7 @@ struct LspDiagnostic {
     QString message;
 };
 
-// A thin Language Server Protocol client that drives Slang's `slangd.exe` over stdio.
+// A thin Language Server Protocol client that drives Slang's `slangd` over stdio.
 // It speaks JSON-RPC framed with Content-Length headers, buffers requests until the
 // server has completed the `initialize` handshake, and surfaces the language features
 // (completion, hover, signature help, definition, live diagnostics) the editor needs.

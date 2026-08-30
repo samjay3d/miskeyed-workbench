@@ -66,8 +66,14 @@ bool RenderToySession::selectPostEntryPoints(const QString& vertex, const QStrin
 void RenderToySession::resolveEntryPoints()
 {
     auto resolve = [](ShaderDocument* document, QString& vertexName, QString& fragmentName) {
-        const auto* vertex = document ? document->findEntryPoint(ShaderStage::Vertex) : nullptr;
-        const auto* fragment = document ? document->findEntryPoint(ShaderStage::Fragment) : nullptr;
+        const auto* vertex
+            = document ? document->findEntryPoint(ShaderStage::Vertex, vertexName) : nullptr;
+        const auto* fragment
+            = document ? document->findEntryPoint(ShaderStage::Fragment, fragmentName) : nullptr;
+        if (!vertex && document)
+            vertex = document->findEntryPoint(ShaderStage::Vertex);
+        if (!fragment && document)
+            fragment = document->findEntryPoint(ShaderStage::Fragment);
         vertexName = vertex ? vertex->name : QString();
         fragmentName = fragment ? fragment->name : QString();
     };

@@ -43,7 +43,7 @@ int main(int argc, char** argv)
 
     workspace.session(generated)->cursorPosition = 73;
     workspace.session(generated)->verticalScroll = 240;
-    workspace.timeTransport()->seek(core::TimeValue(49.0, 24.0));
+    workspace.timeTransport()->seek(miskeyed::workbench::core::TimeValue(49.0, 24.0));
 
     generated->setSource(shaderToySource + QStringLiteral("\n// edited once"));
     assert(generated->dirty());
@@ -94,12 +94,25 @@ struct V { float4 position : SV_Position; };
     assert(shaderToy.bindShader(&arbitraryProgram));
     assert(shaderToy.selectEntryPoints(QStringLiteral("vertexMain"), QStringLiteral("debugMain")));
     assert(shaderToy.fragmentEntry() == QStringLiteral("debugMain"));
+    renderToy.bindScene(&arbitraryProgram);
+    assert(renderToy.selectSceneEntryPoints(
+        QStringLiteral("vertexMain"), QStringLiteral("imageMain")));
+    assert(renderToy.sceneDocument() == shaderToy.shaderDocument());
+    assert(renderToy.sceneFragmentEntry() == QStringLiteral("imageMain"));
+    assert(shaderToy.fragmentEntry() == QStringLiteral("debugMain"));
+    assert(renderToy.timeContext() == workspace.timeContext());
+    arbitraryProgram.setSource(arbitraryProgram.source() + QStringLiteral("\n// edit once"));
+    arbitraryProgram.compile();
+    shaderToy.resolveEntryPoints();
+    renderToy.resolveEntryPoints();
+    assert(renderToy.sceneFragmentEntry() == QStringLiteral("imageMain"));
+    assert(shaderToy.fragmentEntry() == QStringLiteral("debugMain"));
 
     ShaderDocument incompatible;
     incompatible.setSource(QStringLiteral("this is not a graphics program"));
     incompatible.compile();
     assert(!shaderToy.canBindShader(&incompatible));
     assert(!shaderToy.bindShader(&incompatible));
-    assert(shaderToy.shaderDocument() == scene);
+    assert(shaderToy.shaderDocument() == &arbitraryProgram);
     return 0;
 }

@@ -48,8 +48,14 @@ bool ShaderToySession::selectEntryPoints(const QString& vertex, const QString& f
 
 void ShaderToySession::resolveEntryPoints()
 {
-    const auto* vertex = m_shader ? m_shader->findEntryPoint(ShaderStage::Vertex) : nullptr;
-    const auto* fragment = m_shader ? m_shader->findEntryPoint(ShaderStage::Fragment) : nullptr;
+    const auto* vertex
+        = m_shader ? m_shader->findEntryPoint(ShaderStage::Vertex, m_vertexEntry) : nullptr;
+    const auto* fragment
+        = m_shader ? m_shader->findEntryPoint(ShaderStage::Fragment, m_fragmentEntry) : nullptr;
+    if (!vertex && m_shader)
+        vertex = m_shader->findEntryPoint(ShaderStage::Vertex);
+    if (!fragment && m_shader)
+        fragment = m_shader->findEntryPoint(ShaderStage::Fragment);
     const QString vertexName = vertex ? vertex->name : QString();
     const QString fragmentName = fragment ? fragment->name : QString();
     if (m_vertexEntry == vertexName && m_fragmentEntry == fragmentName)
