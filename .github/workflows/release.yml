@@ -114,6 +114,9 @@ jobs:
         needs: [detect, build-documentation]
         if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
+        concurrency:
+            group: documentation-publication
+            cancel-in-progress: false
         environment:
             name: documentation
         permissions:
@@ -138,7 +141,8 @@ jobs:
                       git -C publish rm -rf . >/dev/null 2>&1 || true
                   fi
                   python3 -m ci.publish_docs \
-                    --site generated-site --publish-tree publish --version "$VERSION"
+                    --site generated-site --publish-tree publish \
+                    --channel release --version "$VERSION"
                   test -f "publish/$VERSION/index.html"
                   grep -F "/$VERSION/" publish/index.html
             - name: Publish the generated site
@@ -165,6 +169,7 @@ jobs:
                   for attempt in $(seq 1 20); do
                       if page=$(curl --fail --silent --show-error --location "$url") && \
                          grep -F "Workbench $VERSION documentation" <<<"$page"; then
+                          echo "### [Published Release Documentation $VERSION]($url)" >> "$GITHUB_STEP_SUMMARY"
                           echo "Published documentation is live at $url"
                           exit 0
                       fi

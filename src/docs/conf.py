@@ -3,12 +3,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-version = metadata["version"]
+release = metadata["version"]
+version = ".".join(release.split(".")[:2])
 documentation_url = metadata["urls"]["Documentation"]
+development_url = f"{documentation_url}dev/"
 project = "Miskeyed Workbench"
 author = "Miskeyed Workbench contributors"
-release = version
-rst_epilog = f".. |workbench_release| replace:: {release}"
+rst_epilog = "\n".join(
+    (
+        f".. |workbench_release| replace:: {release}",
+        f".. |documentation_url| replace:: {documentation_url}",
+        f".. |development_url| replace:: {development_url}",
+    )
+)
 extensions = []
 source_suffix = ".rst"
 master_doc = "index"

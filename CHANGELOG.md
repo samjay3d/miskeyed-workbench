@@ -82,8 +82,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Linux/macOS by wheel success.
 - Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
   review-only release artifacts without publishing permissions.
-- Added read-only PR documentation previews and a trusted release gate that publishes
-  the validated site to the generated `docs` branch before TestPyPI/PyPI publication.
+- Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for
+  trusted `main`/`release/**` pushes, and a trusted release gate that publishes the
+  immutable versioned site before TestPyPI/PyPI publication.
 
 ## [0.2.1] — 2026-08-30
 

@@ -14,6 +14,8 @@ permissions:
 
 on:
     pull_request:
+    push:
+        branches: [main, "release/**"]
     workflow_dispatch:
 
 concurrency:
@@ -309,7 +311,7 @@ jobs:
                   QT_QPA_PLATFORM: offscreen
               run: python -m pytest tests/ -v
 
-            - name: Build reviewable documentation deployment
+            - name: Build Documentation Preview Artifact
               if: matrix.python-version == '3.11'
               shell: pwsh
               run: |
@@ -318,12 +320,77 @@ jobs:
                   python -m ci.build_docs --output "$siteRoot\site"
                   Set-Content -Path "$siteRoot\source-ref.txt" -Value "${{ github.head_ref }}"
 
-            - name: Upload reviewable documentation deployment
+            - name: Upload Documentation Preview Artifact
               if: matrix.python-version == '3.11'
               uses: actions/upload-artifact@v7
               with:
                   name: workbench-documentation
                   path: ${{ runner.temp }}/workbench-documentation
+
+    publish-dev-documentation:
+        name: Public Dev Documentation
+        needs: [changes, test]
+        if: >-
+            github.event_name == 'push' &&
+            needs.test.result == 'success' &&
+            (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+        runs-on: ubuntu-latest
+        concurrency:
+            group: documentation-publication
+            cancel-in-progress: false
+        environment:
+            name: documentation
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/download-artifact@v8
+              with:
+                  name: workbench-documentation
+                  path: documentation-preview
+            - name: Prepare mutable development documentation
+              run: |
+                  set -euo pipefail
+                  if git ls-remote --exit-code --heads origin docs >/dev/null 2>&1; then
+                      git fetch origin docs
+                      git worktree add -B docs publish origin/docs
+                  else
+                      git worktree add --detach publish
+                      git -C publish checkout --orphan docs
+                      git -C publish rm -rf . >/dev/null 2>&1 || true
+                  fi
+                  python3 -m ci.publish_docs \
+                    --site documentation-preview/site --publish-tree publish --channel dev
+                  test -f publish/dev/index.html
+            - name: Publish mutable development documentation
+              run: |
+                  set -euo pipefail
+                  git -C publish config user.name github-actions[bot]
+                  git -C publish config user.email 41898282+github-actions[bot]@users.noreply.github.com
+                  git -C publish add --all
+                  if git -C publish diff --cached --quiet; then
+                      echo "Development documentation is already current."
+                  else
+                      git -C publish commit -m "docs: update development documentation from $GITHUB_REF_NAME"
+                      git -C publish push origin docs
+                  fi
+            - name: Verify and summarize public development documentation
+              run: |
+                  set -euo pipefail
+                  url=$(python3 -m ci.docs_metadata --field development_url)
+                  version=$(python3 -m ci.docs_metadata --field version)
+                  for attempt in $(seq 1 20); do
+                      if page=$(curl --fail --silent --show-error --location "$url") && \
+                         grep -F "Workbench $version documentation" <<<"$page"; then
+                          echo "### [Public Dev Documentation]($url)" >> "$GITHUB_STEP_SUMMARY"
+                          echo "Published development documentation is live at $url"
+                          exit 0
+                      fi
+                      echo "Pages has not propagated yet (attempt $attempt/20); waiting 15 seconds."
+                      sleep 15
+                  done
+                  echo "Development documentation did not become public at $url" >&2
+                  exit 1
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having
@@ -331,7 +398,7 @@ jobs:
     ci:
         name: CI
         if: always()
-        needs: [changes, lint, anari-backend, test]
+        needs: [changes, lint, anari-backend, test, publish-dev-documentation]
         runs-on: ubuntu-latest
         steps:
             - name: Fail if any dependency failed

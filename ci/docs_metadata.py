@@ -21,6 +21,10 @@ def project_metadata(path: Path = PYPROJECT) -> tuple[str, str]:
     return version, docs_url
 
 
+def development_url(docs_url: str) -> str:
+    return f"{docs_url}dev/"
+
+
 def versioned_url(version: str, docs_url: str) -> str:
     return f"{docs_url}{version}/"
 
@@ -28,7 +32,9 @@ def versioned_url(version: str, docs_url: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--field", choices=("version", "documentation_url", "versioned_url"), required=True
+        "--field",
+        choices=("version", "documentation_url", "development_url", "versioned_url"),
+        required=True,
     )
     parser.add_argument("--version", help="Version override for versioned_url")
     args = parser.parse_args()
@@ -36,6 +42,7 @@ def main() -> int:
     values = {
         "version": version,
         "documentation_url": docs_url,
+        "development_url": development_url(docs_url),
         "versioned_url": versioned_url(args.version or version, docs_url),
     }
     print(values[args.field])
