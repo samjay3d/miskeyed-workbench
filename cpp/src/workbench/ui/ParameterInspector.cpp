@@ -3,10 +3,12 @@
 #include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QScrollArea>
+#include <QSizePolicy>
 #include <QSlider>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -151,9 +153,20 @@ namespace {
 ParameterInspector::ParameterInspector(QWidget* parent)
     : QWidget(parent)
 {
-    m_layout = new QVBoxLayout(this);
+    auto* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    m_scrollArea = new QScrollArea(this);
+    m_scrollArea->setObjectName(QStringLiteral("ParameterScrollArea"));
+    m_scrollArea->setWidgetResizable(true);
+    m_scrollArea->setFrameShape(QFrame::NoFrame);
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_contents = new QWidget(m_scrollArea);
+    m_contents->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::MinimumExpanding);
+    m_layout = new QVBoxLayout(m_contents);
     m_layout->setContentsMargins(6, 6, 6, 6);
     m_layout->setAlignment(Qt::AlignTop);
+    m_scrollArea->setWidget(m_contents);
+    outer->addWidget(m_scrollArea);
 }
 
 void ParameterInspector::setModel(ShaderParameterModel* model)
@@ -200,8 +213,8 @@ void ParameterInspector::rebuild()
         groups[group].append(row);
     }
     for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
-        auto* box
-            = new QGroupBox(it.key().isEmpty() ? QStringLiteral("Parameters") : it.key(), this);
+        auto* box = new QGroupBox(
+            it.key().isEmpty() ? QStringLiteral("Parameters") : it.key(), m_contents);
         auto* form = new QFormLayout(box);
         for (int row : it.value()) {
             const auto idx = m_model->index(row);

@@ -83,6 +83,8 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/ui/ParameterInspector.cpp
     cpp/src/workbench/ui/WorkbenchToolFactory.cpp
     cpp/src/workbench/ui/WorkbenchTheme.cpp
+    cpp/src/workbench/ui/TimelineWidget.cpp
+    cpp/src/workbench/ui/ToolViewSelector.cpp
     # Tool contributions and application theming remain independent from renderer policy.
     cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
     cpp/src/workbench/modes/render_toy/RenderToySession.cpp
@@ -93,6 +95,8 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
     cpp/include/miskeyed/workbench/ui/ParameterInspector.h
     cpp/include/miskeyed/workbench/ui/WorkbenchTheme.h
+    cpp/include/miskeyed/workbench/ui/TimelineWidget.h
+    cpp/include/miskeyed/workbench/ui/ToolViewSelector.h
     cpp/include/miskeyed/workbench/slang/ShaderDocument.h
     cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
     cpp/include/miskeyed/workbench/slang/SlangCompiler.h
@@ -171,12 +175,15 @@ if(BUILD_TESTING)
     add_executable(test_rhi_backend_policy tests/test_rhi_backend_policy.cpp)
     target_link_libraries(test_rhi_backend_policy PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME rhi_backend_policy COMMAND test_rhi_backend_policy)
+    add_executable(test_workbench_ui_hardening tests/test_workbench_ui_hardening.cpp)
+    target_link_libraries(test_workbench_ui_hardening PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME workbench_ui_hardening COMMAND test_workbench_ui_hardening)
 
     # These contract tests intentionally use assert(). Keep them active in Release CI;
     # otherwise the executables run without checking any of their invariants.
     foreach(_contract_test IN ITEMS test_viewport_camera test_shader_workspace
             test_time_context test_render_toy_contract test_shader_toy_contract test_shader_dependencies
-            test_rhi_backend_policy)
+            test_rhi_backend_policy test_workbench_ui_hardening)
         target_compile_options(${_contract_test} PRIVATE
             $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)

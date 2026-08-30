@@ -5,6 +5,8 @@
 #include <QWidget>
 
 class QVBoxLayout;
+class QScrollArea;
+class QWidget;
 
 namespace miskeyed::workbench::slang_rhi {
 
@@ -26,6 +28,8 @@ private slots:
 private:
     ShaderParameterModel* m_model = nullptr;
     QVBoxLayout* m_layout = nullptr;
+    QScrollArea* m_scrollArea = nullptr;
+    QWidget* m_contents = nullptr;
     QString m_groupFilter;
     bool m_includeGroup = true;
 };

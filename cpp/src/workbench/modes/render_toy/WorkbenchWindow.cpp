@@ -1,6 +1,8 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
 #include <miskeyed/workbench/ui/WorkbenchTheme.h>
+#include <miskeyed/workbench/ui/TimelineWidget.h>
+#include <miskeyed/workbench/ui/ToolViewSelector.h>
 #include <miskeyed/workbench/modes/render_toy/RenderToySession.h>
 #include <miskeyed/workbench/modes/shader_toy/ShaderToySession.h>
 #include <miskeyed/workbench/ui/ParameterInspector.h>
@@ -32,9 +34,6 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSplitter>
-#include <QSlider>
-#include <QDoubleSpinBox>
-#include <QElapsedTimer>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QStackedWidget>
@@ -46,7 +45,6 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QHeaderView>
-#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <QVector>
@@ -143,10 +141,7 @@ WorkbenchWindow::WorkbenchWindow(const QString& shaderPath, QWidget* parent)
         openShader(shaderPath);
 }
 
-WorkbenchWindow::~WorkbenchWindow()
-{
-    delete m_playbackClock;
-}
+WorkbenchWindow::~WorkbenchWindow() = default;
 
 ShaderDocument* WorkbenchWindow::focusedDocument() const
 {
@@ -167,10 +162,8 @@ void WorkbenchWindow::setActiveTool(const QString& toolId)
     const bool changed = m_activeTool != toolId;
     m_activeTool = toolId;
     m_toolStack->setCurrentWidget(it->surface);
-    for (const ToolContribution& tool : std::as_const(m_toolContributions)) {
-        if (tool.selector)
-            tool.selector->setChecked(tool.id == toolId);
-    }
+    if (m_toolSelector)
+        m_toolSelector->setCurrentView(toolId);
     updateDocumentTabs();
     if (changed)
         emit activeToolChanged(toolId);
@@ -187,7 +180,7 @@ bool WorkbenchWindow::registerTool(
         return false;
 
     m_toolStack->addWidget(contributionSurface);
-    m_toolContributions.push_back({ toolId, title, contributionSurface, nullptr, {}, {} });
+    m_toolContributions.push_back({ toolId, title, contributionSurface, {}, {} });
     rebuildToolSelector();
     if (m_activeTool.isEmpty())
         setActiveTool(toolId);
@@ -258,22 +251,12 @@ void WorkbenchWindow::setToolSummaryProvider(
 
 void WorkbenchWindow::rebuildToolSelector()
 {
-    if (!m_toolSelectorLayout)
+    if (!m_toolSelector)
         return;
-    while (QLayoutItem* item = m_toolSelectorLayout->takeAt(1)) {
-        if (QWidget* widget = item->widget())
-            widget->deleteLater();
-        delete item;
-    }
-    for (ToolContribution& tool : m_toolContributions) {
-        auto* button = new QPushButton(tool.title, m_toolSelectorLayout->parentWidget());
-        button->setCheckable(true);
-        button->setAutoExclusive(true);
-        button->setChecked(tool.id == m_activeTool);
-        connect(button, &QPushButton::clicked, this, [this, id = tool.id] { setActiveTool(id); });
-        m_toolSelectorLayout->addWidget(button);
-        tool.selector = button;
-    }
+    m_toolSelector->clear();
+    for (const ToolContribution& tool : std::as_const(m_toolContributions))
+        m_toolSelector->addView(tool.id, tool.title);
+    m_toolSelector->setCurrentView(m_activeTool);
 }
 
 void WorkbenchWindow::buildUi()
@@ -282,9 +265,6 @@ void WorkbenchWindow::buildUi()
     resize(1600, 950);
     m_renderToySession = new RenderToySession(this);
     m_shaderToySession = new ShaderToySession(this);
-    m_playbackTimer = new QTimer(this);
-    m_playbackTimer->setTimerType(Qt::PreciseTimer);
-    m_playbackClock = new QElapsedTimer;
     m_workspace = new ShaderWorkspace(this);
     m_timeContext = m_workspace->timeContext();
     m_timeTransport = m_workspace->timeTransport();
@@ -412,7 +392,7 @@ void WorkbenchWindow::buildUi()
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
     m_diagTabIndex = tabs->addTab(compilationPanel, QStringLiteral("Compilation"));
     m_tabs = tabs;
-    tabs->setMinimumWidth(380);
+    tabs->setMinimumWidth(280);
     inspectorLayout->addWidget(tabs, 1);
 
     auto* editorBox = new QWidget(this);
@@ -420,115 +400,9 @@ void WorkbenchWindow::buildUi()
     ev->setContentsMargins(0, 0, 0, 0);
     ev->setSpacing(2);
 
-    auto* timeline = new QWidget(editorBox);
-    timeline->setObjectName(QStringLiteral("Timeline"));
-    auto* th = new QHBoxLayout(timeline);
-    th->setContentsMargins(8, 3, 8, 3);
-    auto transportButton = [timeline, th](const QString& text, const QString& tip) {
-        auto* button = new QPushButton(text, timeline);
-        button->setToolTip(tip);
-        button->setFixedWidth(34);
-        th->addWidget(button);
-        return button;
-    };
-    auto* firstFrame = transportButton(QStringLiteral("|<"), QStringLiteral("First frame"));
-    auto* previousFrame = transportButton(QStringLiteral("<"), QStringLiteral("Previous frame"));
-    auto* playPause = transportButton(QStringLiteral("▶"), QStringLiteral("Play / pause"));
-    auto* nextFrame = transportButton(QStringLiteral(">"), QStringLiteral("Next frame"));
-    auto* lastFrame = transportButton(QStringLiteral(">|"), QStringLiteral("Last frame"));
-    auto* frameSpin = new QDoubleSpinBox(timeline);
-    auto* startSpin = new QDoubleSpinBox(timeline);
-    auto* endSpin = new QDoubleSpinBox(timeline);
-    auto* fpsSpin = new QDoubleSpinBox(timeline);
-    auto* timeLabel = new QLabel(timeline);
-    auto* frameSlider = new QSlider(Qt::Horizontal, timeline);
-    for (QDoubleSpinBox* spin : { frameSpin, startSpin, endSpin }) {
-        spin->setRange(-1000000, 1000000);
-        spin->setDecimals(3);
-        spin->setSingleStep(1.0);
-    }
-    auto syncTransportRange = [this, frameSpin, frameSlider, startSpin, endSpin, fpsSpin] {
-        QSignalBlocker frameBlock(frameSpin);
-        QSignalBlocker sliderBlock(frameSlider);
-        QSignalBlocker startBlock(startSpin);
-        QSignalBlocker endBlock(endSpin);
-        QSignalBlocker fpsBlock(fpsSpin);
-        const double start = m_timeTransport->startValue();
-        const double end = m_timeTransport->endValue();
-        frameSpin->setRange(start, end);
-        frameSlider->setRange(qFloor(start), qCeil(end));
-        startSpin->setValue(start);
-        endSpin->setValue(end);
-        fpsSpin->setValue(m_timeTransport->rate());
-    };
-    fpsSpin->setRange(0.001, 1000.0);
-    fpsSpin->setDecimals(3);
-    syncTransportRange();
-    th->addWidget(new QLabel(QStringLiteral("Frame"), timeline));
-    th->addWidget(frameSpin);
-    th->addWidget(timeLabel);
-    th->addWidget(new QLabel(QStringLiteral("FPS"), timeline));
-    th->addWidget(fpsSpin);
-    th->addWidget(new QLabel(QStringLiteral("Range"), timeline));
-    th->addWidget(startSpin);
-    th->addWidget(new QLabel(QStringLiteral("to"), timeline));
-    th->addWidget(endSpin);
-    th->addWidget(frameSlider, 1);
+    m_timeline = new miskeyed::workbench::ui::TimelineWidget(editorBox);
+    m_timeline->setTimeModel(m_timeContext, m_timeTransport);
 
-    connect(firstFrame, &QPushButton::clicked, this, [this] {
-        m_timeTransport->seek(
-            core::TimeValue(m_timeTransport->startValue(), m_timeTransport->rate()));
-    });
-    connect(previousFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(-1.0); });
-    connect(nextFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(1.0); });
-    connect(lastFrame, &QPushButton::clicked, this, [this] {
-        m_timeTransport->seek(
-            core::TimeValue(m_timeTransport->endValue(), m_timeTransport->rate()));
-    });
-    connect(playPause, &QPushButton::clicked, this,
-        [this] { m_timeTransport->setPlaying(!m_timeTransport->playing()); });
-    connect(frameSpin, &QDoubleSpinBox::valueChanged, this, [this](double frame) {
-        m_timeTransport->seek(core::TimeValue(frame, m_timeTransport->rate()));
-    });
-    connect(frameSlider, &QSlider::valueChanged, this, [this](int frame) {
-        m_timeTransport->seek(core::TimeValue(double(frame), m_timeTransport->rate()));
-    });
-    connect(fpsSpin, &QDoubleSpinBox::valueChanged, m_timeTransport, &core::TimeTransport::setRate);
-    auto setRange = [this, startSpin, endSpin] {
-        m_timeTransport->setPlaybackRange(
-            core::TimeValue(startSpin->value(), m_timeTransport->rate()),
-            core::TimeValue(endSpin->value(), m_timeTransport->rate()));
-    };
-    connect(startSpin, &QDoubleSpinBox::valueChanged, this, setRange);
-    connect(endSpin, &QDoubleSpinBox::valueChanged, this, setRange);
-    connect(m_timeTransport, &core::TimeTransport::playingChanged, this,
-        [this, playPause](bool playing) {
-            playPause->setText(playing ? QStringLiteral("❚❚") : QStringLiteral("▶"));
-            if (playing) {
-                m_playbackClock->restart();
-                m_playbackTimer->start(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
-            } else {
-                m_playbackTimer->stop();
-            }
-        });
-    connect(m_playbackTimer, &QTimer::timeout, this, [this] {
-        const double elapsedSeconds = double(m_playbackClock->restart()) / 1000.0;
-        m_timeTransport->advanceSeconds(elapsedSeconds);
-    });
-    connect(m_timeTransport, &core::TimeTransport::playbackChanged, this, syncTransportRange);
-    connect(m_timeContext, &core::TimeContext::changed, this,
-        [this, frameSpin, frameSlider, timeLabel] {
-            QSignalBlocker frameBlock(frameSpin);
-            QSignalBlocker sliderBlock(frameSlider);
-            frameSpin->setValue(m_timeContext->timeValue());
-            frameSlider->setValue(qRound(m_timeContext->timeValue()));
-            timeLabel->setText(
-                QStringLiteral("Time %1 s").arg(m_timeContext->timeSeconds(), 0, 'f', 3));
-            if (m_timeTransport->playing())
-                m_playbackTimer->setInterval(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
-            updateDocumentTabs();
-        });
-    timeLabel->setText(QStringLiteral("Time 0.000 s"));
     auto* modeBar = new QWidget(editorBox);
     modeBar->setObjectName(QStringLiteral("EditorStatusBar"));
     auto* modeActions = new QHBoxLayout(modeBar);
@@ -544,7 +418,7 @@ void WorkbenchWindow::buildUi()
     ev->addWidget(modeBar);
     ev->addWidget(m_workspaceEditor, 1);
     // Transport remains in the shared shell while the tool surface above changes.
-    ev->addWidget(timeline);
+    ev->addWidget(m_timeline);
 
     auto* documentWorkspace = new QSplitter(Qt::Vertical, this);
     documentWorkspace->addWidget(m_toolStack);
@@ -569,14 +443,11 @@ void WorkbenchWindow::buildUi()
 
     auto* tb = addToolBar(QStringLiteral("Shader"));
     tb->setMovable(false);
-    auto* toolSelector = new QWidget(tb);
-    toolSelector->setObjectName(QStringLiteral("ToolSelector"));
-    m_toolSelectorLayout = new QHBoxLayout(toolSelector);
-    m_toolSelectorLayout->setContentsMargins(2, 2, 8, 2);
-    m_toolSelectorLayout->setSpacing(0);
-    m_toolSelectorLayout->addWidget(new QLabel(QStringLiteral("Workspace"), toolSelector));
+    m_toolSelector = new miskeyed::workbench::ui::ToolViewSelector(tb);
+    connect(m_toolSelector, &miskeyed::workbench::ui::ToolViewSelector::viewSelected, this,
+        &WorkbenchWindow::setActiveTool);
     rebuildToolSelector();
-    tb->addWidget(toolSelector);
+    tb->addWidget(m_toolSelector);
     tb->addSeparator();
     auto* open = tb->addAction(QStringLiteral("Open"));
     open->setShortcut(QKeySequence::Open);
@@ -663,6 +534,7 @@ void WorkbenchWindow::buildUi()
 
 void WorkbenchWindow::connectUi()
 {
+    connect(m_timeContext, &core::TimeContext::changed, this, [this] { updateDocumentTabs(); });
     connect(m_workspaceEditor, &WorkspaceEditor::sourceEdited, this,
         [this](ShaderDocument*, const QString&) { setCompileState(CompileState::Dirty); });
 

@@ -7,7 +7,6 @@
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPushButton>
 #include <QSignalBlocker>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -19,10 +18,9 @@ namespace {
         QComboBox* binding;
         QComboBox* vertex;
         QComboBox* fragment;
-        QPushButton* bind;
     };
 
-    Panel panel(QWidget* parent, const QString& name, const QString& action, QWidget* viewport)
+    Panel panel(QWidget* parent, const QString& name, QWidget* viewport)
     {
         auto* surface = new QWidget(parent);
         auto* column = new QVBoxLayout(surface);
@@ -38,8 +36,6 @@ namespace {
         auto* binding = new QComboBox(header);
         row->addWidget(binding, 1);
         row->addWidget(new QLabel(QStringLiteral("linked"), header));
-        auto* bind = new QPushButton(action, header);
-        row->addWidget(bind);
         auto* vertex = new QComboBox(header);
         vertex->setToolTip(QStringLiteral("Selected vertex entry point"));
         auto* fragment = new QComboBox(header);
@@ -50,7 +46,7 @@ namespace {
         row->addWidget(fragment);
         column->addWidget(header);
         column->addWidget(viewport, 1);
-        return { surface, binding, vertex, fragment, bind };
+        return { surface, binding, vertex, fragment };
     }
 
     void repopulateEntryPoints(
@@ -93,19 +89,13 @@ namespace {
             , m_workspace(workspace)
             , m_session(session)
         {
-            const Panel scene = panel(parent, QStringLiteral("Scene"),
-                QStringLiteral("Use focused as Scene"), sceneViewport);
-            const Panel post = panel(parent, QStringLiteral("Post"),
-                QStringLiteral("Use focused as Post"), postViewport);
+            const Panel scene = panel(parent, QStringLiteral("Scene"), sceneViewport);
+            const Panel post = panel(parent, QStringLiteral("Post"), postViewport);
             m_scene = scene.binding;
             m_post = post.binding;
             scene.surface->setObjectName(QStringLiteral("RenderToySceneView"));
             post.surface->setObjectName(QStringLiteral("RenderToyPostView"));
             m_views = { scene.surface, post.surface };
-            connect(scene.bind, &QPushButton::clicked, this,
-                [this] { m_session->bindScene(m_workspace->focusedDocument()); });
-            connect(post.bind, &QPushButton::clicked, this,
-                [this] { m_session->bindPost(m_workspace->focusedDocument()); });
             connect(m_scene, QOverload<int>::of(&QComboBox::activated), this,
                 [this](int i) { m_session->bindScene(m_workspace->documentAt(i)); });
             connect(m_post, QOverload<int>::of(&QComboBox::activated), this,
@@ -195,14 +185,11 @@ namespace {
             , m_workspace(workspace)
             , m_session(session)
         {
-            const Panel p = panel(parent, QStringLiteral("ShaderToy"),
-                QStringLiteral("Use focused document"), viewport);
+            const Panel p = panel(parent, QStringLiteral("ShaderToy"), viewport);
             p.surface->setObjectName(QStringLiteral("ShaderToyView"));
             m_views = { p.surface };
             m_binding = p.binding;
             m_panel = p;
-            connect(p.bind, &QPushButton::clicked, this,
-                [this] { m_session->bindShader(m_workspace->focusedDocument()); });
             connect(m_binding, QOverload<int>::of(&QComboBox::activated), this, [this](int i) {
                 m_session->bindShader(
                     m_binding->itemData(i, Qt::UserRole).value<ShaderDocument*>());

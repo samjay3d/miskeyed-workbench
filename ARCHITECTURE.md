@@ -75,6 +75,13 @@ views around a still-live runtime session, and the shell only enumerates contrib
 The current selector swaps layout presets containing those views; it does not activate or
 destroy sessions. A studio can provide contributions from its own composition root.
 
+`ToolViewSelector` presents those layout presets through one compact combo box, so adding
+contributions does not widen the global toolbar. `TimelineWidget` presents the shared time
+model as a transport/readout row plus a temporal ruler/scrubber row; it owns only the UI
+clock adapter, never the `TimeContext` or `TimeTransport`. `ParameterInspector` places its
+generated controls in a widget-resizable scroll area so reflection size does not impose a
+minimum height on the Workbench shell.
+
 The right-hand inspector is a single active-document surface: Parameters, Resources,
 Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
 change workspace focus to the document currently bound to that pass; Render Toy binding

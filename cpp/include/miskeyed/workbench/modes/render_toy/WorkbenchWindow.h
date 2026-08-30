@@ -15,15 +15,17 @@ class QTabWidget;
 class QTabBar;
 class QStackedWidget;
 class QSplitter;
-class QTimer;
 class QTreeWidget;
 class QLabel;
-class QElapsedTimer;
-class QHBoxLayout;
 
 namespace miskeyed::workbench::core {
 class TimeContext;
 class TimeTransport;
+}
+
+namespace miskeyed::workbench::ui {
+class TimelineWidget;
+class ToolViewSelector;
 }
 
 namespace miskeyed::workbench::slang_rhi {
@@ -115,12 +117,12 @@ private:
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
     ShaderWorkspace* m_workspace = nullptr;
     QStackedWidget* m_toolStack = nullptr;
-    QHBoxLayout* m_toolSelectorLayout = nullptr;
+    miskeyed::workbench::ui::ToolViewSelector* m_toolSelector = nullptr;
+    miskeyed::workbench::ui::TimelineWidget* m_timeline = nullptr;
     struct ToolContribution final {
         QString id;
         QString title;
         QWidget* surface = nullptr;
-        QPushButton* selector = nullptr;
         QString status;
         std::function<QString()> summary;
     };
@@ -129,8 +131,6 @@ private:
     ShaderToySession* m_shaderToySession = nullptr;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     miskeyed::workbench::core::TimeTransport* m_timeTransport = nullptr;
-    QTimer* m_playbackTimer = nullptr;
-    QElapsedTimer* m_playbackClock = nullptr;
     bool m_syncing = false; // guards camera mirroring re-entrancy
     LspClient* m_lsp = nullptr; // Slang language server (slangd)
     QHash<QString, QList<LspDiagnostic>> m_diagnosticsByUri; // last diagnostics per document
