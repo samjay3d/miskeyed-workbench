@@ -65,6 +65,7 @@ and QRhi resources all remain native.
 pip install miskeyed-workbench
 workbench                 # launch the standalone app
 workbench eye.slang       # open a shader on start
+uvx miskeyed-workbench    # one-shot launch
 ```
 
 Then just start typing in the shader panel — edits recompile and re-render live.

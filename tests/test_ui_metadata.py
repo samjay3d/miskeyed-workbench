@@ -95,6 +95,21 @@ def test_uniform_without_metadata_uses_defaults(app):
     assert not _value(model, "plain", Role.WidgetRole)
 
 
+def test_metadata_only_edit_live_updates_parameter_model(app):
+    doc = ShaderDocument()
+    doc.setSource(SHADER)
+    doc.compile()
+
+    model = doc.parameters()
+    Role = ShaderParameterModel.Role
+    assert _value(model, "camFov", Role.LabelRole) == "Field of View (deg)"
+
+    doc.setSource(SHADER.replace('UIName("Field of View")', 'UIName("Lens Angle")'))
+    doc.compile()
+
+    assert _value(model, "camFov", Role.LabelRole) == "Lens Angle (deg)"
+
+
 def test_app_icon_available(app):
     # Cheap smoke check that the package resources ship with the wheel.
     assert not workbench.app_icon().isNull()
