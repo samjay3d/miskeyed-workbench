@@ -148,9 +148,11 @@ void WorkbenchWindow::buildUi()
             QString::fromUtf8(postShaderSource()));
 
     m_sceneViewport = new SlangRhiWidget(this);
+    m_sceneViewport->setObjectName(QStringLiteral("SceneViewport"));
     m_sceneViewport->setTimeContext(m_timeContext);
     m_sceneViewport->setDocument(m_sceneDocument);
     m_viewport = new SlangRhiWidget(this);
+    m_viewport->setObjectName(QStringLiteral("PostViewport"));
     m_viewport->setTimeContext(m_timeContext);
     m_viewport->setDocument(m_document);
     // The post viewport runs a real two-pass pipeline: it renders the scene document into
@@ -161,18 +163,8 @@ void WorkbenchWindow::buildUi()
     m_editor->setFont(monospaceFont());
     new ShaderHighlighter(m_editor->document());
 
-    auto* cameraInspector = new ParameterInspector(this);
-    m_cameraInspector = cameraInspector;
-    cameraInspector->setGroupFilter(QStringLiteral("Camera"), true);
-    cameraInspector->setModel(m_sceneDocument->parameters());
-    auto* sceneInspector = new ParameterInspector(this);
-    m_sceneInspector = sceneInspector;
-    sceneInspector->setGroupFilter(QStringLiteral("Camera"), false);
-    sceneInspector->setModel(m_sceneDocument->parameters());
-    auto* postInspector = new ParameterInspector(this);
-    m_postInspector = postInspector;
-    postInspector->setGroupFilter(QStringLiteral("Camera"), false);
-    postInspector->setModel(m_document->parameters());
+    m_parameterInspector = new ParameterInspector(this);
+    m_parameterInspector->setObjectName(QStringLiteral("ActiveDocumentParameters"));
     m_diagnostics = new QPlainTextEdit(this);
     m_diagnostics->setReadOnly(true);
     m_diagnostics->setFont(monospaceFont(10));
@@ -226,23 +218,41 @@ void WorkbenchWindow::buildUi()
         "draws on top. Click this viewport to focus the Post-bound document tab below.\n"
         "Camera drag here still moves the shared scene camera."));
 
-    auto* tabs = new QTabWidget(this);
-    tabs->addTab(cameraInspector, QStringLiteral("Camera"));
-    tabs->addTab(sceneInspector, QStringLiteral("Scene"));
-    tabs->addTab(postInspector, QStringLiteral("Post"));
+    auto* inspector = new QWidget(this);
+    inspector->setObjectName(QStringLiteral("InspectorPanel"));
+    auto* inspectorLayout = new QVBoxLayout(inspector);
+    inspectorLayout->setContentsMargins(0, 0, 0, 0);
+    inspectorLayout->setSpacing(0);
+    auto* inspectorHeader = new QWidget(inspector);
+    inspectorHeader->setObjectName(QStringLiteral("InspectorHeader"));
+    auto* inspectorHeaderLayout = new QVBoxLayout(inspectorHeader);
+    inspectorHeaderLayout->setContentsMargins(10, 7, 10, 7);
+    inspectorHeaderLayout->setSpacing(2);
+    m_inspectorDocument = new QLabel(inspectorHeader);
+    m_inspectorDocument->setObjectName(QStringLiteral("InspectorDocument"));
+    m_inspectorContext = new QLabel(inspectorHeader);
+    m_inspectorContext->setObjectName(QStringLiteral("InspectorContext"));
+    inspectorHeaderLayout->addWidget(m_inspectorDocument);
+    inspectorHeaderLayout->addWidget(m_inspectorContext);
+    inspectorLayout->addWidget(inspectorHeader);
+
+    auto* resources = new QPlainTextEdit(inspector);
+    resources->setReadOnly(true);
+    resources->setPlainText(QStringLiteral(
+        "No reflected resources in this document.\n\nTextures, samplers, and buffers will appear "
+        "here when resource reflection is exposed by the document model."));
+
+    auto* tabs = new QTabWidget(inspector);
+    tabs->setObjectName(QStringLiteral("ActiveDocumentInspector"));
+    tabs->addTab(m_parameterInspector, QStringLiteral("Parameters"));
+    tabs->addTab(resources, QStringLiteral("Resources"));
     // Reflection belongs in the inspector. Source and generated text are editor views,
     // not permanent inspector panels.
     tabs->addTab(dependencyPanel, QStringLiteral("Dependencies"));
     m_diagTabIndex = tabs->addTab(m_diagnostics, QStringLiteral("Compile"));
     m_tabs = tabs;
     tabs->setMinimumWidth(380);
-
-    auto* upper = new QSplitter(Qt::Horizontal, this);
-    upper->addWidget(views);
-    upper->addWidget(tabs);
-    upper->setStretchFactor(0, 4);
-    upper->setStretchFactor(1, 1);
-    upper->setSizes({ 1220, 380 });
+    inspectorLayout->addWidget(tabs, 1);
 
     auto* editorBox = new QWidget(this);
     auto* ev = new QVBoxLayout(editorBox);
@@ -295,7 +305,6 @@ void WorkbenchWindow::buildUi()
     th->addWidget(new QLabel(QStringLiteral("to"), timeline));
     th->addWidget(endSpin);
     th->addWidget(frameSlider, 1);
-    ev->addWidget(timeline);
 
     connect(firstFrame, &QPushButton::clicked, this, [this] {
         m_timeTransport->seek(
@@ -452,15 +461,30 @@ void WorkbenchWindow::buildUi()
     ev->addWidget(editorBar);
     ev->addWidget(documentBar);
     ev->addWidget(editorSplit, 1);
+    // Transport is a persistent controller for the active Render Toy evaluation,
+    // independent of whichever authoring document currently has focus.
+    ev->addWidget(timeline);
     setEditorView(0);
 
-    auto* root = new QSplitter(Qt::Vertical, this);
-    root->addWidget(upper);
-    root->addWidget(editorBox);
-    root->setStretchFactor(0, 3);
-    root->setStretchFactor(1, 2);
+    auto* documentWorkspace = new QSplitter(Qt::Vertical, this);
+    documentWorkspace->addWidget(views);
+    documentWorkspace->addWidget(editorBox);
+    documentWorkspace->setStretchFactor(0, 3);
+    documentWorkspace->setStretchFactor(1, 2);
+
+    // The inspector spans result and editor surfaces because it describes the focused
+    // document, not either viewport or either Render Toy binding.
+    auto* root = new QSplitter(Qt::Horizontal, this);
+    root->addWidget(documentWorkspace);
+    root->addWidget(inspector);
+    root->setStretchFactor(0, 4);
+    root->setStretchFactor(1, 1);
+    root->setSizes({ 1220, 380 });
     setCentralWidget(root);
     setStatusBar(new QStatusBar(this));
+    m_bindingSummary = new QLabel(statusBar());
+    m_bindingSummary->setObjectName(QStringLiteral("BindingSummary"));
+    statusBar()->addWidget(m_bindingSummary, 1);
 
     auto* tb = addToolBar(QStringLiteral("Shader"));
     tb->setMovable(false);
@@ -585,11 +609,10 @@ void WorkbenchWindow::connectUi()
             m_sceneViewport->setDocument(scene);
             m_viewport->setScenePass(scene);
             m_viewport->setDocument(post);
-            if (scene)
-                m_cameraInspector->setModel(scene->parameters());
-            m_sceneInspector->setModel(scene->parameters());
-            if (post)
-                m_postInspector->setModel(post->parameters());
+            // Binding changes affect rendering only. The inspector continues to follow
+            // workspace focus, even when another document is bound behind the scenes.
+            if (m_editorDoc)
+                setFocusedDocument(m_editorDoc);
             updateDocumentTabs();
         });
 
@@ -689,6 +712,18 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
     if (!document)
         return;
     m_editorDoc = document;
+    m_parameterInspector->setModel(document->parameters());
+    const ShaderRole role = m_workspace->role(document);
+    const bool boundScene = document == m_workspace->activeSceneDocument();
+    const bool boundPost = document == m_workspace->activePostDocument();
+    const QString roleName = role == ShaderRole::Scene ? QStringLiteral("Scene document")
+        : role == ShaderRole::Post                     ? QStringLiteral("Post document")
+                                                       : QStringLiteral("Generic document");
+    const QString binding = boundScene ? QStringLiteral(" · bound as Scene")
+        : boundPost                    ? QStringLiteral(" · bound as Post")
+                                       : QStringLiteral(" · not bound");
+    m_inspectorDocument->setText(m_workspace->displayName(document));
+    m_inspectorContext->setText(roleName + binding);
     m_editor->blockSignals(true);
     m_editor->setPlainText(m_editorDoc->source());
     m_editor->blockSignals(false);
@@ -700,9 +735,29 @@ void WorkbenchWindow::setFocusedDocument(ShaderDocument* document)
         m_editor->setDiagnostics(m_diagnosticsByUri.value(uri));
     }
     recountDiagnostics();
+    m_lastCompileOk = m_editorDoc->compileSucceeded();
     setCompileState(m_lastCompileOk ? (m_editorWarnings > 0 ? CompileState::Warn : CompileState::Ok)
                                     : CompileState::Error);
     reloadGeneratedTargets();
+    if (role == ShaderRole::Generic) {
+        m_bindDocument->setText(QStringLiteral("Generic document"));
+        m_bindDocument->setEnabled(false);
+    } else if (boundScene || boundPost) {
+        m_bindDocument->setText(
+            boundScene ? QStringLiteral("Bound as Scene") : QStringLiteral("Bound as Post"));
+        m_bindDocument->setEnabled(false);
+    } else {
+        m_bindDocument->setText(role == ShaderRole::Scene ? QStringLiteral("Use as Scene")
+                                                          : QStringLiteral("Use as Post"));
+        m_bindDocument->setEnabled(true);
+    }
+    auto markViewportActive = [](QWidget* viewport, bool active) {
+        viewport->setProperty("documentFocus", active);
+        viewport->style()->unpolish(viewport);
+        viewport->style()->polish(viewport);
+    };
+    markViewportActive(m_sceneViewport, boundScene);
+    markViewportActive(m_viewport, boundPost);
     updateDocumentTabs();
 }
 
@@ -734,6 +789,11 @@ void WorkbenchWindow::updateDocumentTabs()
                 + suffix);
         if (doc == m_editorDoc)
             m_documentTabs->setCurrentIndex(i);
+    }
+    if (m_bindingSummary) {
+        const QString scene = m_workspace->displayName(m_workspace->activeSceneDocument());
+        const QString post = m_workspace->displayName(m_workspace->activePostDocument());
+        m_bindingSummary->setText(QStringLiteral("Scene: %1    ·    Post: %2").arg(scene, post));
     }
 }
 
@@ -994,6 +1054,14 @@ void WorkbenchWindow::applyTheme()
         }
         QLabel#PanelHeaderInline { color: #e6e6e6; font-weight: 600; padding-right: 6px; }
         QLabel#HintLabel { color: #7f8794; padding-left: 12px; }
+        QWidget#InspectorPanel { border-left: 1px solid #2f323b; }
+        QWidget#InspectorHeader { background: #1d1f25; border-bottom: 1px solid #2f323b; }
+        QLabel#InspectorDocument { color: #e6e6e6; font-weight: 600; }
+        QLabel#InspectorContext { color: #9aa0ac; }
+        QLabel#BindingSummary { color: #aab0bc; padding-left: 8px; }
+        #SceneViewport[documentFocus="true"], #PostViewport[documentFocus="true"] {
+            border: 2px solid #7c5ce7;
+        }
         QWidget#DocumentViewBar {
             background: #22242b; border-top: 1px solid #2f323b;
             border-bottom: 1px solid #2f323b;

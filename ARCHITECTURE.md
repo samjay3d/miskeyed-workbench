@@ -49,6 +49,15 @@ and dirty state; selecting any node resolves its current payload from the graph.
 project files are watched, so editing an imported module recompiles the document and
 updates the same graph and inspector in place.
 
+The right-hand inspector is a single active-document surface: Parameters, Resources,
+Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
+change workspace focus to the document currently bound to that pass; Render Toy binding
+changes never directly select an inspector model. This keeps focused document, editor,
+and inspector as one state while Scene/Post remain separate runtime bindings. The
+inspector spans the viewport and editor region, and the shared transport sits at the
+bottom of the document workspace as a controller of Render Toy evaluation rather than a
+property of any shader tab.
+
 ### Time and deterministic evaluation
 
 `core::TimeValue` carries a floating-point coordinate and its units-per-second rate;

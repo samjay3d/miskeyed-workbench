@@ -139,6 +139,7 @@ void ShaderDocument::compileNow()
     QElapsedTimer timer;
     timer.start();
     const CompileResult r = m_compiler.compileFullscreen(m_source, virtualPath);
+    m_compileSucceeded = r.ok;
     m_lastCompileMs = int(timer.elapsed());
     m_compiling = false;
     emit compilingChanged();

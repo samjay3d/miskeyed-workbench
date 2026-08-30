@@ -16,6 +16,7 @@ class QStackedWidget;
 class QSplitter;
 class QTimer;
 class QTreeWidget;
+class QLabel;
 
 namespace miskeyed::workbench::core {
 class TimeContext;
@@ -45,6 +46,8 @@ public:
     SlangRhiWidget* sceneViewport() const { return m_sceneViewport; }
     miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
     miskeyed::workbench::core::TimeTransport* timeTransport() const { return m_timeTransport; }
+    ShaderDocument* focusedDocument() const { return m_editorDoc; }
+    ParameterInspector* parameterInspector() const { return m_parameterInspector; }
 
     Q_INVOKABLE void openShader(const QString& path);
 
@@ -97,10 +100,11 @@ private:
     QHash<QString, QList<LspDiagnostic>> m_diagnosticsByUri; // last diagnostics per document
 
     QPushButton* m_compileStatus = nullptr; // persistent compile-state pill
-    QTabWidget* m_tabs = nullptr; // Reflected parameters and diagnostics
-    ParameterInspector* m_cameraInspector = nullptr;
-    ParameterInspector* m_sceneInspector = nullptr;
-    ParameterInspector* m_postInspector = nullptr;
+    QTabWidget* m_tabs = nullptr; // Active-document semantic inspector
+    ParameterInspector* m_parameterInspector = nullptr;
+    QLabel* m_inspectorDocument = nullptr;
+    QLabel* m_inspectorContext = nullptr;
+    QLabel* m_bindingSummary = nullptr;
     int m_diagTabIndex = -1;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;

@@ -43,7 +43,8 @@ focused nested namespace such as `core` or `anari`.
 - `editor` and `ui` contain reusable widgets; neither selects a product mode.
 - `modes/render_toy` binds open shader documents to the active Scene/Post passes and
   presents controls for `TimeTransport`. It does not define time semantics or own
-  compiler and GPU implementations.
+  compiler and GPU implementations. Its inspector consumes only the workspace's focused
+  document; binding signals update the renderer, not inspector ownership.
 - `anari` remains an optional sibling target and never becomes a dependency of the
   shipped Slang/QRhi modes.
 

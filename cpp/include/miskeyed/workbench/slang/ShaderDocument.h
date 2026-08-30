@@ -36,6 +36,7 @@ public:
     bool compiling() const { return m_compiling; }
     QString diagnostics() const { return m_diagnostics; }
     bool dirty() const { return m_dirty; }
+    bool compileSucceeded() const { return m_compileSucceeded; }
     QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
     QList<SourceDependency> importedDependencies() const { return m_importedDependencies; }
     void setSystemPrelude(const QString& source) { m_compiler.setSystemPrelude(source); }
@@ -85,6 +86,7 @@ private:
     bool m_live = true;
     bool m_compiling = false;
     bool m_dirty = false;
+    bool m_compileSucceeded = false;
     QString m_diagnostics;
     QTimer m_compileTimer;
     QFileSystemWatcher m_dependencyWatcher;

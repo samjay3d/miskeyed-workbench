@@ -19,6 +19,25 @@ def main() -> int:
     window.show()
 
     saved = False
+    inspector_synced = False
+
+    def exercise_document_focus() -> None:
+        """Exercise the same focus path used by viewport clicks before documenting it."""
+        nonlocal inspector_synced
+        inspector = window.parameterInspector()
+        window.sceneViewport().activated.emit()
+        scene_synced = (
+            window.focusedDocument() == window.sceneDocument()
+            and inspector.model() == window.sceneDocument().parameters()
+        )
+        window.viewport().activated.emit()
+        post_synced = (
+            window.focusedDocument() == window.document()
+            and inspector.model() == window.document().parameters()
+        )
+        # Leave Scene focused so the capture makes the active viewport/document context visible.
+        window.sceneViewport().activated.emit()
+        inspector_synced = scene_synced and post_synced
 
     def capture() -> None:
         nonlocal saved
@@ -27,9 +46,10 @@ def main() -> int:
         app.quit()
 
     # Let slangd startup, compilation, layout, and the first QRhi frames complete.
+    QTimer.singleShot(2000, exercise_document_focus)
     QTimer.singleShot(3000, capture)
     app.exec()
-    return 0 if saved and output.stat().st_size > 0 else 1
+    return 0 if inspector_synced and saved and output.stat().st_size > 0 else 1
 
 
 if __name__ == "__main__":
