@@ -103,7 +103,7 @@ jobs:
                   if ($metadataVersion -ne "${{ needs.detect.outputs.version }}") {
                       throw "Documentation version $metadataVersion does not match release version"
                   }
-                  python -m ci.build_docs --output build\documentation-site
+                  python -m ci.build_docs --channel release --output build\documentation-site
             - uses: actions/upload-artifact@v7
               with:
                   name: documentation-site

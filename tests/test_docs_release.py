@@ -1,3 +1,5 @@
+import struct
+import zlib
 from pathlib import Path
 from runpy import run_path
 
@@ -5,9 +7,29 @@ import pytest
 
 from ci.docs_metadata import development_url, project_metadata, versioned_url
 from ci.publish_docs import prepare
-from ci.verify_doc_images import REQUIRED, verify
+from ci.verify_doc_images import EXPECTED, verify
 
 VERSION, DOCS_URL = project_metadata()
+
+
+def png_chunk(kind: bytes, payload: bytes) -> bytes:
+    return (
+        struct.pack(">I", len(payload))
+        + kind
+        + payload
+        + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+    )
+
+
+def write_png(path: Path, width: int, height: int) -> None:
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    pixels = b"".join(b"\0" + b"\0\0\0\xff" * width for _ in range(height))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(pixels))
+        + png_chunk(b"IEND", b"")
+    )
 
 
 def write_site(root: Path, marker: str = "site") -> None:
@@ -22,18 +44,34 @@ def test_canonical_documentation_metadata_is_release_ready():
     assert versioned_url(VERSION, DOCS_URL) == f"{DOCS_URL}{VERSION}/"
 
 
-def test_sphinx_version_identity_is_derived_from_project_metadata():
-    config = run_path("src/docs/conf.py")
-    assert config["release"] == VERSION
-    assert config["version"] == ".".join(VERSION.split(".")[:2])
-    assert config["html_title"] == f"Workbench {VERSION} documentation"
+def test_sphinx_version_identity_is_derived_from_project_metadata(monkeypatch):
+    monkeypatch.delenv("WORKBENCH_DOCS_CHANNEL", raising=False)
+    development = run_path("src/docs/conf.py")
+    assert development["release"] == VERSION
+    assert development["version"] == ".".join(VERSION.split(".")[:2])
+    assert development["html_title"] == "Workbench development documentation"
+
+    monkeypatch.setenv("WORKBENCH_DOCS_CHANNEL", "release")
+    release = run_path("src/docs/conf.py")
+    assert release["html_title"] == f"Workbench {VERSION}"
 
 
 def test_capture_manifest_reports_missing_and_accepts_complete_set(tmp_path):
     assert verify(tmp_path)
-    for name in REQUIRED:
-        (tmp_path / name).write_text("generated capture", encoding="utf-8")
+    for name, minimum in EXPECTED.items():
+        write_png(tmp_path / name, *minimum)
     assert verify(tmp_path) == []
+
+
+def test_capture_manifest_rejects_corrupt_and_undersized_images(tmp_path):
+    for name, minimum in EXPECTED.items():
+        write_png(tmp_path / name, *minimum)
+    corrupt = next(iter(EXPECTED))
+    (tmp_path / corrupt).write_bytes(b"not a png")
+    assert any("invalid documentation image" in problem for problem in verify(tmp_path))
+
+    write_png(tmp_path / corrupt, 16, 16)
+    assert any("undersized documentation image" in problem for problem in verify(tmp_path))
 
 
 def test_publication_preserves_old_versions_and_updates_stable_root(tmp_path):
@@ -90,6 +128,7 @@ def test_published_version_is_immutable(tmp_path):
 def test_release_workflow_gates_package_publication_on_live_docs():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "needs: [detect, build-distributions, publish-documentation]" in workflow
+    assert "python -m ci.build_docs --channel release" in workflow
     assert "Verify the public versioned documentation" in workflow
     assert "[Documentation for $v]($docs_url)" in workflow
     assert workflow.count("contents: write") == 2

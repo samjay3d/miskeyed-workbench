@@ -1,0 +1,15 @@
+Use the timeline
+================
+
+.. image:: ../images/timeline_overview.png
+   :alt: Focused Workbench timeline paused at frame 48 with 24 FPS and range 0 to 240
+   :align: center
+
+* **Play** advances from elapsed real time.
+* **Previous/Next** steps deterministically by one timeline unit.
+* Drag the scrubber to seek.
+* **Range** describes playback start and end.
+* **FPS** changes the coordinate rate while preserving seconds.
+
+The capture above is paused at frame 48, 24 FPS, in a 0--240 range. The deeper model
+is :doc:`../concepts/evaluation_time`.

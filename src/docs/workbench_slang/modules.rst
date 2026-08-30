@@ -1,0 +1,19 @@
+Modules and imports
+===================
+
+Workbench ships ``miskeyed.ui``, ``miskeyed.time``,
+``miskeyed.viewport_camera``, ``miskeyed.render_toy``, and
+``miskeyed.shader_toy``. Import only contracts a program uses::
+
+   import miskeyed.ui;
+   import miskeyed.time;
+
+Slang owns import semantics and program composition. Workbench exposes packaged
+sources through ``ISlangFileSystem`` and supplies project search paths. It watches
+resolved project files; it does not maintain a parallel module database.
+
+Implementation
+--------------
+
+Relevant source: ``shaders/workbench/``, ``WorkbenchModules.cpp``, and
+``SlangCompiler.cpp``.

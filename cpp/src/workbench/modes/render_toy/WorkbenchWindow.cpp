@@ -301,6 +301,7 @@ void WorkbenchWindow::buildUi()
     m_shaderToyViewport->setTimeContext(m_timeContext);
     m_shaderToyViewport->setDocument(shaderToyDocument);
     m_workspaceEditor = new WorkspaceEditor(this);
+    m_workspaceEditor->setObjectName(QStringLiteral("WorkspaceEditor"));
     m_workspaceEditor->setWorkspace(m_workspace);
     m_editor = m_workspaceEditor->sourceEditor();
     m_generatedView = m_workspaceEditor->generatedEditor();
@@ -314,6 +315,7 @@ void WorkbenchWindow::buildUi()
     m_diagnostics->setPlaceholderText(QStringLiteral("No diagnostics — shader compiled cleanly."));
     auto* dependencyPanel = new QSplitter(Qt::Vertical, this);
     m_dependencyTree = new QTreeWidget(dependencyPanel);
+    m_dependencyTree->setObjectName(QStringLiteral("DependencyTree"));
     m_dependencyTree->setHeaderLabels({ QStringLiteral("Kind"), QStringLiteral("Identity / path"),
         QStringLiteral("Hash"), QStringLiteral("State") });
     m_dependencyTree->header()->setStretchLastSection(false);
@@ -377,6 +379,7 @@ void WorkbenchWindow::buildUi()
 
     auto* compilationPanel = new QSplitter(Qt::Vertical, inspector);
     m_compilationTree = new QTreeWidget(compilationPanel);
+    m_compilationTree->setObjectName(QStringLiteral("CompilationTree"));
     m_compilationTree->setHeaderLabels({ QStringLiteral("Compilation"), QStringLiteral("Value") });
     m_compilationTree->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     compilationPanel->addWidget(m_compilationTree);
@@ -421,6 +424,7 @@ void WorkbenchWindow::buildUi()
     ev->addWidget(m_timeline);
 
     auto* documentWorkspace = new QSplitter(Qt::Vertical, this);
+    documentWorkspace->setObjectName(QStringLiteral("DocumentWorkspace"));
     documentWorkspace->addWidget(m_toolStack);
     documentWorkspace->addWidget(editorBox);
     documentWorkspace->setStretchFactor(0, 3);
@@ -430,6 +434,7 @@ void WorkbenchWindow::buildUi()
     // The inspector spans result and editor surfaces because it describes the focused
     // document, not either viewport or either Render Toy binding.
     auto* root = new QSplitter(Qt::Horizontal, this);
+    root->setObjectName(QStringLiteral("WorkbenchRoot"));
     root->addWidget(documentWorkspace);
     root->addWidget(inspector);
     root->setStretchFactor(0, 4);

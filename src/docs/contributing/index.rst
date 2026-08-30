@@ -27,7 +27,7 @@ and update ``/dev/``; a fork PR can never enter the write-enabled job.
 Publication and versioning
 --------------------------
 
-The canonical public entry point is ``|documentation_url|``. Generated output is
+The canonical public entry point is |documentation_url|. Generated output is
 committed only to the disposable ``docs`` deployment branch. A release publishes an immutable
 version directory such as ``/0.3.0/`` and updates the root redirect to that version.
 Existing version directories are preserved. Trusted pushes to ``main`` or
@@ -57,7 +57,7 @@ branch.
 
 The **documentation** environment is used by both trusted development and release
 publication jobs. Pushes to trusted branches publish
-``|development_url|`` and place that clickable URL
+|development_url| and place that clickable URL
 in the Actions job summary.
 
 The 0.3.0 gate runs in this order: detect the release; build distributions; install

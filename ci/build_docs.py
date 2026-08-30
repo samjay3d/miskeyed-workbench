@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,7 @@ from ci.docs_metadata import PROJECT_ROOT
 from ci.verify_doc_images import verify
 
 
-def build(output: Path, *, capture: bool = True) -> int:
+def build(output: Path, *, capture: bool = True, channel: str = "development") -> int:
     output = output.resolve()
     source = PROJECT_ROOT / "src" / "docs"
     images = source / "images"
@@ -24,7 +25,8 @@ def build(output: Path, *, capture: bool = True) -> int:
         subprocess.run(
             [
                 sys.executable,
-                str(PROJECT_ROOT / "ci" / "capture_workbench.py"),
+                "-m",
+                "ci.capture_workbench",
                 "--all",
                 "--output",
                 str(images),
@@ -38,19 +40,28 @@ def build(output: Path, *, capture: bool = True) -> int:
     if output.exists():
         shutil.rmtree(output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    return sphinx_main(["-W", "--keep-going", "-b", "html", str(source), str(output)])
+    previous_channel = os.environ.get("WORKBENCH_DOCS_CHANNEL")
+    os.environ["WORKBENCH_DOCS_CHANNEL"] = channel
+    try:
+        return sphinx_main(["-W", "--keep-going", "-b", "html", str(source), str(output)])
+    finally:
+        if previous_channel is None:
+            os.environ.pop("WORKBENCH_DOCS_CHANNEL", None)
+        else:
+            os.environ["WORKBENCH_DOCS_CHANNEL"] = previous_channel
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("build/documentation/site"))
+    parser.add_argument("--channel", choices=("development", "release"), default="development")
     parser.add_argument(
         "--skip-capture",
         action="store_true",
         help="Use only in tests when a complete generated capture set already exists",
     )
     args = parser.parse_args()
-    return build(args.output, capture=not args.skip_capture)
+    return build(args.output, capture=not args.skip_capture, channel=args.channel)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 // Workbench reflected-control attributes.
 //
-// These declarations are prepended before authored source so attributes remain concise.
+// Authored shaders import this packaged module so attributes remain concise.
 // This authored module source is packaged with Workbench rather than reconstructed in UI code.
 [__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
 [__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }

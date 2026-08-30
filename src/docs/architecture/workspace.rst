@@ -1,45 +1,37 @@
-Workspace, documents, and bindings
-==================================
+Workspace model
+===============
 
-``ShaderWorkspace`` is the authoring container. It owns open
-``ShaderDocument`` objects, exactly one focused document, per-document
-``DocumentSession`` view state, and shared time objects. It does **not** decide
-which shader a tool renders.
+:doc:`../concepts/documents_and_bindings` introduces open, focused, and bound state.
+This page describes the native ownership that implements it.
 
-``ShaderDocument`` owns source identity, live source, compiler diagnostics,
-reflection, resources, entry points, generated targets, and its dependency graph.
-A ``DocumentSession`` is deliberately cheaper: cursor/selection, scroll, Source /
-Generated / Compare mode, and generated target selection.
+``ShaderWorkspace`` owns ``ShaderDocument`` objects, exactly one focused document,
+per-document ``DocumentSession`` view state, ``TimeContext``, and ``TimeTransport``.
+It emits focus and lifetime signals but has no Render Toy or ShaderToy binding policy.
 
-Open, focused, and bound are different
---------------------------------------
-
-::
-
-   Workspace: A.slang, B.slang, C.slang
-   Focus: C.slang
-
-   Render Toy session: Scene -> A.slang, Post -> B.slang
-   Shader Toy session: Shader -> C.slang
-
-**Open** means the workspace preserves a document. **Focused** means its source and
-semantic inspector are being presented. **Bound** means a runtime session consumes
-it. Clicking a Render Toy viewport focuses that pass's bound document; merely
-opening or focusing a file never silently rebinds a renderer.
-
-A document can have more than one consumer. Binding is therefore a reference held
-by a session, not transfer of ownership. Closing a document asks sessions to remove
-their reference; switching the visible tool leaves every session alive.
-
-Data flow
----------
+``ShaderDocument`` owns source identity, authored buffer, compiler diagnostics,
+reflection, resources, entry points, generated targets, parameter model, and dependency
+graph. ``DocumentSession`` retains only cursor/selection, scroll positions, view mode,
+and generated target.
 
 ::
 
-   file/editor -> ShaderDocument -> workspace focus -> editor + inspector
-                         |
-                         +---- session binding ----> selected entry points -> viewport
+   ShaderWorkspace
+      +-> ShaderDocument A
+      +-> ShaderDocument B
+      `-> focus -> WorkspaceEditor + active-document Inspector
 
-Look in ``cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h`` and
-``ShaderDocument.h`` for ownership, ``editor/WorkspaceEditor.h`` for presentation,
-and ``modes/*/*Session.h`` for bindings.
+   RenderToySession ----references----> A/B
+   ShaderToySession ----references----> A
+
+Closing a document notifies sessions to remove references. Changing the visible tool
+leaves the workspace and both runtime sessions alive.
+
+Implementation
+--------------
+
+Relevant source:
+
+* ``cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h``
+* ``cpp/src/workbench/slang/ShaderWorkspace.cpp``
+* ``cpp/include/miskeyed/workbench/slang/ShaderDocument.h``
+* ``cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h``

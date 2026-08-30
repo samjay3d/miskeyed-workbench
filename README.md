@@ -24,15 +24,24 @@ C++ owns lifecycle, synchronization, command submission, resources, and Python
 exposure. There is no Python-owned renderer and no runtime `slangc` or `qsb`
 subprocess.
 
-## Install and run
+## Run Workbench
 
-```powershell
-python -m pip install miskeyed-workbench
-workbench
-workbench eye.slang
+For a zero-install user launch, install `uv` and run:
+
+```text
+uvx miskeyed-workbench
 ```
 
-The distribution is `miskeyed-workbench`; the Python import is
+The equivalent one-shot `pipx` command is:
+
+```text
+pipx run miskeyed-workbench
+```
+
+For a persistent command, use `pipx install miskeyed-workbench` or
+`uv tool install miskeyed-workbench`, then run `miskeyed-workbench`.
+
+The distribution is `miskeyed-workbench`; the developer/library import is
 `miskeyed.workbench`. Wheels target CPython 3.11–3.13 on Windows x86_64, Linux
 x86_64, and macOS arm64/x86_64.
 

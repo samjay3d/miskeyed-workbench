@@ -1,4 +1,4 @@
-"""Capture deterministic documentation scenarios from the real native Workbench UI."""
+"""Capture deterministic teaching images from the real native Workbench UI."""
 
 from __future__ import annotations
 
@@ -11,35 +11,75 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QLabel,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
     QTabWidget,
+    QTreeWidget,
     QWidget,
 )
+
+from ci.verify_doc_images import EXPECTED
 
 
 @dataclass(frozen=True)
 class Scenario:
     filename: str
+    target: str = "window"
     tool: str = "render-toy"
     focus: str = "scene"
     inspector: int = 0
     view: int = 0
-    target: str = "HLSL"
+    target_code: str = "HLSL"
     frame: int = 48
+    minimum_size: tuple[int, int] = (280, 180)
 
 
 SCENARIOS = {
-    "overview": Scenario("workbench_overview.png", view=2),
-    "render-toy": Scenario("render_toy.png", focus="post"),
-    "shader-toy": Scenario("shader_toy.png", tool="shader-toy", focus="shader"),
-    "inspector-parameters": Scenario("inspector_parameters.png", inspector=0),
-    "dependencies": Scenario("inspector_dependencies.png", inspector=2),
-    "compilation": Scenario("inspector_compilation.png", inspector=3),
-    "compare": Scenario("source_generated_compare.png", focus="post", view=2),
-    "timeline": Scenario("timeline.png", frame=48),
+    "overview": Scenario("workbench_overview.png", minimum_size=(1200, 700), view=2),
+    "workspace-documents": Scenario(
+        "workspace_documents.png", target="WorkspaceEditor", minimum_size=(700, 350)
+    ),
+    "documents-and-bindings": Scenario(
+        "documents_and_bindings.png", target="WorkbenchRoot", minimum_size=(1000, 550)
+    ),
+    "inspector-parameters": Scenario(
+        "inspector_parameters.png", target="InspectorPanel", minimum_size=(280, 450)
+    ),
+    "inspector-dependencies": Scenario(
+        "inspector_dependencies.png", target="InspectorPanel", inspector=2, minimum_size=(280, 450)
+    ),
+    "inspector-entry-points": Scenario(
+        "inspector_entry_points.png",
+        target="InspectorPanel",
+        tool="shader-toy",
+        focus="shader",
+        inspector=3,
+        minimum_size=(280, 450),
+    ),
+    "timeline": Scenario("timeline_overview.png", target="Timeline", minimum_size=(700, 70)),
+    "render-toy": Scenario(
+        "render_toy.png", target="ToolSurface", focus="post", minimum_size=(700, 300)
+    ),
+    "shader-toy": Scenario(
+        "shader_toy.png",
+        target="ToolSurface",
+        tool="shader-toy",
+        focus="shader",
+        minimum_size=(700, 300),
+    ),
+    "source-generated-compare": Scenario(
+        "source_generated_compare.png",
+        target="WorkspaceEditor",
+        focus="post",
+        view=2,
+        minimum_size=(700, 350),
+    ),
 }
+
+if {scenario.filename for scenario in SCENARIOS.values()} != set(EXPECTED):
+    raise RuntimeError("capture scenarios and teaching-image manifest disagree")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -80,37 +120,49 @@ def configure(window: WorkbenchWindow, scenario: Scenario) -> None:
 
     tabs = required(window, QTabWidget, "ActiveDocumentInspector")
     tabs.setCurrentIndex(scenario.inspector)
+    if scenario.inspector == 2:
+        required(window, QTreeWidget, "DependencyTree").expandAll()
+    if scenario.inspector == 3:
+        required(window, QTreeWidget, "CompilationTree").expandAll()
     click_view(window, scenario.view)
     target = required(window, QComboBox, "WorkspaceGeneratedTarget")
-    target_index = target.findText(scenario.target)
+    target_index = target.findText(scenario.target_code)
     if target_index >= 0:
         target.setCurrentIndex(target_index)
 
-    # Drive the real timeline controls. Child order is stable: start, end, then FPS.
+    window.timeTransport().setPlaying(False)
     timeline = required(window, QWidget, "Timeline")
-    spins = timeline.findChildren(QWidget)
-    numeric = [w for w in spins if w.metaObject().className() == "QDoubleSpinBox"]
+    numeric = [
+        widget
+        for widget in timeline.findChildren(QWidget)
+        if widget.metaObject().className() == "QDoubleSpinBox"
+    ]
     if len(numeric) != 3:
         raise RuntimeError("timeline range/FPS controls are incomplete")
     numeric[0].setProperty("value", 0.0)
     numeric[1].setProperty("value", 240.0)
     numeric[2].setProperty("value", 24.0)
-    scrubber = required(timeline, QWidget, "TimelineScrubber")
-    scrubber.setProperty("value", scenario.frame)
+    required(timeline, QWidget, "TimelineScrubber").setProperty("value", scenario.frame)
 
-    # Stabilize the authored/generated and root layout proportions.
-    for splitter in window.findChildren(QSplitter):
-        if splitter.count() == 2:
-            width = max(splitter.width(), 600)
-            splitter.setSizes([int(width * 0.72), int(width * 0.28)])
+    required(window, QSplitter, "WorkbenchRoot").setSizes([1120, 480])
+    required(window, QSplitter, "DocumentWorkspace").setSizes([520, 380])
+    for splitter in required(window, QWidget, "WorkspaceEditor").findChildren(QSplitter):
+        splitter.setSizes([560, 560])
 
 
-def validate(window: WorkbenchWindow, scenario: Scenario) -> None:
+def capture_target(window: WorkbenchWindow, scenario: Scenario) -> QWidget:
+    if scenario.target == "window":
+        return window
+    return required(window, QWidget, scenario.target)
+
+
+def validate(window: WorkbenchWindow, scenario: Scenario) -> QWidget:
     expected = {
         "scene": window.sceneDocument(),
         "post": window.document(),
         "shader": window.shaderToyDocument(),
     }[scenario.focus]
+    target = capture_target(window, scenario)
     checks = {
         "active tool": window.activeTool() == scenario.tool,
         "focused document": window.focusedDocument() == expected,
@@ -118,16 +170,28 @@ def validate(window: WorkbenchWindow, scenario: Scenario) -> None:
         == scenario.inspector,
         "timeline visible": required(window, QWidget, "Timeline").isVisible(),
         "tool surface visible": required(window, QWidget, "ToolSurface").isVisible(),
-        "viewport has size": window.sceneViewport().width() > 0
-        if scenario.tool == "render-toy"
-        else window.shaderToyViewport().width() > 0,
         "source editor populated": bool(
             required(window, QPlainTextEdit, "WorkspaceSourceEditor").toPlainText()
         ),
+        "binding summary populated": bool(
+            required(window, QLabel, "BindingSummary").text().strip()
+        ),
+        "capture target visible": target.isVisible(),
+        "capture target width": target.width() >= scenario.minimum_size[0],
+        "capture target height": target.height() >= scenario.minimum_size[1],
     }
+    if scenario.inspector == 2:
+        checks["dependency rows"] = (
+            required(window, QTreeWidget, "DependencyTree").topLevelItemCount() > 0
+        )
+    if scenario.inspector == 3:
+        checks["entry point rows"] = (
+            required(window, QTreeWidget, "CompilationTree").topLevelItemCount() > 0
+        )
     failed = [name for name, passed in checks.items() if not passed]
     if failed:
         raise RuntimeError("scenario semantic validation failed: " + ", ".join(failed))
+    return target
 
 
 def capture_one(name: str, output: Path, settle_ms: int) -> int:
@@ -141,9 +205,9 @@ def capture_one(name: str, output: Path, settle_ms: int) -> int:
             scenario = SCENARIOS[name]
             configure(window, scenario)
             app.processEvents()
-            validate(window, scenario)
+            target = validate(window, scenario)
             output.parent.mkdir(parents=True, exist_ok=True)
-            result["ok"] = window.grab().save(str(output), "PNG") and output.stat().st_size > 0
+            result["ok"] = target.grab().save(str(output), "PNG") and output.stat().st_size > 0
         finally:
             window.close()
             app.quit()
@@ -162,9 +226,8 @@ def main() -> int:
         output = args.output / scenario.filename if args.capture_all else args.destination
         if output is None:
             output = args.output / scenario.filename
-        code = capture_one(name, output, args.settle_ms)
-        if code:
-            return code
+        if capture_one(name, output, args.settle_ms):
+            return 1
     return 0
 
 

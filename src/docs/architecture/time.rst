@@ -32,9 +32,8 @@ triggering compilation. This boundary lets a future USD time-code source, OTIO
 transport, offline renderer, simulation, or host DCC replace playback policy while
 consumers keep the same evaluation input.
 
-See ``cpp/include/miskeyed/workbench/core/TimeContext.h``, ``TimeTransport.h``, and
-``cpp/src/workbench/ui/TimelineWidget.cpp``.
+Implementation
+--------------
 
-.. image:: ../images/timeline.png
-   :alt: Workbench timeline paused at a non-zero frame with range and rate controls
-   :align: center
+Relevant source is ``cpp/include/miskeyed/workbench/core/TimeContext.h``,
+``TimeTransport.h``, and ``cpp/src/workbench/ui/TimelineWidget.cpp``.

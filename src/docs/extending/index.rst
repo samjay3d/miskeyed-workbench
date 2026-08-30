@@ -1,0 +1,11 @@
+Extending Workbench
+===================
+
+.. toctree::
+   :maxdepth: 1
+
+   adding_module
+   adding_tool
+   python
+   native_cpp
+   ../contributing/index

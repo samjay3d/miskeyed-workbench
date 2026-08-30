@@ -58,8 +58,8 @@ Changing a slider normally stops at uniform upload. Changing a module can restar
 compilation and pipeline work. These different paths are why identity, ownership,
 and dirty work are documented separately.
 
-Code map
---------
+Implementation
+--------------
 
 Start at ``cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp`` for composition,
 not ownership rules. Follow ``ShaderWorkspace`` and ``ShaderDocument`` into the

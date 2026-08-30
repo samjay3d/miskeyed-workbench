@@ -37,7 +37,7 @@ Workbench shell
 
 The open/focused/bound distinction is taught in
 [Workspace and documents](src/docs/architecture/workspace.rst). Tool composition is
-covered in [Tool sessions and contributions](src/docs/tools/index.rst).
+covered in [Tool sessions and contributions](src/docs/concepts/tool_sessions.rst).
 
 ## Data flow
 

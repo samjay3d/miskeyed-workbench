@@ -1,0 +1,25 @@
+UI metadata
+===========
+
+Purpose
+-------
+
+``import miskeyed.ui;`` provides attributes that express semantic presentation:
+``UIName``, ``UIGroup``, ``UIWidget``, ``UIRange``, ``UIStep``, ``UITooltip``, and
+``UIUnits``.
+
+Example
+-------
+
+::
+
+   import miskeyed.ui;
+
+   [UIName("Exposure")]
+   [UIWidget("slider")]
+   [UIRange(-4.0, 4.0)]
+   [UIStep(0.1)]
+   float exposure = 0.0;
+
+The shader owns intent. Slang reflects it. Workbench maps it to native controls and
+packs values using explicit reflected byte offsets.
