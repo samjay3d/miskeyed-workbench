@@ -206,7 +206,7 @@ jobs:
               # corruption fails `tar -xzf` on download instead of reaching PyPI.
               run: tar -czf "wheels-${{ matrix.python-version }}.tgz" -C wheelhouse .
 
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               with:
                   name: dist-wheels-${{ matrix.python-version }}
                   path: wheels-${{ matrix.python-version }}.tgz
@@ -233,7 +233,7 @@ jobs:
                   # installed, but the Qt-only PySide6/shiboken6/shiboken6-generator are
                   # irrelevant to packaging source — scikit-build-core just collects files.
                   python -c "import scikit_build_core.build as b; print(b.build_sdist('dist'))"
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               with:
                   name: dist-sdist
                   path: ./dist/*.tar.gz
