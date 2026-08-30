@@ -40,16 +40,18 @@ lane before ANARI Device UI work begins.
 `ShaderWorkspace` owns open authoring documents, exactly one focused document, and cheap
 per-document editor sessions (cursor, selection, scroll, view mode, and generated target).
 It does not infer or mutate runtime bindings when a document opens. `RenderToySession`
-separately owns the active Scene/Post bindings and transport. Each `ShaderDocument` retains source, dependency-graph identity,
-reflection, diagnostics, and generated targets. `SlangRhiWidget` consumes only the two
+separately owns the active Scene/Post bindings and transport. Each `ShaderDocument`
+retains source, dependency-graph identity, reflection, diagnostics, and generated
+targets. `SlangRhiWidget` consumes only the two
 active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
 pipelines or textures. Source, generated output, and compare are views of the focused
-document, while reflection remains an inspector concern. The structured **Dependencies** view traverses the focused document's live
-`DependencyGraph` from the active pipeline using node IDs, rather than displaying a
-compiler-result snapshot. It exposes the complete source/module/product stack, hashes,
-and dirty state; selecting any node resolves its current payload from the graph. Resolved
-project files are watched, so editing an imported module recompiles the document and
-updates the same graph and inspector in place.
+document, while reflection remains an inspector concern. The structured **Dependencies**
+view presents the focused shader and compiler-resolved imports as the default hierarchy,
+including paths, hashes, and dirty state. Selecting a source/module resolves its current
+payload from the live `DependencyGraph`, while compiler/renderer products are available
+under a collapsed Advanced graph branch. Resolved project files are watched, so editing
+an imported module recompiles the document and updates the same graph and inspector in
+place.
 
 The right-hand inspector is a single active-document surface: Parameters, Resources,
 Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
