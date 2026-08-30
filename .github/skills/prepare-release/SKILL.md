@@ -23,6 +23,9 @@ records the `vX.Y.Z` tag + GitHub Release itself.
   records the tag + Release automatically — no manual tag needed.
 - Do NOT invent a version. If the user didn't give one, pick it from semver + the
   `[Unreleased]` entries (new feature → minor, fixes only → patch) and confirm.
+- Do NOT infer release state from a hard-coded version in this skill. Inspect the
+  current changelog and task context. Ordinary post-release work accumulates under
+  `[Unreleased]`; this skill moves that content when a release is cut.
 
 ## Choose the Version
 
@@ -45,7 +48,7 @@ Inspect `## [Unreleased]` in [CHANGELOG.md](../../../CHANGELOG.md):
    any missing changelog bullets.
 
 2. **Rebuild** so the editable install reports the new version. Slang + Qt must be on the
-   environment (see [repo memory / build notes]):
+   environment (see [`AGENTS.md`](../../../AGENTS.md)):
 
    ```pwsh
    $env:CMAKE_PREFIX_PATH="C:\dev\code\slang-qt\6.8.3\msvc2022_64"; $env:SLANG_ROOT="C:\dev\app\slang"
