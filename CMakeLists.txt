@@ -16,6 +16,12 @@ set(CMAKE_AUTOMOC ON)
 option(MISKEYED_WORKBENCH_BUILD_APP "Build the native standalone workbench" ON)
 option(MISKEYED_WORKBENCH_BUILD_PYTHON "Build the Workbench Shiboken6 bindings" ON)
 option(MISKEYED_WORKBENCH_WITH_ANARI "Build the optional native ANARI backend foundation" OFF)
+option(MISKEYED_WORKBENCH_WASM_SPIKE "Build the experimental browser vertical slice" OFF)
+
+if(EMSCRIPTEN)
+    set(MISKEYED_WORKBENCH_BUILD_PYTHON OFF CACHE BOOL "" FORCE)
+    set(MISKEYED_WORKBENCH_WITH_ANARI OFF CACHE BOOL "" FORCE)
+endif()
 
 # Build inputs come from the environment so a clean checkout and CI build identically,
 # with no machine-specific paths:
@@ -23,7 +29,9 @@ option(MISKEYED_WORKBENCH_WITH_ANARI "Build the optional native ANARI backend fo
 #   * Slang SDK       ->  SLANG_ROOT      (see cmake/FindSlang.cmake)
 
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Gui Widgets)
-find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
+if(MISKEYED_WORKBENCH_BUILD_PYTHON)
+    find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Slang REQUIRED)
@@ -58,7 +66,7 @@ if(MISKEYED_WORKBENCH_WITH_ANARI)
     endif()
 endif()
 
-add_library(miskeyed_workbench_slang_rhi STATIC
+set(_workbench_vertical_slice_sources
     # Shared authoring infrastructure. These directories describe responsibilities;
     # the public slang_rhi namespace remains stable for the shipped native API.
     cpp/src/workbench/core/Digest.cpp
@@ -69,15 +77,26 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/slang/ShaderWorkspace.cpp
     cpp/src/workbench/core/TimeContext.cpp
     cpp/src/workbench/core/TimeTransport.cpp
-    cpp/src/workbench/editor/CodeEditor.cpp
-    cpp/src/workbench/editor/ShaderHighlighter.cpp
-    cpp/src/workbench/editor/LspClient.cpp
-    cpp/src/workbench/editor/WorkspaceEditor.cpp
     cpp/src/workbench/slang/ShaderParameterModel.cpp
     cpp/src/workbench/slang/SlangCompiler.cpp
     cpp/src/workbench/slang/Qt68ShaderBridge.cpp
     cpp/src/workbench/slang/ShaderDocument.cpp
     cpp/src/workbench/rendering/SlangRhiWidget.cpp
+    cpp/include/miskeyed/workbench/core/DependencyGraph.h
+    cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
+    cpp/include/miskeyed/workbench/slang/ShaderDocument.h
+    cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
+    cpp/include/miskeyed/workbench/slang/SlangCompiler.h
+    cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h
+    cpp/include/miskeyed/workbench/core/TimeContext.h
+    cpp/include/miskeyed/workbench/core/TimeTransport.h
+)
+
+set(_workbench_desktop_sources
+    cpp/src/workbench/editor/CodeEditor.cpp
+    cpp/src/workbench/editor/ShaderHighlighter.cpp
+    cpp/src/workbench/editor/LspClient.cpp
+    cpp/src/workbench/editor/WorkspaceEditor.cpp
     cpp/src/workbench/ui/ParameterInspector.cpp
     # The current shell is specifically the two-pass Render Toy composition. Future
     # modes belong beside it rather than inside the Slang compiler/runtime folders.
@@ -85,22 +104,19 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/modes/render_toy/RenderToySession.cpp
     # Q_OBJECT headers live in cpp/include; list them so AUTOMOC scans them (its
     # basename heuristic only checks the source dir, which would skip moc otherwise).
-    cpp/include/miskeyed/workbench/core/DependencyGraph.h
-    cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
     cpp/include/miskeyed/workbench/ui/ParameterInspector.h
-    cpp/include/miskeyed/workbench/slang/ShaderDocument.h
-    cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
-    cpp/include/miskeyed/workbench/slang/SlangCompiler.h
-    cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h
     cpp/include/miskeyed/workbench/editor/CodeEditor.h
     cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
     cpp/include/miskeyed/workbench/editor/LspClient.h
     cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h
     cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
     cpp/include/miskeyed/workbench/modes/render_toy/RenderToySession.h
-    cpp/include/miskeyed/workbench/core/TimeContext.h
-    cpp/include/miskeyed/workbench/core/TimeTransport.h
 )
+
+add_library(miskeyed_workbench_slang_rhi STATIC ${_workbench_vertical_slice_sources})
+if(NOT EMSCRIPTEN)
+    target_sources(miskeyed_workbench_slang_rhi PRIVATE ${_workbench_desktop_sources})
+endif()
 
 qt_add_resources(miskeyed_workbench_slang_rhi "workbench_headers"
     PREFIX "/miskeyed/workbench/headers"
@@ -123,7 +139,20 @@ qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
         shaders/render_toy/post_crt.slang
 )
 
+if(EMSCRIPTEN)
+    qt_add_resources(miskeyed_workbench_slang_rhi "browser_spike_sample"
+        PREFIX "/miskeyed/workbench/browser"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+        FILES shaders/default.slang
+    )
+endif()
+
 target_compile_definitions(miskeyed_workbench_slang_rhi PUBLIC MISKEYED_WORKBENCH_SLANG_RHI_STATIC)
+if(EMSCRIPTEN)
+    # Slang's supported Wasm build uses native Wasm exceptions. Every C++ translation
+    # unit crossing that static-library boundary must use the same exception ABI.
+    target_compile_options(miskeyed_workbench_slang_rhi PUBLIC "SHELL:-fwasm-exceptions")
+endif()
 target_include_directories(miskeyed_workbench_slang_rhi
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
@@ -166,7 +195,21 @@ if(MISKEYED_WORKBENCH_WITH_ANARI AND BUILD_TESTING)
 endif()
 
 if(MISKEYED_WORKBENCH_BUILD_APP)
-    add_executable(miskeyed-workbench app/main.cpp)
+    if(EMSCRIPTEN)
+        if(NOT MISKEYED_WORKBENCH_WASM_SPIKE)
+            message(FATAL_ERROR "Emscripten is experimental; configure with -DMISKEYED_WORKBENCH_WASM_SPIKE=ON")
+        endif()
+        qt_add_executable(miskeyed-workbench app/wasm_main.cpp)
+        set_target_properties(miskeyed-workbench PROPERTIES SUFFIX ".html")
+        target_link_options(miskeyed-workbench PRIVATE
+            "SHELL:-fwasm-exceptions"
+            "SHELL:-sALLOW_MEMORY_GROWTH=1"
+            "SHELL:-sMAXIMUM_MEMORY=1GB"
+        )
+        target_compile_options(miskeyed-workbench PRIVATE "SHELL:-fwasm-exceptions")
+    else()
+        add_executable(miskeyed-workbench app/main.cpp)
+    endif()
     target_link_libraries(miskeyed-workbench PRIVATE miskeyed_workbench_slang_rhi)
     install(TARGETS miskeyed-workbench RUNTIME DESTINATION bin)
 endif()

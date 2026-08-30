@@ -15,6 +15,9 @@ pickers for your shader's parameters automatically.
 > Direct3D 11 only right now, and I may never fully "finish" it. Treat it as a
 > playground and a proof of concept, not a supported product.
 
+The scoped [Qt WebAssembly viability spike](docs/WASM_SPIKE.md) is likewise a build
+probe, not a supported browser distribution.
+
 ### New to Slang? Read this first
 
 The shaders here are written in **[Slang](https://shader-slang.com/)**, a modern shader

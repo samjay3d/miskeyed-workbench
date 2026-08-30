@@ -70,7 +70,11 @@ SlangRhiWidget::SlangRhiWidget(QWidget* parent)
     : QRhiWidget(parent)
     , d(std::make_unique<SlangRhiWidgetPrivate>())
 {
-#if defined(Q_OS_WIN)
+#if defined(Q_OS_WASM)
+    // Qt maps this QRhi API to the browser-provided WebGL canvas. The browser remains
+    // the runtime owner; Workbench does not introduce a JavaScript rendering layer.
+    setApi(QRhiWidget::Api::OpenGLES2);
+#elif defined(Q_OS_WIN)
     setApi(QRhiWidget::Api::Direct3D11);
 #elif defined(Q_OS_MACOS)
     setApi(QRhiWidget::Api::Metal);

@@ -1,0 +1,144 @@
+name: WebAssembly spike
+
+on:
+    pull_request:
+        paths:
+            - ".github/workflows/wasm-spike.yml"
+            - "CMakeLists.txt"
+            - "app/wasm_main.cpp"
+            - "cmake/FindSlang.cmake"
+            - "cpp/**"
+            - "shaders/**"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+env:
+    QT_VERSION: "6.8.3"
+    EMSDK_VERSION: "3.1.56"
+    SLANG_VERSION: "2026.14.1"
+
+jobs:
+    build:
+        name: Qt Wasm browser artifact
+        runs-on: ubuntu-24.04
+        timeout-minutes: 120
+        steps:
+            - uses: actions/checkout@v7
+
+            # Qt 6.8.3's Wasm binaries are built with this exact Emscripten release.
+            # Mixing versions can configure successfully and then fail at link time.
+            - name: Install Emscripten
+              uses: mymindstorm/setup-emsdk@v14
+              with:
+                  version: ${{ env.EMSDK_VERSION }}
+                  actions-cache-folder: emsdk-cache
+
+            - name: Install Qt ${{ env.QT_VERSION }} WebAssembly SDK
+              uses: jurplel/install-qt-action@v4
+              with:
+                  version: ${{ env.QT_VERSION }}
+                  host: linux
+                  target: wasm
+                  arch: wasm_singlethread
+                  cache: true
+                  setup-python: false
+
+            - name: Cache Slang source and build
+              id: slang-cache
+              uses: actions/cache@v6
+              with:
+                  path: |
+                      ${{ runner.temp }}/slang-src
+                      ${{ runner.temp }}/slang-generators
+                      ${{ runner.temp }}/slang-wasm
+                  key: slang-wasm-${{ env.SLANG_VERSION }}-emsdk-${{ env.EMSDK_VERSION }}-v1
+
+            - name: Build Slang for Emscripten
+              if: steps.slang-cache.outputs.cache-hit != 'true'
+              shell: bash
+              run: |
+                  set -euxo pipefail
+                  git clone --depth 1 --branch "v$SLANG_VERSION" --recurse-submodules \
+                    https://github.com/shader-slang/slang.git "$RUNNER_TEMP/slang-src"
+
+                  cmake -S "$RUNNER_TEMP/slang-src" -B "$RUNNER_TEMP/slang-native" -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DSLANG_SLANG_LLVM_FLAVOR=DISABLE \
+                    -DSLANG_ENABLE_SLANG_RHI=OFF \
+                    -DSLANG_ENABLE_TESTS=OFF
+                  cmake --build "$RUNNER_TEMP/slang-native" --target generators
+                  cmake --install "$RUNNER_TEMP/slang-native" \
+                    --prefix "$RUNNER_TEMP/slang-generators" --component generators
+
+                  emcmake cmake -S "$RUNNER_TEMP/slang-src" -B "$RUNNER_TEMP/slang-build-wasm" -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/slang-wasm" \
+                    -DSLANG_GENERATORS_PATH="$RUNNER_TEMP/slang-generators/bin" \
+                    -DSLANG_LIB_TYPE=STATIC \
+                    -DSLANG_SLANG_LLVM_FLAVOR=DISABLE \
+                    -DSLANG_ENABLE_AFTERMATH=OFF \
+                    -DSLANG_ENABLE_CUDA=OFF \
+                    -DSLANG_ENABLE_DXIL=OFF \
+                    -DSLANG_ENABLE_GFX=OFF \
+                    -DSLANG_ENABLE_OPTIX=OFF \
+                    -DSLANG_ENABLE_REPLAYER=OFF \
+                    -DSLANG_ENABLE_SLANG_RHI=OFF \
+                    -DSLANG_ENABLE_SLANGC=OFF \
+                    -DSLANG_ENABLE_SLANGD=OFF \
+                    -DSLANG_ENABLE_SLANGI=OFF \
+                    -DSLANG_ENABLE_SLANGRT=OFF \
+                    -DSLANG_ENABLE_EXAMPLES=OFF \
+                    -DSLANG_ENABLE_TESTS=OFF \
+                    -DCMAKE_C_FLAGS="-fwasm-exceptions -Os" \
+                    -DCMAKE_CXX_FLAGS="-fwasm-exceptions -Os"
+                  cmake --build "$RUNNER_TEMP/slang-build-wasm" --target slang
+                  cmake --install "$RUNNER_TEMP/slang-build-wasm"
+
+            - name: Configure browser Workbench
+              shell: bash
+              run: |
+                  set -euxo pipefail
+                  qt-cmake -S . -B build-wasm -G Ninja \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DMISKEYED_WORKBENCH_WASM_SPIKE=ON \
+                    -DMISKEYED_WORKBENCH_BUILD_PYTHON=OFF \
+                    -DBUILD_TESTING=OFF \
+                    -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/slang-wasm"
+
+            - name: Build browser Workbench
+              run: cmake --build build-wasm --target miskeyed-workbench
+
+            - name: Assemble browser artifact
+              shell: bash
+              run: |
+                  set -euxo pipefail
+                  mkdir -p artifact
+                  cp build-wasm/miskeyed-workbench.html artifact/index.html
+                  cp build-wasm/miskeyed-workbench.js artifact/
+                  cp build-wasm/miskeyed-workbench.wasm artifact/
+                  find build-wasm -maxdepth 1 -type f \( -name '*.data' -o -name 'qtloader.js' \) \
+                    -exec cp {} artifact/ \;
+                  cat > artifact/serve.py <<'PY'
+                  import http.server
+                  import socketserver
+
+                  class Handler(http.server.SimpleHTTPRequestHandler):
+                      extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
+                                        ".wasm": "application/wasm"}
+
+                  with socketserver.TCPServer(("127.0.0.1", 8000), Handler) as server:
+                      print("Open http://127.0.0.1:8000/")
+                      server.serve_forever()
+                  PY
+                  (cd artifact && sha256sum * > SHA256SUMS.txt)
+                  du -h artifact/*
+
+            - name: Upload browser Workbench
+              uses: actions/upload-artifact@v7
+              with:
+                  name: miskeyed-workbench-wasm-spike
+                  path: artifact/
+                  if-no-files-found: error
+                  retention-days: 14
