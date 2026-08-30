@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
-project(miskeyed_workbench VERSION 0.2.0 LANGUAGES CXX)
+
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml" _project_version_line
+    REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+\"$")
+if(NOT _project_version_line)
+    message(FATAL_ERROR "Could not read project version from pyproject.toml")
+endif()
+string(REGEX REPLACE "^version = \"([^\"]+)\"$" "\\1" _project_version "${_project_version_line}")
+project(miskeyed_workbench VERSION "${_project_version}" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
