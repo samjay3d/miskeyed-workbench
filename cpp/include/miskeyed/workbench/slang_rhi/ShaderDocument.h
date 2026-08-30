@@ -18,6 +18,8 @@ class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderDocument final : public QObject 
     Q_PROPERTY(bool live READ live WRITE setLive NOTIFY liveChanged)
     Q_PROPERTY(bool compiling READ compiling NOTIFY compilingChanged)
     Q_PROPERTY(QString diagnostics READ diagnostics NOTIFY diagnosticsChanged)
+    Q_PROPERTY(bool dirty READ dirty NOTIFY dirtyChanged)
+    Q_PROPERTY(QString dependencyIdentity READ dependencyIdentity NOTIFY compiled)
     Q_PROPERTY(ShaderParameterModel* parameters READ parameters CONSTANT)
     Q_PROPERTY(DependencyGraph* dependencyGraph READ dependencyGraph CONSTANT)
 
@@ -32,6 +34,8 @@ public:
     void setLive(bool live);
     bool compiling() const { return m_compiling; }
     QString diagnostics() const { return m_diagnostics; }
+    bool dirty() const { return m_dirty; }
+    QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
 
     ShaderParameterModel* parameters() { return &m_parameters; }
     DependencyGraph* dependencyGraph() { return &m_graph; }
@@ -52,6 +56,7 @@ public:
     Q_INVOKABLE bool load();
     Q_INVOKABLE bool save();
     Q_INVOKABLE void compile();
+    void markSourceClean();
 
 signals:
     void fileUrlChanged();
@@ -62,6 +67,7 @@ signals:
     void compiled();
     void compileFailed(QString diagnostics);
     void shaderPackageChanged();
+    void dirtyChanged();
 
 private slots:
     void compileNow();
@@ -74,6 +80,7 @@ private:
     QString m_source;
     bool m_live = true;
     bool m_compiling = false;
+    bool m_dirty = false;
     QString m_diagnostics;
     QTimer m_compileTimer;
     SlangCompiler m_compiler;

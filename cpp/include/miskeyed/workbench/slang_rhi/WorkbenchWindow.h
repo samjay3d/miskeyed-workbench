@@ -11,6 +11,14 @@ class QPlainTextEdit;
 class QComboBox;
 class QPushButton;
 class QTabWidget;
+class QTabBar;
+class QStackedWidget;
+class QSplitter;
+class QTimer;
+
+namespace miskeyed::workbench::core {
+class TimeContext;
+}
 
 namespace miskeyed::workbench::slang_rhi {
 
@@ -18,6 +26,8 @@ class ShaderDocument;
 class SlangRhiWidget;
 class CodeEditor;
 class LspClient;
+class ShaderWorkspace;
+class ParameterInspector;
 
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchWindow final : public QMainWindow {
     Q_OBJECT
@@ -31,6 +41,7 @@ public:
     ShaderDocument* sceneDocument() const { return m_sceneDocument; }
     SlangRhiWidget* viewport() const { return m_viewport; }
     SlangRhiWidget* sceneViewport() const { return m_sceneViewport; }
+    miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
 
     Q_INVOKABLE void openShader(const QString& path);
 
@@ -40,8 +51,11 @@ private:
     void applyTheme();
     void setupLanguageServer();
     QString documentUri(ShaderDocument* doc) const;
-    void setEditorTarget(int index);
-    void loadSample(int target, const QByteArray& source);
+    void setFocusedDocument(ShaderDocument* document);
+    void loadSample(const QString& name, int target, const QByteArray& source);
+    void updateDocumentTabs();
+    void setEditorView(int mode);
+    void hookDocument(ShaderDocument* document);
     void reloadGeneratedTargets();
     void refreshGeneratedView();
     void mirrorParameter(ShaderDocument* target, const QString& name, const QVariant& value);
@@ -60,8 +74,16 @@ private:
     CodeEditor* m_editor = nullptr;
     CodeEditor* m_generatedView = nullptr; // read-only compiled-output viewer
     QPlainTextEdit* m_diagnostics = nullptr;
-    QComboBox* m_editorTarget = nullptr;
     QComboBox* m_generatedTarget = nullptr; // HLSL / GLSL / SPIR-V / Metal selector
+    ShaderWorkspace* m_workspace = nullptr;
+    QTabBar* m_documentTabs = nullptr;
+    QWidget* m_sourceSide = nullptr;
+    QWidget* m_generatedSide = nullptr;
+    QSplitter* m_editorSplit = nullptr;
+    QList<QPushButton*> m_viewButtons;
+    QPushButton* m_bindDocument = nullptr;
+    miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
+    QTimer* m_playbackTimer = nullptr;
     ShaderDocument* m_editorDoc = nullptr; // document currently shown in the editor
     bool m_syncing = false; // guards camera mirroring re-entrancy
     LspClient* m_lsp = nullptr; // Slang language server (slangd)
@@ -69,6 +91,8 @@ private:
 
     QPushButton* m_compileStatus = nullptr; // persistent compile-state pill
     QTabWidget* m_tabs = nullptr; // Camera / Post-Process / Diagnostics
+    ParameterInspector* m_cameraInspector = nullptr;
+    ParameterInspector* m_postInspector = nullptr;
     int m_diagTabIndex = -1;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;

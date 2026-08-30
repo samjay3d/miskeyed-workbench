@@ -1,5 +1,8 @@
 #include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
 #include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/RenderPass.h>
+#include <miskeyed/workbench/core/ViewportCamera.h>
+#include <miskeyed/workbench/core/TimeContext.h>
 #include <rhi/qrhi.h>
 #include <QColor>
 #include <QMouseEvent>
@@ -9,27 +12,6 @@
 #include <algorithm>
 
 namespace miskeyed::workbench::slang_rhi {
-
-// One draw pass: a uniform buffer, its resource bindings and a graphics pipeline.
-struct RenderPass {
-    std::unique_ptr<QRhiBuffer> uniforms;
-    std::unique_ptr<QRhiShaderResourceBindings> srb;
-    std::unique_ptr<QRhiGraphicsPipeline> pipeline;
-    QByteArray pendingUniforms;
-    bool pipelineDirty = true;
-    bool uniformsDirty = true;
-    int boundSlot = -1;
-
-    void reset()
-    {
-        pipeline.reset();
-        srb.reset();
-        uniforms.reset();
-        pipelineDirty = true;
-        uniformsDirty = true;
-        boundSlot = -1;
-    }
-};
 
 class SlangRhiWidgetPrivate {
 public:
@@ -115,6 +97,7 @@ void SlangRhiWidget::setDocument(ShaderDocument* document)
     d->main.pipelineDirty = true;
     d->main.uniformsDirty = true;
     emit documentChanged();
+    applyTimeContext();
     update();
 }
 
@@ -139,6 +122,42 @@ void SlangRhiWidget::setScenePass(ShaderDocument* sceneDocument)
     d->retire(std::move(d->main.srb));
     d->retire(std::move(d->main.pipeline));
     d->main.pipelineDirty = true;
+    applyTimeContext();
+    update();
+}
+
+void SlangRhiWidget::setTimeContext(core::TimeContext* context)
+{
+    if (m_timeContext == context)
+        return;
+    if (m_timeContext)
+        disconnect(m_timeContext, nullptr, this, nullptr);
+    m_timeContext = context;
+    if (m_timeContext)
+        connect(
+            m_timeContext, &core::TimeContext::changed, this, &SlangRhiWidget::applyTimeContext);
+    applyTimeContext();
+}
+
+void SlangRhiWidget::applyTimeContext()
+{
+    if (!m_timeContext)
+        return;
+    auto apply = [this](ShaderDocument* document) {
+        if (!document)
+            return;
+        auto* parameters = document->parameters();
+        parameters->setValue(
+            QString::fromLatin1(core::TimeBinding::time), float(m_timeContext->timeSeconds()));
+        parameters->setValue(QString::fromLatin1(core::TimeBinding::deltaTime),
+            float(m_timeContext->deltaSeconds()));
+        parameters->setValue(QString::fromLatin1(core::TimeBinding::frame),
+            uint(qMax<qint64>(0, m_timeContext->frame())));
+        parameters->setValue(
+            QString::fromLatin1(core::TimeBinding::frameRate), float(m_timeContext->frameRate()));
+    };
+    apply(m_scenePass);
+    apply(m_document);
     update();
 }
 
@@ -153,6 +172,7 @@ void SlangRhiWidget::setExposure(float value)
 
 void SlangRhiWidget::onShaderChanged()
 {
+    applyTimeContext();
     d->main.pipelineDirty = true;
     d->main.pendingUniforms = m_document ? m_document->parameters()->packedBytes() : QByteArray();
     d->main.uniformsDirty = true;
@@ -170,6 +190,7 @@ void SlangRhiWidget::onParameterRangeChanged(int, int)
 
 void SlangRhiWidget::onScenePassChanged()
 {
+    applyTimeContext();
     d->scene.pipelineDirty = true;
     d->scene.pendingUniforms
         = m_scenePass ? m_scenePass->parameters()->packedBytes() : QByteArray();
@@ -411,6 +432,7 @@ bool SlangRhiWidget::nudgeParam(const char* name, float delta)
 
 void SlangRhiWidget::mousePressEvent(QMouseEvent* event)
 {
+    emit activated();
     if (event->button() == Qt::LeftButton || event->button() == Qt::MiddleButton
         || event->button() == Qt::RightButton) {
         m_dragging = true;
@@ -436,15 +458,15 @@ void SlangRhiWidget::mouseMoveEvent(QMouseEvent* event)
     const Qt::MouseButtons buttons = event->buttons();
     if (buttons & Qt::LeftButton) {
         // Tumble: horizontal drag orbits (yaw), vertical drag pitches.
-        nudgeParam("camYaw", float(-delta.x()) * 0.010f);
-        nudgeParam("camPitch", float(-delta.y()) * 0.010f);
+        nudgeParam(core::ViewportCameraBinding::yaw, float(-delta.x()) * 0.010f);
+        nudgeParam(core::ViewportCameraBinding::pitch, float(-delta.y()) * 0.010f);
     } else if (buttons & Qt::MiddleButton) {
         // Pan: track the look-at point in screen space.
-        nudgeParam("camPanX", float(-delta.x()) * 0.006f);
-        nudgeParam("camPanY", float(delta.y()) * 0.006f);
+        nudgeParam(core::ViewportCameraBinding::panX, float(-delta.x()) * 0.006f);
+        nudgeParam(core::ViewportCameraBinding::panY, float(delta.y()) * 0.006f);
     } else if (buttons & Qt::RightButton) {
         // Dolly: drag up moves closer, drag down pulls back.
-        nudgeParam("camDistance", float(delta.y()) * 0.02f);
+        nudgeParam(core::ViewportCameraBinding::distance, float(delta.y()) * 0.02f);
     }
     event->accept();
 }
@@ -463,7 +485,7 @@ void SlangRhiWidget::mouseReleaseEvent(QMouseEvent* event)
 void SlangRhiWidget::wheelEvent(QWheelEvent* event)
 {
     const float steps = float(event->angleDelta().y()) / 120.0f;
-    if (steps != 0.0f && nudgeParam("camDistance", -steps * 0.3f)) {
+    if (steps != 0.0f && nudgeParam(core::ViewportCameraBinding::distance, -steps * 0.3f)) {
         event->accept();
         return;
     }

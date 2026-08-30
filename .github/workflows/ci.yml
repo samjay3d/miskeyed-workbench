@@ -239,6 +239,18 @@ jobs:
                   QT_QPA_PLATFORM: offscreen
               run: python -m pytest tests/ -v
 
+            - name: Capture Workbench documentation
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: python ci\capture_workbench.py docs\images\workbench.png
+
+            - name: Upload Workbench documentation
+              if: matrix.python-version == '3.11'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: workbench-documentation
+                  path: docs/images/workbench.png
+
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having
     # to re-edit the rule whenever a Python version is added or removed.

@@ -51,6 +51,10 @@ void ShaderDocument::setSource(const QString& source)
     if (m_source == source)
         return;
     m_source = source;
+    if (!m_dirty) {
+        m_dirty = true;
+        emit dirtyChanged();
+    }
     m_graph.setPayload(m_sourceNode, source.toUtf8());
     emit sourceChanged();
     if (m_live)
@@ -77,6 +81,7 @@ bool ShaderDocument::load()
         return false;
     }
     setSource(QString::fromUtf8(f.readAll()));
+    markSourceClean();
     return true;
 }
 
@@ -94,6 +99,10 @@ bool ShaderDocument::save()
         setDiagnostics(f.errorString());
         return false;
     }
+    if (m_dirty) {
+        m_dirty = false;
+        emit dirtyChanged();
+    }
     return true;
 }
 
@@ -101,6 +110,14 @@ void ShaderDocument::compile()
 {
     m_compileTimer.stop();
     compileNow();
+}
+
+void ShaderDocument::markSourceClean()
+{
+    if (!m_dirty)
+        return;
+    m_dirty = false;
+    emit dirtyChanged();
 }
 
 void ShaderDocument::compileNow()

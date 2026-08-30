@@ -5,3 +5,4 @@
 #include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
 #include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
 #include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>
+#include <miskeyed/workbench/core/TimeContext.h>

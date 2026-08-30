@@ -21,7 +21,7 @@ QHash<int, QByteArray> ShaderParameterModel::roleNames() const
         { WidgetRole, "widget" }, { TooltipRole, "tooltip" }, { TypeRole, "type" },
         { ValueRole, "value" }, { MinimumRole, "minimum" }, { MaximumRole, "maximum" },
         { StepRole, "step" }, { ChoicesRole, "choices" }, { OffsetRole, "offset" },
-        { SizeRole, "size" } };
+        { SizeRole, "size" }, { HostManagedRole, "hostManaged" } };
 }
 
 QVariant ShaderParameterModel::data(const QModelIndex& index, int role) const
@@ -57,6 +57,8 @@ QVariant ShaderParameterModel::data(const QModelIndex& index, int role) const
         return qlonglong(d.offset);
     case SizeRole:
         return qlonglong(d.size);
+    case HostManagedRole:
+        return d.hostManaged;
     default:
         return {};
     }

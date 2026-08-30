@@ -275,7 +275,7 @@ Or build the native app directly with CMake:
 cmake -S . -B build -G Ninja `
   -DCMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64 `
   -DSLANG_ROOT=C:\sdk\slang `
-  -DSLANG_QRHI_BUILD_APP=ON
+  -DMISKEYED_WORKBENCH_BUILD_APP=ON
 cmake --build build --config Release
 ```
 
@@ -290,11 +290,16 @@ cpp/include/miskeyed/workbench/slang_rhi/
     SlangRhiWidget.h        embeddable QRhiWidget
     WorkbenchWindow.h       standalone workbench composition
 
-cpp/src/
-    SlangCompiler.cpp       in-process Slang API
-    Qt68ShaderBridge.cpp    Slang output/reflection -> QShader
-    DependencyGraph.cpp     incremental invalidation
-    SlangRhiWidget.cpp      QRhi rendering + cheap buffer updates
+cpp/src/workbench/
+    core/                   shared contracts, pass state, invalidation
+    editor/                 native editor and language-service UI
+    slang/                  compilation, reflection, shader documents
+    rendering/              QRhi presentation and resource lifecycle
+    ui/                     reusable native inspector widgets
+    modes/render_toy/       current two-pass mode composition
+    anari/                  optional ANARI host edge
+
+docs/SOURCE_LAYOUT.md       ownership and dependency direction
 
 bindings/
     typesystem_slang_qrhi.xml
@@ -306,6 +311,15 @@ python/miskeyed/workbench/
     __init__.py             Shiboken module exposure
     __main__.py             `workbench` console entry point
 ```
+
+The **Headers** panel shows the exact Workbench-owned Slang declarations used during
+compilation, including reflected UI attributes and the viewport camera contract. Their
+authored sources live in `shaders/workbench/`; the UI does not reconstruct documentation
+from a separate schema.
+
+CI also captures the native window after compilation and its first rendered frames. The
+`workbench-documentation` artifact provides the current screenshot for review and
+promotion into [`docs/images`](docs/images/README.md) as the interface evolves.
 
 ## Roadmap
 

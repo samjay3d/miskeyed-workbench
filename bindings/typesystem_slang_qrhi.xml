@@ -6,6 +6,9 @@
 
     <namespace-type name="miskeyed">
       <namespace-type name="workbench">
+       <namespace-type name="core">
+        <object-type name="TimeContext" />
+       </namespace-type>
        <namespace-type name="slang_rhi">
         <enum-type name="NodeKind" />
         <enum-type name="DirtyFlag" flags="yes" />

@@ -38,6 +38,7 @@ struct ParameterDescriptor {
     QVariant step;
     QVariant defaultValue;
     QStringList choices;
+    bool hostManaged = false;
 };
 
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderParameterModel final : public QAbstractListModel {
@@ -59,6 +60,7 @@ public:
         ChoicesRole,
         OffsetRole,
         SizeRole,
+        HostManagedRole,
     };
     Q_ENUM(Role)
 

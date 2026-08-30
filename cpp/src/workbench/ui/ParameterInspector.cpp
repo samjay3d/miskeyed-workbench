@@ -183,9 +183,12 @@ void ParameterInspector::rebuild()
         return;
 
     QMap<QString, QList<int>> groups;
-    for (int row = 0; row < m_model->rowCount(); ++row)
+    for (int row = 0; row < m_model->rowCount(); ++row) {
+        if (m_model->data(m_model->index(row), ShaderParameterModel::HostManagedRole).toBool())
+            continue;
         groups[m_model->data(m_model->index(row), ShaderParameterModel::GroupRole).toString()]
             .append(row);
+    }
     for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
         auto* box
             = new QGroupBox(it.key().isEmpty() ? QStringLiteral("Parameters") : it.key(), this);

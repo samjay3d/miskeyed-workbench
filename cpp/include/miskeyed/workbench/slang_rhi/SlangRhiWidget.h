@@ -9,6 +9,10 @@
 class QMouseEvent;
 class QWheelEvent;
 
+namespace miskeyed::workbench::core {
+class TimeContext;
+}
+
 namespace miskeyed::workbench::slang_rhi {
 
 class SlangRhiWidgetPrivate;
@@ -32,8 +36,11 @@ public:
     // post-process that samples that texture (bound at SRB slot 1 -> HLSL t1/s1).
     ShaderDocument* scenePass() const { return m_scenePass; }
     void setScenePass(ShaderDocument* sceneDocument);
+    miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
+    void setTimeContext(miskeyed::workbench::core::TimeContext* context);
 
 signals:
+    void activated();
     void documentChanged();
     void exposureChanged();
     void gpuError(QString message);
@@ -48,6 +55,7 @@ private slots:
     void onParameterRangeChanged(int offset, int size);
     void onScenePassChanged();
     void onScenePassRangeChanged(int offset, int size);
+    void applyTimeContext();
 
 private:
     // Houdini-style viewport navigation: LMB tumble, MMB pan, RMB/wheel dolly.
@@ -63,6 +71,7 @@ private:
 
     ShaderDocument* m_document = nullptr;
     ShaderDocument* m_scenePass = nullptr;
+    miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     float m_exposure = 1.0f;
     QPointF m_lastDragPos;
     bool m_dragging = false;

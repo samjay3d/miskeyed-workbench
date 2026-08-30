@@ -1,5 +1,7 @@
 #include <miskeyed/workbench/slang_rhi/SlangCompiler.h>
 #include <miskeyed/workbench/slang_rhi/Digest.h>
+#include <miskeyed/workbench/core/WorkbenchHeaders.h>
+#include <miskeyed/workbench/core/TimeContext.h>
 #include <QDataStream>
 #include "Qt68ShaderBridge.h"
 #include <slang.h>
@@ -11,22 +13,6 @@
 
 namespace miskeyed::workbench::slang_rhi {
 namespace {
-
-    // The default "system prelude": the attribute types the Workbench understands. It is
-    // prepended to every compile (see compileFullscreen) so shaders can annotate uniforms
-    // with [UIName("..")], [UIRange(lo,hi)], etc. WITHOUT the user pasting these declarations
-    // into their own source. Slang only reflects an attribute whose type is declared, so
-    // these must be in scope at compile time. Long term this is the seam where user
-    // plugins/sidecars register additional definitions.
-    constexpr const char* kDefaultSystemPrelude = R"SLANG(
-[__AttributeUsage(_AttributeTargets.Var)] struct UINameAttribute    { string name; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIRangeAttribute   { float min; float max; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIStepAttribute    { float step; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIWidgetAttribute  { string kind; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIGroupAttribute   { string group; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UITooltipAttribute { string text; }
-[__AttributeUsage(_AttributeTargets.Var)] struct UIUnitsAttribute   { string units; }
-)SLANG";
 
     QString blobText(slang::IBlob* blob)
     {
@@ -144,9 +130,12 @@ namespace {
                 continue;
             }
             ParameterDescriptor d;
-            d.name = name;
+            d.name = group == QLatin1String("workbenchTime")
+                ? QStringLiteral("workbenchTime.") + name
+                : name;
             d.label = name;
             d.group = group;
+            d.hostManaged = group == QLatin1String("workbenchTime");
             d.type = reflectType(var->getType());
             if (d.type == ParameterType::Unknown)
                 continue; // resources become a separate model in the next slice
@@ -264,7 +253,8 @@ class SlangCompilerPrivate {
 public:
     Slang::ComPtr<slang::IGlobalSession> global;
     QStringList searchPaths;
-    QString systemPrelude = QString::fromUtf8(kDefaultSystemPrelude);
+    QString systemPrelude = QStringLiteral("import miskeyed.time;\n")
+        + QString::fromUtf8(core::workbenchHeaderSource(QStringLiteral("ui")));
 
     SlangCompilerPrivate() { slang::createGlobalSession(global.writeRef()); }
 };
@@ -334,13 +324,27 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
         return result;
     }
 
+    // Register the packaged module in Slang's session, then let the ordinary `import
+    // miskeyed.time` in the small system contract resolve it. Project/user modules still
+    // resolve through SessionDesc.searchPaths; an ISlangFileSystem can replace this
+    // embedded-source edge later without changing authored shaders.
+    const QByteArray timeSource = core::TimeBinding::slangDeclaration();
+    Slang::ComPtr<slang::IBlob> moduleDiagnostics;
+    auto* timeModule = session->loadModuleFromSourceString("miskeyed.time", "miskeyed/time.slang",
+        timeSource.constData(), moduleDiagnostics.writeRef());
+    result.diagnostics += blobText(moduleDiagnostics);
+    if (!timeModule) {
+        result.diagnostics += QStringLiteral("Failed to load the built-in miskeyed.time module.\n");
+        return result;
+    }
+
     const auto src = source.toUtf8();
     const auto path = virtualPath.toUtf8();
     const auto revision = Digest::hash(src).hex().left(16).toUtf8();
     const QByteArray moduleName = QByteArray("sqr_user_") + revision;
 
-    // Prepend the private system prelude, then reset #line so every diagnostic still
-    // reports the user's own line numbers (not offset by the injected declarations).
+    // Prepend the catalog-backed system header, then reset #line so every diagnostic
+    // still reports the user's own line numbers (not offset by the header declarations).
     QByteArray effectiveSrc;
     if (!d->systemPrelude.isEmpty()) {
         QByteArray lineName = path;

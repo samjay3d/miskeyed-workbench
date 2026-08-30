@@ -19,9 +19,9 @@ from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E40
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 # NOTE: the shader below deliberately does NOT declare the UI* attribute types. The
-# compiler injects them as a private "system prelude", so user shaders can annotate
-# uniforms with [UIName], [UIRange], ... without pasting any boilerplate. These tests
-# therefore also prove that injection: if it regressed, reflection would come back empty.
+# compiler prepends the published UI header shown in Workbench's Headers panel, so user
+# shaders can annotate uniforms without pasting boilerplate. These tests therefore also
+# prove that catalog-backed injection: if it regressed, reflection would come back empty.
 SHADER = """
 [UIGroup("Camera")] [UIName("Field of View")] [UIWidget("slider")]
 [UIRange(10.0, 120.0)] [UIStep(1.0)] [UITooltip("Vertical FOV")] [UIUnits("deg")]
@@ -93,6 +93,23 @@ def test_uniform_without_metadata_uses_defaults(app):
     # carries no widget hint (the inspector falls back to a plain numeric editor).
     assert _value(model, "plain", Role.LabelRole) in ("plain", "")
     assert not _value(model, "plain", Role.WidgetRole)
+
+
+def test_host_time_contract_is_reflected_but_not_authored_ui(app):
+    doc = ShaderDocument()
+    doc.setSource(SHADER)
+    doc.compile()
+
+    model = doc.parameters()
+    Role = ShaderParameterModel.Role
+    assert _value(model, "workbenchTime.time", Role.GroupRole) == "workbenchTime"
+    assert _value(model, "workbenchTime.time", Role.HostManagedRole) is True
+
+    graph = doc.dependencyGraph()
+    source = graph.nodeId("source:user")
+    source_identity = graph.digestHex(source)
+    assert model.setValue("workbenchTime.time", 2.0)
+    assert graph.digestHex(source) == source_identity
 
 
 def test_metadata_only_edit_live_updates_parameter_model(app):
