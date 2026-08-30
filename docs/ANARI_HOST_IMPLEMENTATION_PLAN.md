@@ -33,9 +33,10 @@ an extensible UI framework or anticipate its widget hierarchy.
 The first backend slice is now implemented:
 
 - `MISKEYED_WORKBENCH_WITH_ANARI` is an opt-in CMake feature, defaulting to `OFF`;
-- `miskeyed_workbench_anari_backend` is isolated from `slang_qrhi_core` and Qt;
+- `miskeyed_workbench_anari_backend` is isolated from `miskeyed_workbench_slang_rhi` and Qt;
 - device-neutral code lives under `miskeyed::workbench::anari_backend` and
-  `cpp/include/miskeyed/workbench/anari`; the existing renderer remains `slang_qrhi`;
+  `cpp/include/miskeyed/workbench/anari`; the existing renderer is isolated in
+  `miskeyed::workbench::slang_rhi`;
 - `AnariCandidates` parses deterministic configured candidates while preserving the
   ANARI loader's `name,path` syntax;
 - `AnariLibrary` owns load/unload, subtype/extension queries, and status collection;
@@ -259,7 +260,7 @@ layout.
 Every backend change is required to keep the shipped path unchanged:
 
 - all ANARI/OpenUSD/Hydra/Island options default to `OFF`;
-- the existing `slang_qrhi_core`, executable, Shiboken module, imports, and entry points
+- the existing `miskeyed_workbench_slang_rhi`, executable, Shiboken module, imports, and entry points
   keep their current names and dependency set when those options are off;
 - optional SDK discovery occurs only inside the enabled backend target—ordinary CMake
   configure must not require ANARI or OpenUSD;

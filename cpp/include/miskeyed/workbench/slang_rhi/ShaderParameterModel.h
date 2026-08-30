@@ -5,7 +5,7 @@
 #include <QByteArray>
 #include <QVariant>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 enum class ParameterType : quint8 {
     Float,
@@ -40,7 +40,7 @@ struct ParameterDescriptor {
     QStringList choices;
 };
 
-class SLANG_QRHI_EXPORT ShaderParameterModel final : public QAbstractListModel {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderParameterModel final : public QAbstractListModel {
     Q_OBJECT
     Q_PROPERTY(int byteSize READ byteSize NOTIFY layoutChangedByShader)
 
@@ -93,4 +93,4 @@ private:
     QByteArray m_bytes;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

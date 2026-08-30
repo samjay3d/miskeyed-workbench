@@ -1,10 +1,10 @@
-#include <slang_qrhi/WorkbenchWindow.h>
-#include <slang_qrhi/ParameterInspector.h>
-#include <slang_qrhi/ShaderDocument.h>
-#include <slang_qrhi/SlangRhiWidget.h>
-#include <slang_qrhi/CodeEditor.h>
-#include <slang_qrhi/ShaderHighlighter.h>
-#include <slang_qrhi/LspClient.h>
+#include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>
+#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang_rhi/CodeEditor.h>
+#include <miskeyed/workbench/slang_rhi/ShaderHighlighter.h>
+#include <miskeyed/workbench/slang_rhi/LspClient.h>
 #include <QAction>
 #include <QClipboard>
 #include <QComboBox>
@@ -33,7 +33,7 @@
 #include <QVector>
 #include <QWidget>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 namespace {
 
@@ -1275,4 +1275,4 @@ void WorkbenchWindow::openShader(const QString& path)
     }
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

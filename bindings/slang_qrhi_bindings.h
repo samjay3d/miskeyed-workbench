@@ -1,7 +1,7 @@
 #pragma once
-#include <slang_qrhi/DependencyGraph.h>
-#include <slang_qrhi/ShaderParameterModel.h>
-#include <slang_qrhi/ParameterInspector.h>
-#include <slang_qrhi/ShaderDocument.h>
-#include <slang_qrhi/SlangRhiWidget.h>
-#include <slang_qrhi/WorkbenchWindow.h>
+#include <miskeyed/workbench/slang_rhi/DependencyGraph.h>
+#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang_rhi/WorkbenchWindow.h>

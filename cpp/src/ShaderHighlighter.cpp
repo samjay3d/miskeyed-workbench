@@ -1,6 +1,6 @@
-#include <slang_qrhi/ShaderHighlighter.h>
+#include <miskeyed/workbench/slang_rhi/ShaderHighlighter.h>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 ShaderHighlighter::ShaderHighlighter(QTextDocument* parent)
     : QSyntaxHighlighter(parent)
@@ -227,4 +227,4 @@ void ShaderHighlighter::highlightBlock(const QString& text)
     }
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

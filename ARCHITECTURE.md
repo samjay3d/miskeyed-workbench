@@ -1,4 +1,4 @@
-# slang-qrhi architecture
+# Miskeyed Workbench architecture
 
 `slang-qrhi` is a new native SDK. The old Python renderer/toolchain API is intentionally not part of this package.
 
@@ -6,10 +6,17 @@ This document describes the shipped **Shader Toy** and **Render Toy** modes. The
 planned **ANARI Device** mode is not shipped architecture; its product boundary and
 research gates live in [docs/ANARI_HOST_IMPLEMENTATION_PLAN.md](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
 
-The shipped renderer retains the historical `slang_qrhi` C++ namespace and target
-names. New device-neutral backend code uses `miskeyed::workbench` and
-`miskeyed_workbench_*` so ANARI host infrastructure is not presented as part of the
-Slang/QRhi renderer.
+The renderer lives in `miskeyed::workbench::slang_rhi`; device-neutral backend code
+lives beside it in `miskeyed::workbench`. The nested renderer namespace keeps its API
+distinct without presenting ANARI host infrastructure as part of the Slang/QRhi layer.
+
+The CMake project is the `miskeyed_workbench` product umbrella. Consumers inside the
+build use the namespaced aliases `miskeyed::workbench::slang_rhi` and, when ANARI is
+enabled, `miskeyed::workbench::anari_backend`. These target names make the product
+boundary explicit. The private `_slang_qrhi` extension name remains backend-specific,
+while its generated types use the real nested C++ namespace. A compile test includes
+and links both native surfaces to keep that boundary building before ANARI host work
+expands it.
 
 ## Ownership
 

@@ -1,5 +1,5 @@
-#include <slang_qrhi/ParameterInspector.h>
-#include <slang_qrhi/ShaderParameterModel.h>
+#include <miskeyed/workbench/slang_rhi/ParameterInspector.h>
+#include <miskeyed/workbench/slang_rhi/ShaderParameterModel.h>
 #include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
@@ -15,7 +15,7 @@
 #include <QVector4D>
 #include <memory>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 namespace {
 
     QWidget* makeEditor(ShaderParameterModel* model, int row, QWidget* parent)
@@ -202,4 +202,4 @@ void ParameterInspector::rebuild()
     m_layout->addStretch(1);
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

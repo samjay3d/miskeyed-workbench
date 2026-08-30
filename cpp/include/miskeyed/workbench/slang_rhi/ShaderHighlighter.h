@@ -6,12 +6,12 @@
 #include <QTextCharFormat>
 #include <vector>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 // Lightweight highlighter for Slang / HLSL / GLSL source, also used for the generated
 // code viewer. Colors keywords, types, numbers, strings, comments, preprocessor lines,
 // [attributes], : SEMANTICS and function calls with a Tokyo-Night style palette.
-class SLANG_QRHI_EXPORT ShaderHighlighter final : public QSyntaxHighlighter {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderHighlighter final : public QSyntaxHighlighter {
     Q_OBJECT
 public:
     explicit ShaderHighlighter(QTextDocument* parent = nullptr);
@@ -30,4 +30,4 @@ private:
     QTextCharFormat m_commentFormat;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

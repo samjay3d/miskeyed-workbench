@@ -15,14 +15,14 @@ class QCompleter;
 class QStringListModel;
 class QTimer;
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 // A QPlainTextEdit with a gutter of line numbers and a highlighted current line.
 // Used for both the editable Slang source and the read-only generated-code viewer.
 // When given a LspClient it also provides IDE features driven by Slang's language
 // server: auto-completion, hover docs, signature help, live diagnostic squiggles and
 // Ctrl+Click go-to-definition.
-class SLANG_QRHI_EXPORT CodeEditor final : public QPlainTextEdit {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT CodeEditor final : public QPlainTextEdit {
     Q_OBJECT
 public:
     explicit CodeEditor(QWidget* parent = nullptr);
@@ -74,4 +74,4 @@ private:
     int m_completionSerial = 0; // drops stale async completion replies
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

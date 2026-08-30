@@ -1,5 +1,5 @@
-#include <slang_qrhi/SlangCompiler.h>
-#include <slang_qrhi/Digest.h>
+#include <miskeyed/workbench/slang_rhi/SlangCompiler.h>
+#include <miskeyed/workbench/slang_rhi/Digest.h>
 #include "Qt68ShaderBridge.h"
 #include <slang.h>
 #include <slang-com-ptr.h>
@@ -8,7 +8,7 @@
 #include <QVector4D>
 #include <algorithm>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 namespace {
 
     // The default "system prelude": the attribute types the Workbench understands. It is
@@ -452,4 +452,4 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     return result;
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

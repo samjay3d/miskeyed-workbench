@@ -1,8 +1,8 @@
-#include <slang_qrhi/DependencyGraph.h>
+#include <miskeyed/workbench/slang_rhi/DependencyGraph.h>
 #include <algorithm>
 #include <stdexcept>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 DependencyGraph::DependencyGraph(QObject* parent)
     : QObject(parent)
@@ -238,4 +238,4 @@ void DependencyGraph::markAllClean()
         it->dirty = {};
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

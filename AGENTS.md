@@ -104,11 +104,11 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
 **Identity & naming:**
 
 - Distribution: `miskeyed-workbench`; import: `miskeyed.workbench` (PEP 420 namespace).
-- The native extension is `_slang_qrhi.pyd` and the **C++ namespace stays `slang_qrhi`.**
-  Do **not** rename the shipped Slang/QRhi internals — it is risky and buys nothing.
+- The native extension remains `_slang_qrhi.pyd`; its C++ API lives in
+  `miskeyed::workbench::slang_rhi`.
 - New device-neutral Workbench backend code uses `miskeyed::workbench`; do not place
-  ANARI host/device infrastructure in `slang_qrhi` merely because that renderer was the
-  repository's first native target.
+  ANARI host/device infrastructure in `miskeyed::workbench::slang_rhi` merely because
+  that renderer was the repository's first native target.
 
 **Rendering:**
 
