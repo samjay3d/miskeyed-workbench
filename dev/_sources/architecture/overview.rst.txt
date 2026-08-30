@@ -1,0 +1,67 @@
+System overview
+===============
+
+The shell composes services; it is not a render engine disguised as a window.
+The current implementation is ``WorkbenchWindow``, but its widget layout is not
+the conceptual architecture.
+
+::
+
+   Workbench shell
+   +-- ShaderWorkspace
+   |   +-- ShaderDocument(s) and DocumentSession(s)
+   |   +-- focused document
+   |   +-- TimeContext
+   |   `-- TimeTransport
+   +-- WorkspaceEditor and active-document Inspector
+   +-- live tool contributions
+   |   +-- RenderToySession  -> Scene/Post QRhi consumers
+   |   `-- ShaderToySession  -> fullscreen QRhi consumer
+   +-- in-process Slang
+   |   +-- module filesystem/search paths
+   |   +-- reflection and entry points
+   |   `-- generated target code
+   `-- rendering
+       +-- RhiBackendPolicy
+       +-- SlangRhiWidget / RenderPass
+       `-- QRhi device resources and submission
+
+Responsibilities and lifetimes
+------------------------------
+
+``ShaderWorkspace`` lasts with the shell and owns open documents, editor sessions,
+focus, and shared evaluation objects. ``ShaderDocument`` owns authored source and
+the compiler/reflection products derived from that source. ``WorkspaceEditor``
+only presents a focused document and preserves cheap view state.
+
+A tool session lasts independently of which primary surface is visible. It owns
+bindings and entry-point choices, not documents or time. A contribution supplies a
+surface, status, and actions to the shell. Selecting a view changes presentation;
+it does not create or destroy the session.
+
+Slang owns language semantics, module resolution, compilation, reflection, and
+backend code generation. Workbench owns editor state, dependency identity and
+invalidation, UI presentation, consumer bindings, and native execution. Qt/QRhi
+owns graphics API abstraction and resource lifecycle; C++ owns synchronization and
+stable native object lifetime. Python exposes these QObjects through Shiboken only.
+
+End-to-end flow
+---------------
+
+::
+
+   authored Slang -> ShaderDocument -> SlangCompiler -> module resolution
+       -> reflection + entry points -> DependencyGraph products
+       -> tool-selected capabilities -> QShader bridge -> QRhi consumer
+
+Changing a slider normally stops at uniform upload. Changing a module can restart
+compilation and pipeline work. These different paths are why identity, ownership,
+and dirty work are documented separately.
+
+Code map
+--------
+
+Start at ``cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp`` for composition,
+not ownership rules. Follow ``ShaderWorkspace`` and ``ShaderDocument`` into the
+Slang layer, tool sessions into ``modes/``, and GPU work into ``rendering/``. See
+:doc:`source_layout` for placement rules.

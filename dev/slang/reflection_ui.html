@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Reflection-driven parameter UI &#8212; Workbench 0.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/slang/reflection_ui.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="QRhi, backends, and portability" href="../rendering/qrhi.html" />
+    <link rel="prev" title="Entry points are program capabilities" href="entry_points.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="reflection-driven-parameter-ui">
+<h1>Reflection-driven parameter UI<a class="headerlink" href="#reflection-driven-parameter-ui" title="Link to this heading">¶</a></h1>
+<p>Shaders state semantic UI intent with Slang attributes instead of requiring a C++
+control for every uniform:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">UIGroup</span><span class="p">(</span><span class="s2">"Animation"</span><span class="p">)]</span>
+<span class="p">[</span><span class="n">UIName</span><span class="p">(</span><span class="s2">"Speed"</span><span class="p">)]</span>
+<span class="p">[</span><span class="n">UIWidget</span><span class="p">(</span><span class="s2">"slider"</span><span class="p">)]</span>
+<span class="p">[</span><span class="n">UIRange</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)]</span>
+<span class="p">[</span><span class="n">UIStep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)]</span>
+<span class="nb">float</span> <span class="n">speed</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">;</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">authored</span> <span class="n">metadata</span> <span class="o">-&gt;</span> <span class="n">Slang</span> <span class="n">reflection</span> <span class="o">-&gt;</span> <span class="n">ParameterDescriptor</span>
+    <span class="o">-&gt;</span> <span class="n">ShaderParameterModel</span> <span class="o">-&gt;</span> <span class="n">ParameterInspector</span>
+</pre></div>
+</div>
+<p>Reflection supplies explicit offsets, types, binding information, and user
+attributes. <code class="docutils literal notranslate"><span class="pre">ShaderParameterModel</span></code> preserves compatible values across hot reload.
+<code class="docutils literal notranslate"><span class="pre">ParameterInspector</span></code> groups descriptors and chooses an appropriate native Qt
+control. Descriptor order is presentation-only: uniform bytes are packed at their
+reflected offsets.</p>
+<p>This lets a shader author express range, units, grouping, and widget intent while
+C++ retains type-safe model and buffer ownership. Fields from <code class="docutils literal notranslate"><span class="pre">miskeyed.time</span></code> and
+other host contracts are marked host-managed, updated by the application, and
+excluded from authored controls.</p>
+<p>See <code class="docutils literal notranslate"><span class="pre">shaders/workbench/ui.slang</span></code>, <code class="docutils literal notranslate"><span class="pre">ShaderParameterModel.cpp</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">ui/ParameterInspector.cpp</span></code>.</p>
+<img alt="Parameter inspector showing controls grouped from reflected Slang metadata" class="align-center" src="../_images/inspector_parameters.png" />
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Miskeyed Workbench</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/workspace.html">Workspace, documents, and bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Slang</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="modules.html">Slang modules and compilation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entry_points.html">Entry points are program capabilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Reflection-driven parameter UI</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rendering</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/qrhi.html">QRhi, backends, and portability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/render_toy.html">Render Toy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/shader_toy.html">Shader Toy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools and development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Tool sessions and contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing and documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../portability/index.html">Portability evidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../research/anari.html">ANARI research boundary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="entry_points.html" title="previous chapter">Entry points are program capabilities</a></li>
+      <li>Next: <a href="../rendering/qrhi.html" title="next chapter">QRhi, backends, and portability</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/slang/reflection_ui.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

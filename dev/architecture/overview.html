@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>System overview &#8212; Workbench 0.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/architecture/overview.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Workspace, documents, and bindings" href="workspace.html" />
+    <link rel="prev" title="Getting started" href="../getting_started/index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="system-overview">
+<h1>System overview<a class="headerlink" href="#system-overview" title="Link to this heading">¶</a></h1>
+<p>The shell composes services; it is not a render engine disguised as a window.
+The current implementation is <code class="docutils literal notranslate"><span class="pre">WorkbenchWindow</span></code>, but its widget layout is not
+the conceptual architecture.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Workbench shell
++-- ShaderWorkspace
+|   +-- ShaderDocument(s) and DocumentSession(s)
+|   +-- focused document
+|   +-- TimeContext
+|   `-- TimeTransport
++-- WorkspaceEditor and active-document Inspector
++-- live tool contributions
+|   +-- RenderToySession  -&gt; Scene/Post QRhi consumers
+|   `-- ShaderToySession  -&gt; fullscreen QRhi consumer
++-- in-process Slang
+|   +-- module filesystem/search paths
+|   +-- reflection and entry points
+|   `-- generated target code
+`-- rendering
+    +-- RhiBackendPolicy
+    +-- SlangRhiWidget / RenderPass
+    `-- QRhi device resources and submission
+</pre></div>
+</div>
+<section id="responsibilities-and-lifetimes">
+<h2>Responsibilities and lifetimes<a class="headerlink" href="#responsibilities-and-lifetimes" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ShaderWorkspace</span></code> lasts with the shell and owns open documents, editor sessions,
+focus, and shared evaluation objects. <code class="docutils literal notranslate"><span class="pre">ShaderDocument</span></code> owns authored source and
+the compiler/reflection products derived from that source. <code class="docutils literal notranslate"><span class="pre">WorkspaceEditor</span></code>
+only presents a focused document and preserves cheap view state.</p>
+<p>A tool session lasts independently of which primary surface is visible. It owns
+bindings and entry-point choices, not documents or time. A contribution supplies a
+surface, status, and actions to the shell. Selecting a view changes presentation;
+it does not create or destroy the session.</p>
+<p>Slang owns language semantics, module resolution, compilation, reflection, and
+backend code generation. Workbench owns editor state, dependency identity and
+invalidation, UI presentation, consumer bindings, and native execution. Qt/QRhi
+owns graphics API abstraction and resource lifecycle; C++ owns synchronization and
+stable native object lifetime. Python exposes these QObjects through Shiboken only.</p>
+</section>
+<section id="end-to-end-flow">
+<h2>End-to-end flow<a class="headerlink" href="#end-to-end-flow" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">authored</span> <span class="n">Slang</span> <span class="o">-&gt;</span> <span class="n">ShaderDocument</span> <span class="o">-&gt;</span> <span class="n">SlangCompiler</span> <span class="o">-&gt;</span> <span class="n">module</span> <span class="n">resolution</span>
+    <span class="o">-&gt;</span> <span class="n">reflection</span> <span class="o">+</span> <span class="n">entry</span> <span class="n">points</span> <span class="o">-&gt;</span> <span class="n">DependencyGraph</span> <span class="n">products</span>
+    <span class="o">-&gt;</span> <span class="n">tool</span><span class="o">-</span><span class="n">selected</span> <span class="n">capabilities</span> <span class="o">-&gt;</span> <span class="n">QShader</span> <span class="n">bridge</span> <span class="o">-&gt;</span> <span class="n">QRhi</span> <span class="n">consumer</span>
+</pre></div>
+</div>
+<p>Changing a slider normally stops at uniform upload. Changing a module can restart
+compilation and pipeline work. These different paths are why identity, ownership,
+and dirty work are documented separately.</p>
+</section>
+<section id="code-map">
+<h2>Code map<a class="headerlink" href="#code-map" title="Link to this heading">¶</a></h2>
+<p>Start at <code class="docutils literal notranslate"><span class="pre">cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp</span></code> for composition,
+not ownership rules. Follow <code class="docutils literal notranslate"><span class="pre">ShaderWorkspace</span></code> and <code class="docutils literal notranslate"><span class="pre">ShaderDocument</span></code> into the
+Slang layer, tool sessions into <code class="docutils literal notranslate"><span class="pre">modes/</span></code>, and GPU work into <code class="docutils literal notranslate"><span class="pre">rendering/</span></code>. See
+<a class="reference internal" href="source_layout.html"><span class="doc">Native source layout</span></a> for placement rules.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Miskeyed Workbench</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">System overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#responsibilities-and-lifetimes">Responsibilities and lifetimes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#end-to-end-flow">End-to-end flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#code-map">Code map</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="workspace.html">Workspace, documents, and bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source_layout.html">Native source layout</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Slang</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../slang/modules.html">Slang modules and compilation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/entry_points.html">Entry points are program capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/reflection_ui.html">Reflection-driven parameter UI</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rendering</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/qrhi.html">QRhi, backends, and portability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/render_toy.html">Render Toy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/shader_toy.html">Shader Toy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools and development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Tool sessions and contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing and documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../portability/index.html">Portability evidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../research/anari.html">ANARI research boundary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../getting_started/index.html" title="previous chapter">Getting started</a></li>
+      <li>Next: <a href="workspace.html" title="next chapter">Workspace, documents, and bindings</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/architecture/overview.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Render Toy &#8212; Workbench 0.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/rendering/render_toy.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Shader Toy" href="shader_toy.html" />
+    <link rel="prev" title="QRhi, backends, and portability" href="qrhi.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="render-toy">
+<h1>Render Toy<a class="headerlink" href="#render-toy" title="Link to this heading">¶</a></h1>
+<p>Render Toy demonstrates an explicit two-pass consumer. Its session binds one open
+document to <strong>Scene</strong> and another to <strong>Post</strong>, plus selected vertex/fragment entry
+points for each. The scene pass renders to an offscreen color texture; the post pass
+samples that texture and presents the graded result.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">shared</span> <span class="n">TimeContext</span> <span class="o">-&gt;</span> <span class="n">Scene</span> <span class="n">document</span><span class="o">/</span><span class="n">entries</span> <span class="o">-&gt;</span> <span class="n">offscreen</span> <span class="n">scene</span> <span class="n">texture</span>
+                                           <span class="o">-&gt;</span> <span class="n">Post</span> <span class="n">document</span><span class="o">/</span><span class="n">entries</span> <span class="o">-&gt;</span> <span class="n">output</span>
+</pre></div>
+</div>
+<p>The workspace owns both documents and time. <code class="docutils literal notranslate"><span class="pre">RenderToySession</span></code> owns bindings and
+entry selections. <code class="docutils literal notranslate"><span class="pre">RenderPass</span></code>/<code class="docutils literal notranslate"><span class="pre">SlangRhiWidget</span></code> own GPU state. Focusing the Post
+document does not change either binding; switching to the Shader Toy layout does
+not destroy this session.</p>
+<p>See <code class="docutils literal notranslate"><span class="pre">modes/render_toy/RenderToySession.*</span></code> and the corresponding tool adapter in
+<code class="docutils literal notranslate"><span class="pre">WorkbenchToolFactory.cpp</span></code>.</p>
+<img alt="Render Toy with separate Scene and Post surfaces and visible document bindings" class="align-center" src="../_images/render_toy.png" />
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Miskeyed Workbench</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/workspace.html">Workspace, documents, and bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Slang</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../slang/modules.html">Slang modules and compilation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/entry_points.html">Entry points are program capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/reflection_ui.html">Reflection-driven parameter UI</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rendering</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="qrhi.html">QRhi, backends, and portability</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Render Toy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shader_toy.html">Shader Toy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools and development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Tool sessions and contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing and documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../portability/index.html">Portability evidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../research/anari.html">ANARI research boundary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="qrhi.html" title="previous chapter">QRhi, backends, and portability</a></li>
+      <li>Next: <a href="shader_toy.html" title="next chapter">Shader Toy</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/rendering/render_toy.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

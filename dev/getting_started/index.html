@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Getting started &#8212; Workbench 0.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/getting_started/index.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="System overview" href="../architecture/overview.html" />
+    <link rel="prev" title="Miskeyed Workbench" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading">¶</a></h1>
+<section id="what-workbench-is">
+<h2>What Workbench is<a class="headerlink" href="#what-workbench-is" title="Link to this heading">¶</a></h2>
+<p>Workbench is a native technical-art shell with two shipped tool contributions:
+<strong>Render Toy</strong> runs a scene pass and a post-process pass, while <strong>Shader Toy</strong> is a
+minimal fullscreen shader loop. Both use the same workspace, editor, inspector,
+and time model. ANARI support is research, not a third shipped UI mode.</p>
+</section>
+<section id="install-and-run">
+<h2>Install and run<a class="headerlink" href="#install-and-run" title="Link to this heading">¶</a></h2>
+<p>Released wheels target CPython 3.11–3.13. Install and launch with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">miskeyed</span><span class="o">-</span><span class="n">workbench</span>
+<span class="n">workbench</span>
+<span class="n">workbench</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">shader</span><span class="o">.</span><span class="n">slang</span>
+</pre></div>
+</div>
+<p>The wheel exposes the native objects through <code class="docutils literal notranslate"><span class="pre">miskeyed.workbench</span></code>; Python does
+not own or reproduce the renderer.</p>
+</section>
+<section id="first-editing-loop">
+<h2>First editing loop<a class="headerlink" href="#first-editing-loop" title="Link to this heading">¶</a></h2>
+<p>Open a <code class="docutils literal notranslate"><span class="pre">.slang</span></code> file, choose Source or Compare, and edit. A
+<a class="reference internal" href="../architecture/workspace.html"><span class="doc">Workspace, documents, and bindings</span></a> owns the source and focus. The in-process Slang
+compiler resolves imports and reflects parameters. A bound tool session consumes
+compatible entry points and QRhi presents the result. Compilation errors stay on
+the document rather than destroying the last usable runtime state.</p>
+<img alt="Side-by-side authored Slang and generated backend code in Compare view" class="align-center" src="../_images/source_generated_compare.png" />
+</section>
+<section id="build-locally">
+<h2>Build locally<a class="headerlink" href="#build-locally" title="Link to this heading">¶</a></h2>
+<p>A source build requires CMake 3.24+, C++20, Qt/PySide/Shiboken 6.8.x, Slang, and
+Python 3.11–3.13. SDK locations come from the environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">isolation</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span> <span class="o">-</span><span class="n">v</span>
+</pre></div>
+</div>
+<p>On Windows set <code class="docutils literal notranslate"><span class="pre">CMAKE_PREFIX_PATH</span></code> to the Qt development SDK and <code class="docutils literal notranslate"><span class="pre">SLANG_ROOT</span></code>
+to the Slang SDK first. Build isolation must remain disabled because the matching
+Shiboken generator is supplied through Qt’s package index.</p>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading">¶</a></h2>
+<p>Read <a class="reference internal" href="../architecture/overview.html"><span class="doc">System overview</span></a> for ownership, then
+<a class="reference internal" href="../slang/modules.html"><span class="doc">Slang modules and compilation</span></a> for compilation and <a class="reference internal" href="../rendering/qrhi.html"><span class="doc">QRhi, backends, and portability</span></a> for execution.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Miskeyed Workbench</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-workbench-is">What Workbench is</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-and-run">Install and run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first-editing-loop">First editing loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#build-locally">Build locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/workspace.html">Workspace, documents, and bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Slang</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../slang/modules.html">Slang modules and compilation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/entry_points.html">Entry points are program capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/reflection_ui.html">Reflection-driven parameter UI</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rendering</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/qrhi.html">QRhi, backends, and portability</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/render_toy.html">Render Toy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rendering/shader_toy.html">Shader Toy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools and development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Tool sessions and contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing and documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../portability/index.html">Portability evidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../research/anari.html">ANARI research boundary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">Miskeyed Workbench</a></li>
+      <li>Next: <a href="../architecture/overview.html" title="next chapter">System overview</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/getting_started/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

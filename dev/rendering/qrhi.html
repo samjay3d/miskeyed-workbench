@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>QRhi, backends, and portability &#8212; Workbench 0.3.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/rendering/qrhi.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Render Toy" href="render_toy.html" />
+    <link rel="prev" title="Reflection-driven parameter UI" href="../slang/reflection_ui.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="qrhi-backends-and-portability">
+<h1>QRhi, backends, and portability<a class="headerlink" href="#qrhi-backends-and-portability" title="Link to this heading">¶</a></h1>
+<p>Qt’s Rendering Hardware Interface keeps the viewport contract stable across native
+APIs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Workbench</span> <span class="o">-&gt;</span> <span class="n">QRhi</span> <span class="o">-&gt;</span> <span class="n">D3D11</span> <span class="p">(</span><span class="n">Windows</span><span class="p">)</span>
+                   <span class="n">Vulkan</span> <span class="p">(</span><span class="n">Windows</span><span class="o">/</span><span class="n">Linux</span><span class="p">)</span>
+                   <span class="n">Metal</span> <span class="p">(</span><span class="n">macOS</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">RhiBackendPolicy</span></code> selects one backend for the viewport set. <code class="docutils literal notranslate"><span class="pre">SlangRhiWidget</span></code>
+and <code class="docutils literal notranslate"><span class="pre">RenderPass</span></code> own native execution state: QRhi buffers, bindings, pipelines,
+recording, and deferred resource retirement. A session supplies a document and
+entry-point choice; it does not submit commands.</p>
+<section id="runtime-and-inspection-are-orthogonal">
+<h2>Runtime and inspection are orthogonal<a class="headerlink" href="#runtime-and-inspection-are-orthogonal" title="Link to this heading">¶</a></h2>
+<p>The active RHI says where frames execute. The Generated viewer target says which
+compiler output a reader wants to inspect. Running Vulkan while viewing HLSL is a
+valid configuration and does not reconfigure the device.</p>
+</section>
+<section id="support-evidence">
+<h2>Support evidence<a class="headerlink" href="#support-evidence" title="Link to this heading">¶</a></h2>
+<p>0.3.0 packages CPython 3.11–3.13 wheels for Windows x86_64, Linux x86_64, and
+macOS arm64/x86_64. Fresh-wheel import validates packaging on all three families.
+Windows CI additionally smoke-tests D3D11 and Vulkan through device creation,
+pipeline creation, and draw recording. Linux/macOS package and UI-construction
+evidence must not be read as equivalent runtime-rendering validation. Metal is a
+policy/code path, not yet the canonical public capture platform.</p>
+<p>QRhi resources potentially referenced by prior frames are retired for at least
+<code class="docutils literal notranslate"><span class="pre">maxFrameLatency</span> <span class="pre">+</span> <span class="pre">1</span></code> frames; synchronously freeing them from rendering code can
+produce backend use-after-free.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Miskeyed Workbench</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started/index.html">Getting started</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/workspace.html">Workspace, documents, and bindings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Slang</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../slang/modules.html">Slang modules and compilation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/entry_points.html">Entry points are program capabilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../slang/reflection_ui.html">Reflection-driven parameter UI</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Rendering</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">QRhi, backends, and portability</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-and-inspection-are-orthogonal">Runtime and inspection are orthogonal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#support-evidence">Support evidence</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="render_toy.html">Render Toy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shader_toy.html">Shader Toy</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tools and development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Tool sessions and contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing/index.html">Contributing and documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../portability/index.html">Portability evidence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../research/anari.html">ANARI research boundary</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../slang/reflection_ui.html" title="previous chapter">Reflection-driven parameter UI</a></li>
+      <li>Next: <a href="render_toy.html" title="next chapter">Render Toy</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/rendering/qrhi.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
