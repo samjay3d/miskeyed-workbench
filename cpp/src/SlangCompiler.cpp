@@ -1,4 +1,5 @@
 #include <slang_qrhi/SlangCompiler.h>
+#include <QDataStream>
 #include <slang_qrhi/Digest.h>
 #include "Qt68ShaderBridge.h"
 #include <slang.h>
@@ -397,9 +398,13 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
     result.parameters = reflectParameters(layout, result.parameterByteSize);
     result.parameterBinding = layout ? int(layout->getGlobalConstantBufferBinding()) : 0;
     QByteArray reflectionBytes;
+    QDataStream reflectionStream(&reflectionBytes, QIODeviceBase::WriteOnly);
+    reflectionStream.setVersion(QDataStream::Qt_6_8);
     for (const auto& p : result.parameters) {
-        reflectionBytes += p.name.toUtf8() + ':' + QByteArray::number(int(p.type)) + ':'
-            + QByteArray::number(p.offset) + ':' + QByteArray::number(p.size) + ';';
+        // UI metadata is part of schema identity so annotation edits refresh the inspector.
+        reflectionStream << p.name << p.label << p.group << p.widget << p.tooltip << quint8(p.type)
+                         << qint64(p.offset) << qint64(p.size) << p.minimum << p.maximum << p.step
+                         << p.defaultValue << p.choices;
     }
     result.reflectionDigest = Digest::hash(reflectionBytes).bytes();
 

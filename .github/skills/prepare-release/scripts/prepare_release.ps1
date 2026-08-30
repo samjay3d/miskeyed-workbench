@@ -1,12 +1,11 @@
 <#
 .SYNOPSIS
-    Prepare a miskeyed-workbench release: bump the version everywhere and stamp the
+    Prepare a miskeyed-workbench release: bump the package version and stamp the
     changelog. Edits files only — it never commits, tags, or pushes.
 
 .DESCRIPTION
     Applies the mechanical release edits so a human can review the diff, then commit:
       - pyproject.toml      version = "X.Y.Z"
-      - CMakeLists.txt      project(slang_qrhi VERSION X.Y.Z ...)
       - CHANGELOG.md        turns "## [Unreleased]" into a dated "## [X.Y.Z]" section
                             and reopens a fresh empty "## [Unreleased]".
 
@@ -34,7 +33,7 @@ if (-not $dir) { throw 'Could not locate repo root (no pyproject.toml found abov
 $root = $dir
 
 # Write UTF-8 WITHOUT a BOM (Windows PowerShell's -Encoding UTF8 adds one, which would
-# corrupt pyproject.toml / CMakeLists.txt).
+# corrupt pyproject.toml).
 function Write-Utf8NoBom($path, $text) {
     [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding $false))
 }
@@ -49,15 +48,6 @@ $t = [regex]::new('(?m)^version = "[^"]*"').Replace($t, "version = `"$Version`""
 Write-Utf8NoBom $pp $t
 Write-Host "pyproject.toml  -> version = $Version"
 
-# CMakeLists.txt (keep the C++ project version aligned with the wheel version)
-$cm = Join-Path $root 'CMakeLists.txt'
-if (Test-Path $cm) {
-    $t = [System.IO.File]::ReadAllText($cm)
-    $t = [regex]::new('project\(slang_qrhi VERSION [0-9.]+').Replace($t, "project(slang_qrhi VERSION $Version", 1)
-    Write-Utf8NoBom $cm $t
-    Write-Host "CMakeLists.txt  -> project VERSION $Version"
-}
-
 # CHANGELOG.md: stamp the top [Unreleased] block and reopen a fresh one above it.
 $cl = Join-Path $root 'CHANGELOG.md'
 $t = [System.IO.File]::ReadAllText($cl)
@@ -69,6 +59,6 @@ Write-Host "CHANGELOG.md    -> [$Version] $emdash $today"
 
 Write-Host ''
 Write-Host "Prepared $Version. Review the diff, then commit. Tagging/publishing stays manual:"
-Write-Host "  git add pyproject.toml CMakeLists.txt CHANGELOG.md"
+Write-Host "  git add pyproject.toml CHANGELOG.md"
 Write-Host "  git commit -m `"release: prepare $Version`""
 Write-Host "  # after merge to main: git tag v$Version; git push origin v$Version"
