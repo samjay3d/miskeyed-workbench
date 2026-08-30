@@ -10,7 +10,7 @@
 
 class QProcess;
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 // A source range in LSP (0-based line, UTF-16 code-unit character offsets).
 struct LspRange {
@@ -31,7 +31,7 @@ struct LspDiagnostic {
 // It speaks JSON-RPC framed with Content-Length headers, buffers requests until the
 // server has completed the `initialize` handshake, and surfaces the language features
 // (completion, hover, signature help, definition, live diagnostics) the editor needs.
-class SLANG_QRHI_EXPORT LspClient final : public QObject {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT LspClient final : public QObject {
     Q_OBJECT
 public:
     explicit LspClient(QObject* parent = nullptr);
@@ -54,7 +54,7 @@ public:
 signals:
     void ready();
     void diagnosticsReceived(
-        const QString& uri, const QList<slang_qrhi::LspDiagnostic>& diagnostics);
+        const QString& uri, const QList<miskeyed::workbench::slang_rhi::LspDiagnostic>& diagnostics);
 
 private:
     void postNotification(const QString& method, const QJsonObject& params);
@@ -74,4 +74,4 @@ private:
     QList<std::function<void()>> m_queued; // sent once the handshake completes
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

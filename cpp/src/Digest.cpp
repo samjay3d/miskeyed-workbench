@@ -1,10 +1,10 @@
-#include <slang_qrhi/Digest.h>
+#include <miskeyed/workbench/slang_rhi/Digest.h>
 #include <QtEndian>
 #include <array>
 #include <cstring>
 #include <stdexcept>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 namespace {
 
     // Compact BLAKE2b implementation for unkeyed 32-byte digests. This is a fresh
@@ -178,4 +178,4 @@ bool Digest::isNull() const
     return true;
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

@@ -65,9 +65,9 @@ def app_icon():
 
 from . import _slang_qrhi as _ext  # noqa: E402
 
-# The C++ classes live in the `slang_qrhi` namespace inside the extension; surface
+# The C++ classes live in the Workbench Slang RHI namespace inside the extension; surface
 # them at the top level so callers use `miskeyed.workbench.WorkbenchWindow` directly.
-_ns = _ext.slang_qrhi
+_ns = _ext.miskeyed.workbench.slang_rhi
 __all__ = [name for name in dir(_ns) if not name.startswith("_")]
 for _name in __all__:
     globals()[_name] = getattr(_ns, _name)

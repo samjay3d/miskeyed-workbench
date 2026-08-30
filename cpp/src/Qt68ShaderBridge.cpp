@@ -2,7 +2,7 @@
 #include <private/qshaderdescription_p.h>
 #include <rhi/qshader.h>
 
-namespace slang_qrhi::qt68 {
+namespace miskeyed::workbench::slang_rhi::qt68 {
 namespace {
 
     QShaderDescription::VariableType qtType(ParameterType type)
@@ -94,4 +94,4 @@ QShader buildQShader(QShader::Stage stage, const QString& entryPoint, const QByt
     return shader;
 }
 
-} // namespace slang_qrhi::qt68
+} // namespace miskeyed::workbench::slang_rhi::qt68

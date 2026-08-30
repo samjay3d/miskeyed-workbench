@@ -7,7 +7,7 @@
 #include <rhi/qshader.h>
 #include <memory>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 struct CompiledStage {
     QShader shader;
@@ -31,7 +31,7 @@ struct CompileResult {
 
 class SlangCompilerPrivate;
 
-class SLANG_QRHI_EXPORT SlangCompiler final : public QObject {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT SlangCompiler final : public QObject {
     Q_OBJECT
 public:
     explicit SlangCompiler(QObject* parent = nullptr);
@@ -57,4 +57,4 @@ private:
     std::unique_ptr<SlangCompilerPrivate> d;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

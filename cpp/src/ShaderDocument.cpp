@@ -1,9 +1,9 @@
-#include <slang_qrhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QSaveFile>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 ShaderDocument::ShaderDocument(QObject* parent)
     : QObject(parent)
@@ -166,4 +166,4 @@ void ShaderDocument::setDiagnostics(QString text)
     emit diagnosticsChanged();
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

@@ -1,19 +1,62 @@
 # Miskeyed Workbench — Vision
 
-`miskeyed-workbench` is a **native Slang + Qt 6.8 / QRhi shader workbench** with
-Shiboken6 Python bindings. This document states what the package is for and the
-principles that constrain how it is built. The shipped-today design lives in
-[ARCHITECTURE.md](ARCHITECTURE.md); the rules for AI agents live in
-[AGENTS.md](AGENTS.md).
+`miskeyed-workbench` is a native technical-art workbench organized as three modes. The
+first two are a **Slang + Qt 6.8 / QRhi shader workbench** with Shiboken6 Python
+bindings. The third, planned mode is a neutral ANARI device workbench for real
+USD/Hydra scenes. This document states what the package is for and the principles that
+constrain how it is built. The shipped-today design lives in
+[ARCHITECTURE.md](ARCHITECTURE.md); the rules for AI agents live in [AGENTS.md](AGENTS.md).
 
 ---
 
 ## Purpose
 
-Edit a Slang shader and see the result immediately, through a real native runtime —
-not a subprocess pipeline. Shaders are compiled in-process through Slang's
-compilation API, rendered with QRhi, and driven by a live, reflection-based
-parameter UI. The same native Qt objects are usable from C++ and from PySide6.
+Give technical artists progressively larger but clearly separated experimental loops:
+
+1. edit one Slang shader and see it immediately;
+2. experiment with a small scene and post-process render pipeline; and
+3. inspect a real USD/Hydra scene across interchangeable ANARI devices without turning
+   Miskeyed into another renderer or scene database.
+
+Slang shaders are compiled in-process, never through a compiler subprocess. The same
+native Qt objects are usable from C++ and from PySide6.
+
+## Product modes
+
+### 1. Shader Toy
+
+The smallest loop: one `ShaderDocument`, one live reflected parameter surface, and one
+native viewport. It is for learning, shader experiments, and testing compiler/runtime
+behavior without a scene-system dependency.
+
+### 2. Render Toy
+
+Shader Toy plus an explicit render pass. Today this is a Slang-authored scene pre-pass
+rendered to an offscreen texture and sampled by a Slang-authored post-process pass. It
+is still an experiment owned by the native Slang/QRhi runtime, not a general scene
+renderer.
+
+### 3. ANARI Device
+
+A planned work mode for real scene and renderer work:
+
+```text
+USD/session edits -> Hydra -> hdAnari -> selected ANARI device
+Slang edits       -> ShaderDocument (independent authoring path)
+```
+
+The product value is device comparison, scene-delta inspection, look overrides, and
+renderer debugging in a small neutral host. Helide is a baseline, VisRTX is a useful GPU
+renderer, and ANARI-SDK debug tooling or optional TSD capture can expose submitted
+state. Island is a later experiment in how easily a modern Slang renderer can be
+exposed as another device.
+
+Portable USD/MaterialX looks and device-specific programmable Slang features are
+different lanes. The workbench should make that distinction visible rather than imply
+that arbitrary Slang is portable across every ANARI implementation.
+
+The UX for this mode must be designed from observed Hydra and ANARI behavior. It is not
+defined merely as “render USD in Qt,” and Island is not the product foundation.
 
 ---
 
@@ -36,14 +79,18 @@ parameter UI. The same native Qt objects are usable from C++ and from PySide6.
 
 ## Who owns what
 
-The GPU / system split is a hard boundary, not a suggestion.
+In Shader Toy and Render Toy, the GPU/system split is a hard boundary: Slang owns GPU
+work; C++ owns application and QRhi lifecycle, resources, synchronization, submission,
+windowing, and exposure.
 
-- **Slang owns GPU work** — geometry prep, deformation/skinning, culling, GPU-driven
-  draw prep, material evaluation, lighting, raster shaders, compute, post-processing.
-- **C++ owns system work** — app lifecycle, device/resource creation, synchronization,
-  command submission, OS/windowing, stable ownership, and Python exposure.
-- **Python / PySide exposes; it does not own.** There is no Python mirror of the render
-  core, and none should be added.
+In ANARI Device mode, USD owns authored meaning, Hydra owns change propagation,
+`hdAnari` owns Hydra-to-ANARI translation, and the selected ANARI implementation owns
+its rendering work and device resources. Miskeyed's native C++ host owns device
+selection, lifecycle coordination, diagnostics, and presentation. It does not absorb
+an external implementation's render core.
+
+In every mode, Python / PySide exposes; it does not own. There is no Python mirror of a
+render core, and none should be added.
 
 ---
 
@@ -57,11 +104,17 @@ We reach for these before inventing equivalents:
 | **Qt / QRhi** | Portable rendering, windowing, and UI |
 | **Shiboken6** | Native Qt objects exposed to PySide6 |
 | **Merkle / CAS** | Identity, incremental invalidation, determinism |
+| **USD / Hydra** | Authored scene semantics and scene change propagation in ANARI Device mode |
+| **ANARI / hdAnari** | Switchable renderer boundary and Hydra-to-renderer translation |
 
 ---
 
 ## What success looks like
 
-Edit Slang → dependency change detected → in-process compile → minimal QRhi state
-rebuild → viewport updates — with the ownership boundaries above intact and the core
-more portable, not less.
+Shader and Render Toy success remains: edit Slang → dependency change detected →
+in-process compile → minimal QRhi state rebuild → viewport updates.
+
+ANARI Device success is: keep one USD stage authoritative → observe Hydra/ANARI deltas
+→ compare the same scene through interchangeable devices → author non-destructive look
+overrides → keep `ShaderDocument` independent. Device installation should be an edge
+deployment operation, not a rebuild of the Workbench core.

@@ -9,9 +9,9 @@
 #include <QMap>
 #include <QStringList>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
-class SLANG_QRHI_EXPORT ShaderDocument final : public QObject {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderDocument final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QUrl fileUrl READ fileUrl WRITE setFileUrl NOTIFY fileUrlChanged)
     Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)
@@ -93,4 +93,4 @@ private:
     NodeId m_pipelineNode = 0;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

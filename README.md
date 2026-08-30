@@ -196,10 +196,10 @@ Digests use a 32-byte BLAKE2b implementation matching
 ## Native C++ API
 
 ```cpp
-#include <slang_qrhi/ShaderDocument.h>
-#include <slang_qrhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
 
-using namespace slang_qrhi;   // internal C++ namespace
+using namespace miskeyed::workbench::slang_rhi;   // internal C++ namespace
 
 auto* doc = new ShaderDocument(parent);
 doc->setFileUrl(QUrl::fromLocalFile("eye.slang"));
@@ -281,7 +281,7 @@ cmake --build build --config Release
 ## Files that matter
 
 ```text
-cpp/include/slang_qrhi/
+cpp/include/miskeyed/workbench/slang_rhi/
     DependencyGraph.h       live dependency DAG + dirty propagation
     ShaderParameterModel.h  reflected GPU parameter model
     ParameterInspector.h    automatic Qt parameter controls
@@ -307,6 +307,27 @@ python/miskeyed/workbench/
 ```
 
 ## Roadmap
+
+### Experimental ANARI backend probe
+
+ANARI work is isolated from the shipped application and defaults to off. Backend
+developers can build the headless probe without Qt, Slang, or the Workbench target:
+
+```powershell
+cmake -S spikes/anari_probe -B build/anari-probe `
+  -DCMAKE_PREFIX_PATH=C:\sdk\anari
+cmake --build build/anari-probe --config Release
+```
+
+The probe tries an explicit semicolon-separated candidate list passed as its first
+argument, then `MISKEYED_ANARI_LIBRARIES`, then the built-in development candidates.
+Each candidate is an ANARI loader name or the SDK's `name,path` form. See
+[`docs/anari/COMPATIBILITY.md`](docs/anari/COMPATIBILITY.md) and the
+[`ANARI implementation breakdown`](docs/ANARI_HOST_IMPLEMENTATION_PLAN.md).
+
+The root build exposes the same backend behind
+`MISKEYED_WORKBENCH_WITH_ANARI=ON`. Leaving it off preserves the existing dependency
+graph and runtime behavior.
 
 1. reflect Slang user attributes into ranges/groups/widgets;
 2. resource reflection model (`Texture2D`, samplers, buffers, HDRI file widgets);

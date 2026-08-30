@@ -6,9 +6,9 @@
 
 class QVBoxLayout;
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
-class SLANG_QRHI_EXPORT ParameterInspector final : public QWidget {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ParameterInspector final : public QWidget {
     Q_OBJECT
     Q_PROPERTY(ShaderParameterModel* model READ model WRITE setModel NOTIFY modelChanged)
 public:
@@ -27,4 +27,4 @@ private:
     QVBoxLayout* m_layout = nullptr;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

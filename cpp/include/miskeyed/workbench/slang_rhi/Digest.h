@@ -8,9 +8,9 @@
 #include <QPair>
 #include <QString>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
-class SLANG_QRHI_EXPORT Digest final {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT Digest final {
 public:
     static constexpr qsizetype Size = 32;
 
@@ -31,9 +31,9 @@ private:
     QByteArray m_bytes;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi
 
-inline size_t qHash(const slang_qrhi::Digest& d, size_t seed = 0)
+inline size_t qHash(const miskeyed::workbench::slang_rhi::Digest& d, size_t seed = 0)
 {
     const QByteArray b = d.bytes();
     return qHashBits(b.constData(), static_cast<size_t>(b.size()), seed);

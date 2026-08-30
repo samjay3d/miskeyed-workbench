@@ -7,7 +7,7 @@
 #include <QSet>
 #include <QStringList>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 Q_NAMESPACE
 
@@ -51,7 +51,7 @@ struct GraphNode {
     DirtyFlags dirty;
 };
 
-class SLANG_QRHI_EXPORT DependencyGraph final : public QObject {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT DependencyGraph final : public QObject {
     Q_OBJECT
     Q_PROPERTY(int nodeCount READ nodeCount NOTIFY graphChanged)
 
@@ -91,6 +91,6 @@ private:
     QHash<QString, NodeId> m_byKey;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(slang_qrhi::DirtyFlags)
+Q_DECLARE_OPERATORS_FOR_FLAGS(miskeyed::workbench::slang_rhi::DirtyFlags)

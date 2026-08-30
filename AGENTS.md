@@ -10,10 +10,18 @@ The product intent lives in [VISION.md](VISION.md); the shipped-today design liv
 
 ## What this repo is
 
-`miskeyed-workbench`: a native **Slang + Qt 6.8 / QRhi** shader workbench with
-Shiboken6 Python bindings. Keep changes scoped to this package. Do not add
-speculative infrastructure (multi-app networking, DCC adapters, external transports)
-unless the current, concrete problem requires it.
+`miskeyed-workbench`: a native technical-art workbench with three deliberately
+separate modes:
+
+1. **Shader Toy** — the smallest live Slang shader loop;
+2. **Render Toy** — live Slang authoring with a scene pass and a post-process pass; and
+3. **ANARI Device** — a planned device-neutral USD/Hydra workbench for real scene and
+   renderer inspection. Its UX is a design problem and is not shipped yet.
+
+The shipped modes use Qt 6.8 / QRhi and Shiboken6 Python bindings. Keep changes scoped
+to this package. Do not add speculative infrastructure (multi-app networking, custom
+DCC scene extraction, external transports) unless the current, concrete problem
+requires it.
 
 ---
 
@@ -40,12 +48,25 @@ unless the current, concrete problem requires it.
 
 ## Ownership boundaries (do not blur)
 
+**Shader Toy and Render Toy:**
+
 - **Slang owns GPU work** — geometry prep, deformation/skinning, culling, GPU-driven
   draw prep, material evaluation, lighting, raster shaders, compute, post-processing.
 - **C++ owns system work** — app lifecycle, device/resource creation, synchronization,
   command submission, OS/windowing, stable ownership, and Python exposure.
-- **Python / PySide exposes only.** There is no Python mirror of the render core. Do
-  not add one.
+
+**ANARI Device mode:**
+
+- **USD owns authored scene meaning; Hydra owns scene change propagation; hdAnari owns
+  Hydra-to-ANARI translation.** Do not add a parallel USD traversal or scene database.
+- **The selected ANARI implementation owns its GPU rendering work and device resources.**
+  The host owns selection, lifecycle coordination, diagnostics, frame presentation, and
+  the authoring session—not the implementation's render core.
+- **ShaderDocument remains independent.** A future ANARI implementation may consume a
+  shader product through an explicit edge, but it does not own the compiler session.
+
+**All modes:** Python / PySide exposes only. There is no Python mirror of a render core.
+Do not add one.
 
 ---
 
@@ -83,8 +104,11 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
 **Identity & naming:**
 
 - Distribution: `miskeyed-workbench`; import: `miskeyed.workbench` (PEP 420 namespace).
-- The native extension is `_slang_qrhi.pyd` and the **C++ namespace stays `slang_qrhi`.**
-  Do **not** rename the C++ internals — it is risky and buys nothing.
+- The native extension remains `_slang_qrhi.pyd`; its C++ API lives in
+  `miskeyed::workbench::slang_rhi`.
+- New device-neutral Workbench backend code uses `miskeyed::workbench`; do not place
+  ANARI host/device infrastructure in `miskeyed::workbench::slang_rhi` merely because
+  that renderer was the repository's first native target.
 
 **Rendering:**
 
@@ -121,6 +145,10 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
 
 ## What "done" looks like
 
-Edit Slang → dependency change detected → in-process compile → minimal QRhi state
-rebuild → viewport updates. Every change leaves the boundaries above intact and the
-core more portable, not less.
+For Shader Toy and Render Toy: edit Slang → dependency change detected → in-process
+compile → minimal QRhi state rebuild → viewport updates.
+
+For the planned ANARI Device mode: edit USD → Hydra/hdAnari emits the minimum ANARI
+delta → the selected device updates → the neutral viewport and diagnostics update.
+Changing devices may rebuild device-side state but must not change USD ownership or
+merge scene state with `ShaderDocument`.

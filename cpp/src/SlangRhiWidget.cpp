@@ -1,5 +1,5 @@
-#include <slang_qrhi/SlangRhiWidget.h>
-#include <slang_qrhi/ShaderDocument.h>
+#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
 #include <rhi/qrhi.h>
 #include <QColor>
 #include <QMouseEvent>
@@ -8,7 +8,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 // One draw pass: a uniform buffer, its resource bindings and a graphics pipeline.
 struct RenderPass {
@@ -470,4 +470,4 @@ void SlangRhiWidget::wheelEvent(QWheelEvent* event)
     QRhiWidget::wheelEvent(event);
 }
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi

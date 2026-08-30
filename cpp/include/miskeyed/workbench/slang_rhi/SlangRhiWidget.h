@@ -9,11 +9,11 @@
 class QMouseEvent;
 class QWheelEvent;
 
-namespace slang_qrhi {
+namespace miskeyed::workbench::slang_rhi {
 
 class SlangRhiWidgetPrivate;
 
-class SLANG_QRHI_EXPORT SlangRhiWidget final : public QRhiWidget {
+class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT SlangRhiWidget final : public QRhiWidget {
     Q_OBJECT
     Q_PROPERTY(ShaderDocument* document READ document WRITE setDocument NOTIFY documentChanged)
     Q_PROPERTY(float exposure READ exposure WRITE setExposure NOTIFY exposureChanged)
@@ -69,4 +69,4 @@ private:
     std::unique_ptr<SlangRhiWidgetPrivate> d;
 };
 
-} // namespace slang_qrhi
+} // namespace miskeyed::workbench::slang_rhi
