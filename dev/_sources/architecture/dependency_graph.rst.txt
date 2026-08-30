@@ -29,11 +29,12 @@ and normally requests only a uniform upload. An imported module edit invalidates
 documents that resolved that module. A binding-layout change requests binding and
 pipeline work even if a label did not change.
 
-The inspector presents authored sources/imports first and keeps internal compiler
-and renderer products under an advanced branch. See
-``cpp/include/miskeyed/workbench/core/DependencyGraph.h`` and graph construction in
-``cpp/src/workbench/slang/ShaderDocument.cpp``.
+The Inspector presents authored sources/imports first and keeps internal compiler
+and renderer products under an advanced branch.
 
-.. image:: ../images/inspector_dependencies.png
-   :alt: Dependencies inspector showing a shader and its compiler-resolved imports
-   :align: center
+Implementation
+--------------
+
+``NodeId`` identifies a stable graph node; ``NodeKind`` selects invalidation semantics.
+Relevant source is ``cpp/include/miskeyed/workbench/core/DependencyGraph.h``, its
+implementation, and graph construction in ``cpp/src/workbench/slang/ShaderDocument.cpp``.
