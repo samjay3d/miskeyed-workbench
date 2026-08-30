@@ -11,8 +11,8 @@ no "export, run the compiler, relaunch, look again" loop. It also shows you the
 pickers for your shader's parameters automatically.
 
 > **Heads up — this is a personal side project / experiment.** I built it to see how
-> easy a real-time shader-compile loop could feel for artists and TDs. It's Windows /
-> Direct3D 11 only right now, and I may never fully "finish" it. Treat it as a
+> easy a real-time shader-compile loop could feel for artists and TDs. The portable
+> shell targets D3D11 or Vulkan on Windows, Vulkan on Linux, and Metal on macOS. Treat it as a
 > playground and a proof of concept, not a supported product.
 
 ### New to Slang? Read this first
@@ -78,8 +78,10 @@ Or from Python:
 from miskeyed.workbench import WorkbenchWindow
 ```
 
-> Binary wheels are Windows / Direct3D 11. Building from source needs the Qt 6.8
-> and Slang SDKs — see [Building from source](#building-from-source).
+Binary wheels are built for CPython 3.11–3.13 on Windows x86_64, Linux x86_64,
+and macOS arm64/x86_64. They bundle the matching Slang runtime; Qt and Shiboken come from
+the declared PySide6 dependencies. Source builds need the Qt 6.8 and Slang SDKs —
+see [Building from source](#building-from-source).
 
 ## Architecture
 
@@ -104,11 +106,12 @@ from miskeyed.workbench import WorkbenchWindow
                             SlangRhiWidget
                               QRhiWidget
                                   |
-                          Direct3D 11 (QRhi)
+                          D3D11 / Vulkan / Metal (QRhi)
 ```
 
-QRhi is the rendering abstraction, so the Vulkan / Metal / D3D12 backends remain
-reachable; the shipped build targets Direct3D 11.
+QRhi is the rendering abstraction. `Auto` selects D3D11 on Windows, Vulkan on Linux,
+and Metal on macOS; the native executable also accepts `--rhi vulkan` on Windows.
+This live backend is independent of the HLSL / SPIR-V / Metal generated-code tab.
 
 ## Runtime: zero compiler subprocesses
 

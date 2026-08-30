@@ -35,6 +35,8 @@ classifiers = [
   "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Developers",
   "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
   "Programming Language :: C++",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",

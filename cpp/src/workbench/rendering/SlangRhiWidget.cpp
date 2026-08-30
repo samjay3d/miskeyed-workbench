@@ -68,18 +68,21 @@ public:
 
 SlangRhiWidget::SlangRhiWidget(QWidget* parent)
     : QRhiWidget(parent)
+    , m_backend(rendering::RhiBackendPolicy::defaultBackend())
     , d(std::make_unique<SlangRhiWidgetPrivate>())
 {
-#if defined(Q_OS_WIN)
-    setApi(QRhiWidget::Api::Direct3D11);
-#elif defined(Q_OS_MACOS)
-    setApi(QRhiWidget::Api::Metal);
-#else
-    setApi(QRhiWidget::Api::Vulkan);
-#endif
+    setApi(rendering::RhiBackendPolicy::api(m_backend));
     setColorBufferFormat(QRhiWidget::TextureFormat::RGBA16F);
 }
 SlangRhiWidget::~SlangRhiWidget() = default;
+
+QString SlangRhiWidget::backendName() const
+{
+    const auto resolved = m_backend == rendering::RhiBackend::Auto
+        ? rendering::RhiBackendPolicy::platformDefault()
+        : m_backend;
+    return rendering::RhiBackendPolicy::name(resolved);
+}
 
 void SlangRhiWidget::setDocument(ShaderDocument* document)
 {
@@ -278,6 +281,10 @@ namespace {
 
 void SlangRhiWidget::initialize(QRhiCommandBuffer*)
 {
+    if (!m_reportedBackend && rhi()) {
+        m_reportedBackend = true;
+        emit backendInitialized(backendName(), QString::fromUtf8(rhi()->driverInfo().deviceName));
+    }
     auto* r = rhi();
     if (!r || !renderTarget())
         return;
@@ -395,6 +402,11 @@ void SlangRhiWidget::render(QRhiCommandBuffer* cb)
         cb->draw(3);
     }
     cb->endPass();
+
+    if (!m_reportedFrame && d->main.pipeline && (!m_scenePass || twoPass)) {
+        m_reportedFrame = true;
+        emit frameRendered(backendName(), QString::fromUtf8(r->driverInfo().deviceName));
+    }
 
     // Age out resources retired this frame; they are freed once no in-flight command
     // buffer (max frame latency 2) can still reference them.

@@ -66,6 +66,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/core/ViewportCamera.cpp
     cpp/src/workbench/slang/WorkbenchModules.cpp
     cpp/src/workbench/rendering/RenderPass.cpp
+    cpp/src/workbench/rendering/RhiBackendPolicy.cpp
     cpp/src/workbench/slang/ShaderWorkspace.cpp
     cpp/src/workbench/core/TimeContext.cpp
     cpp/src/workbench/core/TimeTransport.cpp
@@ -79,6 +80,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/slang/ShaderDocument.cpp
     cpp/src/workbench/rendering/SlangRhiWidget.cpp
     cpp/src/workbench/ui/ParameterInspector.cpp
+    cpp/src/workbench/ui/WorkbenchTheme.cpp
     # The current shell is specifically the two-pass Render Toy composition. Future
     # modes belong beside it rather than inside the Slang compiler/runtime folders.
     cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
@@ -88,10 +90,12 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/core/DependencyGraph.h
     cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
     cpp/include/miskeyed/workbench/ui/ParameterInspector.h
+    cpp/include/miskeyed/workbench/ui/WorkbenchTheme.h
     cpp/include/miskeyed/workbench/slang/ShaderDocument.h
     cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
     cpp/include/miskeyed/workbench/slang/SlangCompiler.h
     cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h
+    cpp/include/miskeyed/workbench/rendering/RhiBackendPolicy.h
     cpp/include/miskeyed/workbench/editor/CodeEditor.h
     cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
     cpp/include/miskeyed/workbench/editor/LspClient.h
@@ -151,6 +155,19 @@ if(BUILD_TESTING)
     add_executable(test_shader_dependencies tests/test_shader_dependencies.cpp)
     target_link_libraries(test_shader_dependencies PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME shader_dependencies COMMAND test_shader_dependencies)
+    add_executable(test_rhi_backend_policy tests/test_rhi_backend_policy.cpp)
+    target_link_libraries(test_rhi_backend_policy PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME rhi_backend_policy COMMAND test_rhi_backend_policy)
+
+    # These contract tests intentionally use assert(). Keep them active in Release CI;
+    # otherwise the executables run without checking any of their invariants.
+    foreach(_contract_test IN ITEMS test_viewport_camera test_shader_workspace
+            test_time_context test_render_toy_contract test_shader_dependencies
+            test_rhi_backend_policy)
+        target_compile_options(${_contract_test} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endforeach()
 endif()
 
 if(MISKEYED_WORKBENCH_WITH_ANARI AND BUILD_TESTING)
@@ -199,6 +216,22 @@ if(MISKEYED_WORKBENCH_BUILD_PYTHON)
             get_filename_component(_slang_bin_dir "${SLANG_RUNTIME_DLL}" DIRECTORY)
             file(GLOB _slang_runtime_dlls "${_slang_bin_dir}/*.dll")
             install(FILES ${_slang_runtime_dlls} DESTINATION miskeyed/workbench)
+        endif()
+    elseif(APPLE)
+        find_file(SLANG_RUNTIME_LIBRARY NAMES libslang.dylib
+            HINTS "${slang_DIR}/../lib" "${SLANG_ROOT}/lib" "$ENV{SLANG_ROOT}/lib")
+        if(SLANG_RUNTIME_LIBRARY)
+            file(REAL_PATH "${SLANG_RUNTIME_LIBRARY}" _slang_runtime_real)
+            install(FILES "${_slang_runtime_real}" DESTINATION miskeyed/workbench)
+        endif()
+    else()
+        find_file(SLANG_RUNTIME_LIBRARY NAMES libslang.so
+            HINTS "${slang_DIR}/../lib" "${SLANG_ROOT}/lib" "$ENV{SLANG_ROOT}/lib")
+        if(SLANG_RUNTIME_LIBRARY)
+            # Slang SDK archives expose libslang.so as a symlink. Wheels do not preserve
+            # that symlink, while the extension's DT_NEEDED names the versioned target.
+            file(REAL_PATH "${SLANG_RUNTIME_LIBRARY}" _slang_runtime_real)
+            install(FILES "${_slang_runtime_real}" DESTINATION miskeyed/workbench)
         endif()
     endif()
 endif()

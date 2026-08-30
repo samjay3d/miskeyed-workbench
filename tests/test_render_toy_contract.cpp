@@ -2,6 +2,7 @@
 #include <miskeyed/workbench/slang/WorkbenchModules.h>
 #include <QCoreApplication>
 #include <QFile>
+#include <rhi/qshader.h>
 #include <array>
 #include <cassert>
 
@@ -27,6 +28,10 @@ float4 psMain(VSOut input) : SV_Target0 { return sampleScene(input.uv); }
 
     assert(document.diagnostics().isEmpty());
     assert(document.fragmentShader().isValid());
+    const QShaderKey spirvKey(QShader::SpirvShader, QShaderVersion(100), QShader::StandardShader);
+    assert(document.vertexShader().shader(spirvKey).entryPoint() == QByteArrayLiteral("main"));
+    assert(document.fragmentShader().shader(spirvKey).entryPoint() == QByteArrayLiteral("main"));
+    assert(document.generatedTargets().contains(QStringLiteral("Metal")));
     const auto dependencies = document.importedDependencies();
     assert(dependencies.size() == 3);
     QStringList identities;
