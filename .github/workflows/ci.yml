@@ -265,8 +265,20 @@ jobs:
                     -Filter vk_swiftshader_icd.json -Recurse -ErrorAction SilentlyContinue `
                     | Select-Object -First 1
                   if (-not $icd) { throw "Chrome SwiftShader Vulkan ICD was not found" }
+                  $manifest = Get-Content $icd.FullName -Raw | ConvertFrom-Json
+                  $driver = $manifest.ICD.library_path
+                  if (-not [IO.Path]::IsPathRooted($driver)) {
+                      $driver = Join-Path $icd.DirectoryName $driver
+                  }
+                  if (-not (Test-Path $driver)) { throw "SwiftShader driver not found: $driver" }
                   $env:VK_DRIVER_FILES = $icd.FullName
-                  $env:PATH = "$env:SLANG_ROOT\bin;$env:PATH"
+                  # VK_ICD_FILENAMES is the equivalent understood by older loaders.
+                  $env:VK_ICD_FILENAMES = $icd.FullName
+                  # Chrome's ICD manifest names vk_swiftshader.dll relatively. The
+                  # Windows Vulkan loader searches PATH (not necessarily the manifest's
+                  # directory), so make the ICD directory explicit.
+                  $env:PATH = "$([IO.Path]::GetDirectoryName($driver));$env:SLANG_ROOT\bin;$env:PATH"
+                  $env:QT_LOGGING_RULES = "qt.rhi.*=true"
                   .\build-rhi-smoke\miskeyed-workbench.exe --rhi vulkan --rhi-smoke-test
 
             - name: Run tests
