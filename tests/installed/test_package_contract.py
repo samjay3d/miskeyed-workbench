@@ -28,7 +28,7 @@ VSOut vsMain(uint vertexID : SV_VertexID)
     return output;
 }
 [shader("fragment")]
-float4 psMain() : SV_Target0 { return float4(miskeyed_time_seconds, 0.0, 0.0, 1.0); }
+float4 psMain() : SV_Target0 { return float4(workbenchTime.time, 0.0, 0.0, 1.0); }
 """
     )
     document.compile()
