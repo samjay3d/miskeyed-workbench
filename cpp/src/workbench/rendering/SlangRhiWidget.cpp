@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <limits>
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -152,9 +153,10 @@ void SlangRhiWidget::applyTimeContext()
         parameters->setValue(QString::fromLatin1(core::TimeBinding::deltaTime),
             float(m_timeContext->deltaSeconds()));
         parameters->setValue(QString::fromLatin1(core::TimeBinding::frame),
-            uint(qMax<qint64>(0, m_timeContext->frame())));
-        parameters->setValue(
-            QString::fromLatin1(core::TimeBinding::frameRate), float(m_timeContext->frameRate()));
+            uint(
+                qMin<quint64>(m_timeContext->evaluationIndex(), std::numeric_limits<uint>::max())));
+        parameters->setValue(QString::fromLatin1(core::TimeBinding::frameRate),
+            float(m_timeContext->current().rate));
     };
     apply(m_scenePass);
     apply(m_document);

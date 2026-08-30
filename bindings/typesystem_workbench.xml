@@ -6,6 +6,13 @@
 
     <namespace-type name="miskeyed">
       <namespace-type name="workbench">
+       <namespace-type name="core">
+        <value-type name="TimeValue" />
+        <value-type name="TimeRange" />
+        <object-type name="TimeContext" />
+        <enum-type name="LoopMode" />
+        <object-type name="TimeTransport" />
+       </namespace-type>
        <namespace-type name="slang_rhi">
         <enum-type name="NodeKind" />
         <enum-type name="DirtyFlag" flags="yes" />

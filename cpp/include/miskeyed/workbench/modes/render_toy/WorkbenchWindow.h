@@ -18,6 +18,7 @@ class QTimer;
 
 namespace miskeyed::workbench::core {
 class TimeContext;
+class TimeTransport;
 }
 
 namespace miskeyed::workbench::slang_rhi {
@@ -42,6 +43,7 @@ public:
     SlangRhiWidget* viewport() const { return m_viewport; }
     SlangRhiWidget* sceneViewport() const { return m_sceneViewport; }
     miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
+    miskeyed::workbench::core::TimeTransport* timeTransport() const { return m_timeTransport; }
 
     Q_INVOKABLE void openShader(const QString& path);
 
@@ -83,6 +85,7 @@ private:
     QList<QPushButton*> m_viewButtons;
     QPushButton* m_bindDocument = nullptr;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
+    miskeyed::workbench::core::TimeTransport* m_timeTransport = nullptr;
     QTimer* m_playbackTimer = nullptr;
     ShaderDocument* m_editorDoc = nullptr; // document currently shown in the editor
     bool m_syncing = false; // guards camera mirroring re-entrancy

@@ -1,64 +1,54 @@
 #include <miskeyed/workbench/core/TimeContext.h>
-#include <algorithm>
+
+#include <cmath>
 
 namespace miskeyed::workbench::core {
+namespace {
+    double validRate(double rate)
+    {
+        return std::isfinite(rate) && rate > 0.0 ? rate : 24.0;
+    }
+}
+
+TimeValue::TimeValue(double coordinateValue, double unitsPerSecond)
+    : value(std::isfinite(coordinateValue) ? coordinateValue : 0.0)
+    , rate(validRate(unitsPerSecond))
+{
+}
+
+double TimeValue::seconds() const
+{
+    return value / validRate(rate);
+}
+
+TimeRange::TimeRange(TimeValue startValue, TimeValue durationValue)
+    : start(startValue)
+    , duration(durationValue)
+{
+}
+
+TimeValue TimeRange::endTime() const
+{
+    return TimeValue(start.value + duration.seconds() * start.rate, start.rate);
+}
 
 TimeContext::TimeContext(QObject* parent)
     : QObject(parent)
 {
 }
 
-void TimeContext::updateSample()
+void TimeContext::setSample(TimeValue current, TimeValue delta, quint64 evaluationIndex)
 {
-    m_timeSeconds = double(m_frame) / m_frameRate;
-    m_deltaSeconds = 1.0 / m_frameRate;
+    current = TimeValue(current.value, current.rate);
+    delta = TimeValue(delta.value, delta.rate);
+    if (m_current.value == current.value && m_current.rate == current.rate
+        && m_delta.value == delta.value && m_delta.rate == delta.rate
+        && m_evaluationIndex == evaluationIndex)
+        return;
+    m_current = current;
+    m_delta = delta;
+    m_evaluationIndex = evaluationIndex;
     emit changed();
-}
-
-void TimeContext::setFrame(qint64 frame)
-{
-    frame = std::clamp(frame, m_startFrame, m_endFrame);
-    if (m_frame == frame)
-        return;
-    m_frame = frame;
-    updateSample();
-}
-
-void TimeContext::setFrameRate(double frameRate)
-{
-    frameRate = std::max(0.001, frameRate);
-    if (qFuzzyCompare(m_frameRate, frameRate))
-        return;
-    m_frameRate = frameRate;
-    updateSample();
-}
-
-void TimeContext::setRange(qint64 startFrame, qint64 endFrame)
-{
-    if (startFrame > endFrame)
-        std::swap(startFrame, endFrame);
-    if (m_startFrame == startFrame && m_endFrame == endFrame)
-        return;
-    m_startFrame = startFrame;
-    m_endFrame = endFrame;
-    m_frame = std::clamp(m_frame, m_startFrame, m_endFrame);
-    updateSample();
-}
-
-void TimeContext::setPlaying(bool playing)
-{
-    if (m_playing == playing)
-        return;
-    m_playing = playing;
-    emit playingChanged(playing);
-}
-
-void TimeContext::step(qint64 frames)
-{
-    qint64 next = m_frame + frames;
-    if (m_playing && next > m_endFrame)
-        next = m_startFrame;
-    setFrame(next);
 }
 
 } // namespace miskeyed::workbench::core

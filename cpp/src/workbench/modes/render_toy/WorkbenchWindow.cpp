@@ -9,6 +9,7 @@
 #include <miskeyed/workbench/slang/ShaderWorkspace.h>
 #include <miskeyed/workbench/core/ViewportCamera.h>
 #include <miskeyed/workbench/core/TimeContext.h>
+#include <miskeyed/workbench/core/TimeTransport.h>
 #include <QAction>
 #include <QClipboard>
 #include <QComboBox>
@@ -144,6 +145,8 @@ void WorkbenchWindow::buildUi()
     setWindowTitle(QStringLiteral("Workbench"));
     resize(1600, 950);
     m_timeContext = new core::TimeContext(this);
+    m_timeTransport = new core::TimeTransport(this);
+    m_timeTransport->setContext(m_timeContext);
     m_playbackTimer = new QTimer(this);
     m_playbackTimer->setTimerType(Qt::PreciseTimer);
     m_workspace = new ShaderWorkspace(this);
@@ -267,13 +270,18 @@ void WorkbenchWindow::buildUi()
     auto* frameSlider = new QSlider(Qt::Horizontal, timeline);
     for (QSpinBox* spin : { frameSpin, startSpin, endSpin })
         spin->setRange(-1000000, 1000000);
-    startSpin->setValue(int(m_timeContext->startFrame()));
-    endSpin->setValue(int(m_timeContext->endFrame()));
-    frameSpin->setRange(int(m_timeContext->startFrame()), int(m_timeContext->endFrame()));
-    frameSlider->setRange(int(m_timeContext->startFrame()), int(m_timeContext->endFrame()));
+    auto syncTransportRange = [this, frameSpin, frameSlider, startSpin, endSpin, fpsSpin] {
+        const int start = qRound(m_timeTransport->startValue());
+        const int end = qRound(m_timeTransport->endValue());
+        frameSpin->setRange(start, end);
+        frameSlider->setRange(start, end);
+        startSpin->setValue(start);
+        endSpin->setValue(end);
+        fpsSpin->setValue(m_timeTransport->rate());
+    };
     fpsSpin->setRange(0.001, 1000.0);
     fpsSpin->setDecimals(3);
-    fpsSpin->setValue(m_timeContext->frameRate());
+    syncTransportRange();
     th->addWidget(new QLabel(QStringLiteral("Frame"), timeline));
     th->addWidget(frameSpin);
     th->addWidget(timeLabel);
@@ -286,52 +294,52 @@ void WorkbenchWindow::buildUi()
     th->addWidget(frameSlider, 1);
     ev->addWidget(timeline);
 
-    connect(firstFrame, &QPushButton::clicked, this,
-        [this] { m_timeContext->setFrame(m_timeContext->startFrame()); });
-    connect(previousFrame, &QPushButton::clicked, this, [this] { m_timeContext->step(-1); });
-    connect(nextFrame, &QPushButton::clicked, this, [this] { m_timeContext->step(1); });
-    connect(lastFrame, &QPushButton::clicked, this,
-        [this] { m_timeContext->setFrame(m_timeContext->endFrame()); });
+    connect(firstFrame, &QPushButton::clicked, this, [this] {
+        m_timeTransport->seek(
+            core::TimeValue(m_timeTransport->startValue(), m_timeTransport->rate()));
+    });
+    connect(previousFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(-1.0); });
+    connect(nextFrame, &QPushButton::clicked, this, [this] { m_timeTransport->step(1.0); });
+    connect(lastFrame, &QPushButton::clicked, this, [this] {
+        m_timeTransport->seek(
+            core::TimeValue(m_timeTransport->endValue(), m_timeTransport->rate()));
+    });
     connect(playPause, &QPushButton::clicked, this,
-        [this] { m_timeContext->setPlaying(!m_timeContext->playing()); });
-    connect(frameSpin, &QSpinBox::valueChanged, this,
-        [this](int frame) { m_timeContext->setFrame(frame); });
-    connect(frameSlider, &QSlider::valueChanged, this,
-        [this](int frame) { m_timeContext->setFrame(frame); });
-    connect(fpsSpin, &QDoubleSpinBox::valueChanged, this,
-        [this](double fps) { m_timeContext->setFrameRate(fps); });
+        [this] { m_timeTransport->setPlaying(!m_timeTransport->playing()); });
+    connect(frameSpin, &QSpinBox::valueChanged, this, [this](int frame) {
+        m_timeTransport->seek(core::TimeValue(double(frame), m_timeTransport->rate()));
+    });
+    connect(frameSlider, &QSlider::valueChanged, this, [this](int frame) {
+        m_timeTransport->seek(core::TimeValue(double(frame), m_timeTransport->rate()));
+    });
+    connect(fpsSpin, &QDoubleSpinBox::valueChanged, m_timeTransport, &core::TimeTransport::setRate);
     auto setRange = [this, startSpin, endSpin] {
-        m_timeContext->setRange(startSpin->value(), endSpin->value());
+        m_timeTransport->setPlaybackRange(
+            core::TimeValue(double(startSpin->value()), m_timeTransport->rate()),
+            core::TimeValue(double(endSpin->value()), m_timeTransport->rate()));
     };
     connect(startSpin, &QSpinBox::valueChanged, this, setRange);
     connect(endSpin, &QSpinBox::valueChanged, this, setRange);
-    connect(
-        m_timeContext, &core::TimeContext::playingChanged, this, [this, playPause](bool playing) {
+    connect(m_timeTransport, &core::TimeTransport::playingChanged, this,
+        [this, playPause](bool playing) {
             playPause->setText(playing ? QStringLiteral("❚❚") : QStringLiteral("▶"));
             if (playing)
-                m_playbackTimer->start(qMax(1, qRound(1000.0 / m_timeContext->frameRate())));
+                m_playbackTimer->start(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
             else
                 m_playbackTimer->stop();
         });
-    connect(m_playbackTimer, &QTimer::timeout, this, [this] { m_timeContext->step(1); });
+    connect(m_playbackTimer, &QTimer::timeout, this, [this] { m_timeTransport->step(1.0); });
+    connect(m_timeTransport, &core::TimeTransport::playbackChanged, this, syncTransportRange);
     connect(m_timeContext, &core::TimeContext::changed, this,
-        [this, frameSpin, frameSlider, startSpin, endSpin, fpsSpin, timeLabel] {
+        [this, frameSpin, frameSlider, timeLabel] {
             QSignalBlocker frameBlock(frameSpin);
             QSignalBlocker sliderBlock(frameSlider);
-            QSignalBlocker startBlock(startSpin);
-            QSignalBlocker endBlock(endSpin);
-            QSignalBlocker fpsBlock(fpsSpin);
-            frameSpin->setRange(int(m_timeContext->startFrame()), int(m_timeContext->endFrame()));
-            frameSlider->setRange(int(m_timeContext->startFrame()), int(m_timeContext->endFrame()));
-            frameSpin->setValue(int(m_timeContext->frame()));
-            frameSlider->setValue(int(m_timeContext->frame()));
-            startSpin->setValue(int(m_timeContext->startFrame()));
-            endSpin->setValue(int(m_timeContext->endFrame()));
-            fpsSpin->setValue(m_timeContext->frameRate());
+            frameSpin->setValue(qRound(m_timeContext->timeValue()));
+            frameSlider->setValue(qRound(m_timeContext->timeValue()));
             timeLabel->setText(
                 QStringLiteral("Time %1 s").arg(m_timeContext->timeSeconds(), 0, 'f', 3));
-            if (m_timeContext->playing())
-                m_playbackTimer->setInterval(qMax(1, qRound(1000.0 / m_timeContext->frameRate())));
+            if (m_timeTransport->playing())
+                m_playbackTimer->setInterval(qMax(1, qRound(1000.0 / m_timeTransport->rate())));
         });
     timeLabel->setText(QStringLiteral("Time 0.000 s"));
     auto* editorBar = new QWidget(editorBox);

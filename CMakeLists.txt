@@ -68,6 +68,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/rendering/RenderPass.cpp
     cpp/src/workbench/slang/ShaderWorkspace.cpp
     cpp/src/workbench/core/TimeContext.cpp
+    cpp/src/workbench/core/TimeTransport.cpp
     cpp/src/workbench/editor/CodeEditor.cpp
     cpp/src/workbench/editor/ShaderHighlighter.cpp
     cpp/src/workbench/editor/LspClient.cpp
@@ -94,6 +95,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/editor/LspClient.h
     cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
     cpp/include/miskeyed/workbench/core/TimeContext.h
+    cpp/include/miskeyed/workbench/core/TimeTransport.h
 )
 
 qt_add_resources(miskeyed_workbench_slang_rhi "workbench_headers"
@@ -174,6 +176,7 @@ if(MISKEYED_WORKBENCH_BUILD_PYTHON)
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h"
             "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/TimeContext.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/TimeTransport.h"
         LINK_LIBRARIES miskeyed_workbench_slang_rhi
     )
 

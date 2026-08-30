@@ -46,13 +46,16 @@ document, while reflection remains an inspector concern.
 
 ### Time and deterministic evaluation
 
-`core::TimeContext` is host evaluation state shared by the active Render Toy scene and
-post passes. Controllers such as the timeline advance discrete frames; a sample is
-always derived as `time = frame / frameRate` and `deltaTime = 1 / frameRate`. Updating
-time writes host-managed reflected uniform bytes and schedules rendering without
-changing shader, module, or dependency hashes. Future evaluated-product identities can
-therefore combine dependency, parameter, resource, and time-sample identities without
-making time part of authored source identity.
+`core::TimeValue` carries a floating-point coordinate and its units-per-second rate;
+`core::TimeRange` describes a domain without clamping samples. `core::TimeContext` holds
+only the current value, delta, and a monotonic evaluation index. It has no playback
+range, playing state, stepping, or looping behavior.
+
+`core::TimeTransport` is the replaceable playback controller used by Render Toy's small
+timeline. It owns range and loop policy and drives the shared context consumed by both
+active passes. USD, OTIO, an offline renderer, or another host can instead set the same
+context directly without translating through an integer frame. Context changes upload
+host-managed uniform bytes without changing shader or dependency identity.
 
 The packaged `miskeyed.time` Slang module supplies `workbenchTime`; the compiler imports
 that standard host contract automatically. An `ISlangFileSystem` edge supplies the packaged module to the Slang session, while project

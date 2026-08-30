@@ -32,15 +32,18 @@ focused nested namespace such as `core` or `anari`.
 
 ## Placement rules
 
-- `core` contains only backend-neutral state and identity: `Digest`, `DependencyGraph`,
-  `TimeContext`, and `ViewportCamera`. It does not load Slang source or own QRhi objects.
+- `core` contains backend-neutral identity and temporal vocabulary: `Digest`,
+  `DependencyGraph`, `TimeValue`, `TimeRange`, `TimeContext`, `TimeTransport`, and
+  `ViewportCamera`. Evaluation state is separate from transport policy; core does not
+  load Slang source or own QRhi objects.
 - `slang` owns `ShaderDocument`, reflection/parameter models, compilation, open shader
   workspace state, and the packaged Workbench Slang-module sources.
 - `rendering` owns `RenderPass` and `SlangRhiWidget`, including QRhi resource lifetime
   and deferred retirement.
 - `editor` and `ui` contain reusable widgets; neither selects a product mode.
 - `modes/render_toy` binds open shader documents to the active Scene/Post passes and
-  owns the small timeline controller. It does not own compiler or GPU implementations.
+  presents controls for `TimeTransport`. It does not define time semantics or own
+  compiler and GPU implementations.
 - `anari` remains an optional sibling target and never becomes a dependency of the
   shipped Slang/QRhi modes.
 

@@ -5,3 +5,5 @@
 #include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <miskeyed/workbench/rendering/SlangRhiWidget.h>
 #include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
+#include <miskeyed/workbench/core/TimeContext.h>
+#include <miskeyed/workbench/core/TimeTransport.h>
