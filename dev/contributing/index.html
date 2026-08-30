@@ -288,6 +288,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../reference/cli_environment.html">CLI and environment</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference/build_options.html">CMake build options</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference/backends.html">Runtime backend reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference/portability.html">Portability and validation status</a></li>
 </ul>
 </li>
 </ul>
@@ -410,6 +411,13 @@ the package release.</p>
 </section>
 <section id="release-work">
 <h2>Release work<a class="headerlink" href="#release-work" title="Link to this heading">¶</a></h2>
+<p>Read release health by evidence level: <strong>Package</strong> is a produced wheel, <strong>Installed</strong>
+is a fresh-environment install/import, <strong>Contracts</strong> is the installed-package or native
+contract suite, and <strong>Runtime</strong> is an actual QRhi draw through
+<code class="docutils literal notranslate"><span class="pre">miskeyed-workbench</span> <span class="pre">--rhi</span> <span class="pre">&lt;backend&gt;</span> <span class="pre">--rhi-smoke-test</span></code>. A release support claim must
+have a passing lane at the claimed level. Checkout-dependent architecture tests stay
+in the source-tree suite; the installed-wheel suite must exercise only public package
+behavior and packaged resources. Runner and ICD setup belongs in the workflow.</p>
 <p>Keep <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> release-oriented, update the single package version in
 <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs

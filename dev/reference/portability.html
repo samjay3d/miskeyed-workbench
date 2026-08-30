@@ -3,11 +3,11 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Module resolution" href="module_resolution.html" /><link rel="prev" title="Workspace model" href="workspace.html" />
-        <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/architecture/compilation.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Research" href="../research/index.html" /><link rel="prev" title="Runtime backend reference" href="backends.html" />
+        <link rel="canonical" href="https://samjay3d.github.io/miskeyed-workbench/reference/portability.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>Compilation pipeline - Workbench development documentation</title>
+        <title>Portability and validation status - Workbench development documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
@@ -179,7 +179,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -251,21 +251,21 @@
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Architecture</span></p>
-<ul class="current">
-<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Architecture</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Architecture</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="overview.html">System overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ownership.html">Ownership and lifetime</a></li>
-<li class="toctree-l2"><a class="reference internal" href="workspace.html">Workspace model</a></li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Compilation pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="module_resolution.html">Module resolution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="reflection_pipeline.html">Reflection pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="dependency_graph.html">Dependency identity and invalidation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="time.html">Time is evaluation, not a widget</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rendering_pipeline.html">Rendering pipeline</a></li>
-<li class="toctree-l2"><a class="reference internal" href="backend_policy.html">Backend policy</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tool_contributions.html">Tool contribution model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="python_boundary.html">Python and Shiboken boundary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source_layout.html">Native source layout</a></li>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../architecture/index.html">Architecture</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Architecture</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/overview.html">System overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/ownership.html">Ownership and lifetime</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/workspace.html">Workspace model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/compilation.html">Compilation pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/module_resolution.html">Module resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/reflection_pipeline.html">Reflection pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/dependency_graph.html">Dependency identity and invalidation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/time.html">Time is evaluation, not a widget</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/rendering_pipeline.html">Rendering pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/backend_policy.html">Backend policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/tool_contributions.html">Tool contribution model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/python_boundary.html">Python and Shiboken boundary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../architecture/source_layout.html">Native source layout</a></li>
 </ul>
 </li>
 </ul>
@@ -281,14 +281,14 @@
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Reference</span></p>
-<ul>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/index.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../reference/slang_modules.html">Slang module reference</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../reference/ui_attributes.html">UI attribute reference</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../reference/cli_environment.html">CLI and environment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../reference/build_options.html">CMake build options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../reference/backends.html">Runtime backend reference</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../reference/portability.html">Portability and validation status</a></li>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="slang_modules.html">Slang module reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ui_attributes.html">UI attribute reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cli_environment.html">CLI and environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_options.html">CMake build options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backends.html">Runtime backend reference</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Portability and validation status</a></li>
 </ul>
 </li>
 </ul>
@@ -320,7 +320,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/architecture/compilation.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/reference/portability.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -334,31 +334,64 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="compilation-pipeline">
-<h1>Compilation pipeline<a class="headerlink" href="#compilation-pipeline" title="Link to this heading">¶</a></h1>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">editor</span> <span class="n">buffer</span>
-   <span class="o">-&gt;</span> <span class="n">Slang</span> <span class="n">session</span> <span class="o">+</span> <span class="n">module</span> <span class="n">resolution</span>
-   <span class="o">-&gt;</span> <span class="n">program</span> <span class="n">composition</span> <span class="ow">and</span> <span class="n">link</span>
-   <span class="o">-&gt;</span> <span class="n">reflection</span><span class="p">:</span> <span class="n">entries</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">resources</span>
-   <span class="o">-&gt;</span> <span class="n">generated</span> <span class="n">backend</span> <span class="n">blobs</span>
-   <span class="o">-&gt;</span> <span class="n">QShader</span> <span class="n">bridge</span>
-   <span class="o">-&gt;</span> <span class="n">consumer</span> <span class="n">pipeline</span> <span class="n">invalidation</span>
-</pre></div>
+          <section id="portability-and-validation-status">
+<h1>Portability and validation status<a class="headerlink" href="#portability-and-validation-status" title="Link to this heading">¶</a></h1>
+<p>Workbench uses four evidence levels. <strong>Wheel</strong> means a platform-tagged distribution was
+produced. <strong>Installed</strong> means that wheel installed and imported in a fresh virtual
+environment. <strong>Contracts</strong> means the installed public API loaded the bundled Slang
+runtime and compiled a representative shader using a packaged Workbench module.
+<strong>Runtime</strong> means the canonical native harness created the named QRhi device and
+pipeline and recorded a draw. A lower level never implies a higher one.</p>
+<p>The 0.3.0 release gate covers CPython 3.11, 3.12, and 3.13. Native contracts and
+runtime smoke execute once per platform on 3.11; the other Python lanes validate the
+wheel and installed-package contract without claiming another render result.</p>
+<div class="table-wrapper docutils container" id="id1">
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Release validation scope</span><a class="headerlink" href="#id1" title="Link to this table">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Platform</p></th>
+<th class="head"><p>Wheels</p></th>
+<th class="head"><p>Default QRhi backend</p></th>
+<th class="head"><p>Runtime evidence required for release</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Windows x86_64</p></td>
+<td><p>CPython 3.11–3.13</p></td>
+<td><p>D3D11</p></td>
+<td><p>Python 3.11: D3D11 and Vulkan/SwiftShader smoke</p></td>
+</tr>
+<tr class="row-odd"><td><p>Linux x86_64</p></td>
+<td><p>CPython 3.11–3.13</p></td>
+<td><p>Vulkan</p></td>
+<td><p>Python 3.11: Vulkan smoke with the explicitly selected Mesa lavapipe ICD</p></td>
+</tr>
+<tr class="row-even"><td><p>macOS arm64</p></td>
+<td><p>CPython 3.11–3.13</p></td>
+<td><p>Metal</p></td>
+<td><p>Python 3.11: Metal smoke</p></td>
+</tr>
+<tr class="row-odd"><td><p>macOS x86_64</p></td>
+<td><p>CPython 3.11–3.13</p></td>
+<td><p>Metal</p></td>
+<td><p>Python 3.11: Metal smoke</p></td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>Compilation is in-process; Workbench launches neither <code class="docutils literal notranslate"><span class="pre">slangc</span></code> nor <code class="docutils literal notranslate"><span class="pre">qsb</span></code>. A
-failed compile retains diagnostics on the document instead of transferring compiler
-ownership to the UI.</p>
-<section id="implementation">
-<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
-<p>Relevant source: <code class="docutils literal notranslate"><span class="pre">SlangCompiler.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">ShaderDocument.cpp</span></code>, and
-<code class="docutils literal notranslate"><span class="pre">Qt68ShaderBridge.cpp</span></code>.</p>
-</section>
+<p>The workflow writes a per-lane Actions summary from actual step outcomes. Read
+<code class="docutils literal notranslate"><span class="pre">success</span></code> as evidence only for that column and lane. <code class="docutils literal notranslate"><span class="pre">NOT</span> <span class="pre">VALIDATED</span></code> means no
+runtime smoke ran in that lane; it is not a failure and is not a runtime pass.
+<code class="docutils literal notranslate"><span class="pre">UNSUPPORTED</span></code> is reserved for a combination the product does not offer.</p>
+<p>The latest release-candidate run is the source of truth for whether required evidence
+actually passed. Support wording in release notes must be updated from those results,
+not from the intended matrix or from wheel availability alone.</p>
 </section>
 
         </article>
@@ -366,23 +399,23 @@ ownership to the UI.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="module_resolution.html">
+          <a class="next-page" href="../research/index.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Module resolution</div>
+                <div class="title">Research</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="workspace.html">
+          <a class="prev-page" href="backends.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Workspace model</div>
+                <div class="title">Runtime backend reference</div>
                 
               </div>
             </a>
@@ -404,27 +437,8 @@ ownership to the UI.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Compilation pipeline</a><ul>
-<li><a class="reference internal" href="#implementation">Implementation</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
