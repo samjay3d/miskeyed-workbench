@@ -157,7 +157,6 @@ void WorkspaceEditor::setWorkspace(ShaderWorkspace* workspace)
         [this](ShaderDocument* previous, ShaderDocument*) { saveSession(previous); });
     connect(m_workspace, &ShaderWorkspace::focusedDocumentChanged, this,
         [this](ShaderDocument* document) {
-            m_presented = document;
             restoreSession(document);
             refreshTabs();
             emit focusedDocumentPresented(document);
@@ -201,8 +200,7 @@ void WorkspaceEditor::setWorkspace(ShaderWorkspace* workspace)
             }
         });
     }
-    m_presented = m_workspace->focusedDocument();
-    restoreSession(m_presented);
+    restoreSession(m_workspace->focusedDocument());
     refreshTabs();
 }
 

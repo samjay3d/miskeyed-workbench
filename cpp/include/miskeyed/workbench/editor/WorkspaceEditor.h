@@ -48,7 +48,6 @@ private:
     void requestClose(ShaderDocument* document);
 
     ShaderWorkspace* m_workspace = nullptr;
-    ShaderDocument* m_presented = nullptr;
     QTabBar* m_tabs = nullptr;
     CodeEditor* m_sourceEditor = nullptr;
     CodeEditor* m_generatedEditor = nullptr;
