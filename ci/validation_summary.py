@@ -55,8 +55,11 @@ def summarize(args: argparse.Namespace) -> None:
                     "runtime_result": "not-run" if python != "3.11" else "skipped",
                 },
             )
+    platform_order = {
+        platform["label"]: index for index, platform in enumerate(metadata["platforms"])
+    }
     results = list(results_by_lane.values())
-    results.sort(key=lambda item: (item["platform"], item["python"]))
+    results.sort(key=lambda item: (platform_order[item["platform"]], item["python"]))
     lines = [
         "## Workbench Validation",
         "",
