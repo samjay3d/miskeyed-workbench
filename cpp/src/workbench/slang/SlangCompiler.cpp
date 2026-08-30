@@ -341,6 +341,48 @@ namespace {
         return out;
     }
 
+    QList<ResourceDescriptor> reflectResources(slang::ProgramLayout* layout)
+    {
+        QList<ResourceDescriptor> out;
+        if (!layout)
+            return out;
+        for (unsigned i = 0; i < layout->getParameterCount(); ++i) {
+            auto* parameter = layout->getParameterByIndex(i);
+            if (!parameter || !parameter->getVariable() || !parameter->getTypeLayout())
+                continue;
+            QString kindName;
+            switch (parameter->getTypeLayout()->getKind()) {
+            case slang::TypeReflection::Kind::Resource:
+                kindName = QStringLiteral("Texture / resource");
+                break;
+            case slang::TypeReflection::Kind::SamplerState:
+                kindName = QStringLiteral("Sampler");
+                break;
+            case slang::TypeReflection::Kind::TextureBuffer:
+                kindName = QStringLiteral("Texture buffer");
+                break;
+            case slang::TypeReflection::Kind::ShaderStorageBuffer:
+                kindName = QStringLiteral("Storage buffer");
+                break;
+            case slang::TypeReflection::Kind::ParameterBlock:
+                kindName = QStringLiteral("Parameter block");
+                break;
+            case slang::TypeReflection::Kind::ConstantBuffer:
+                kindName = QStringLiteral("Constant buffer");
+                break;
+            default:
+                continue;
+            }
+            ResourceDescriptor descriptor;
+            descriptor.name = QString::fromUtf8(parameter->getVariable()->getName());
+            descriptor.kind = kindName;
+            descriptor.binding = int(parameter->getBindingIndex());
+            descriptor.space = int(parameter->getBindingSpace());
+            out.push_back(descriptor);
+        }
+        return out;
+    }
+
 } // namespace
 
 class SlangCompilerPrivate {
@@ -485,6 +527,7 @@ CompileResult SlangCompiler::compileFullscreen(const QString& source, const QStr
 
     slang::ProgramLayout* layout = linked->getLayout(0);
     result.parameters = reflectParameters(layout, result.parameterByteSize);
+    result.resources = reflectResources(layout);
     result.parameterBinding = layout ? int(layout->getGlobalConstantBufferBinding()) : 0;
     QByteArray layoutBytes;
     QDataStream layoutStream(&layoutBytes, QIODeviceBase::WriteOnly);

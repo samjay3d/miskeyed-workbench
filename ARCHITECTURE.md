@@ -37,8 +37,10 @@ lane before ANARI Device UI work begins.
 
 ### Render Toy documents and views
 
-`ShaderWorkspace` owns open authoring documents, the focused tab, and the active Scene
-and Post bindings. Each `ShaderDocument` retains source, dependency-graph identity,
+`ShaderWorkspace` owns open authoring documents, exactly one focused document, and cheap
+per-document editor sessions (cursor, selection, scroll, view mode, and generated target).
+It does not infer or mutate runtime bindings when a document opens. `RenderToySession`
+separately owns the active Scene/Post bindings and transport. Each `ShaderDocument` retains source, dependency-graph identity,
 reflection, diagnostics, and generated targets. `SlangRhiWidget` consumes only the two
 active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
 pipelines or textures. Source, generated output, and compare are views of the focused
@@ -58,6 +60,12 @@ inspector spans the viewport and editor region, and the shared transport sits at
 bottom of the document workspace as a controller of Render Toy evaluation rather than a
 property of any shader tab.
 
+Resources are compiler-reflected textures, samplers, buffers, and parameter blocks with
+binding/space information. Dependencies default to the authored shader/module stack;
+compiler and renderer DAG products remain collapsed under an Advanced graph branch.
+Compilation presents status, elapsed compile time, entry points, generated targets,
+profile, and diagnostics as structured document information.
+
 ### Time and deterministic evaluation
 
 `core::TimeValue` carries a floating-point coordinate and its units-per-second rate;
@@ -70,6 +78,8 @@ timeline. It owns range and loop policy and drives the shared context consumed b
 active passes. USD, OTIO, an offline renderer, or another host can instead set the same
 context directly without translating through an integer frame. Context changes upload
 host-managed uniform bytes without changing shader or dependency identity.
+Rate changes rescale current/range coordinates to preserve seconds. Realtime controllers
+advance it with elapsed monotonic seconds, while explicit seek/step remains deterministic.
 
 The packaged `miskeyed.ui` and `miskeyed.time` modules provide host contracts. Authored
 shaders explicitly import the contracts they use; Render Toy samples import `miskeyed.viewport_camera` and

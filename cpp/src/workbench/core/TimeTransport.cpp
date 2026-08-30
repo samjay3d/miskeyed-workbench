@@ -49,11 +49,14 @@ void TimeTransport::setPlaying(bool playing)
 
 void TimeTransport::setRate(double newRate)
 {
-    const TimeValue start(m_playbackRange.start.value, newRate);
-    const TimeValue end(endValue(), newRate);
+    if (!std::isfinite(newRate) || newRate <= 0.0 || newRate == rate())
+        return;
+    const TimeValue start(m_playbackRange.start.seconds() * newRate, newRate);
+    const TimeValue end(m_playbackRange.endTime().seconds() * newRate, newRate);
+    const double currentSeconds = m_context ? m_context->current().seconds() : 0.0;
     setPlaybackRange(start, end);
     if (m_context)
-        seek(TimeValue(m_context->current().value, newRate));
+        seek(TimeValue(currentSeconds * newRate, newRate));
 }
 
 void TimeTransport::seek(TimeValue value)
@@ -74,12 +77,35 @@ void TimeTransport::step(double units)
     evaluate(next);
 }
 
+void TimeTransport::advanceSeconds(double elapsedSeconds)
+{
+    if (!m_context || !std::isfinite(elapsedSeconds) || elapsedSeconds <= 0.0)
+        return;
+    const double start = m_playbackRange.start.seconds();
+    const double end = m_playbackRange.endTime().seconds();
+    double next = m_context->current().seconds() + elapsedSeconds;
+    if (next > end) {
+        if (m_loopMode == LoopMode::Loop && end > start)
+            next = start + std::fmod(next - start, end - start);
+        else
+            next = end;
+    }
+    const double sampleRate = m_context->current().rate;
+    evaluate(TimeValue(next * sampleRate, sampleRate),
+        TimeValue(elapsedSeconds * sampleRate, sampleRate));
+}
+
 void TimeTransport::evaluate(TimeValue value)
+{
+    evaluate(value, TimeValue(1.0, value.rate));
+}
+
+void TimeTransport::evaluate(TimeValue value, TimeValue delta)
 {
     if (!m_context)
         return;
     ++m_evaluationIndex;
-    m_context->setSample(value, TimeValue(1.0, value.rate), m_evaluationIndex);
+    m_context->setSample(value, delta, m_evaluationIndex);
 }
 
 } // namespace miskeyed::workbench::core

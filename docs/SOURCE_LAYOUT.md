@@ -37,11 +37,12 @@ focused nested namespace such as `core` or `anari`.
   `ViewportCamera`. Evaluation state is separate from transport policy; core does not
   load Slang source or own QRhi objects.
 - `slang` owns `ShaderDocument`, reflection/parameter models, compilation, open shader
-  workspace state, and the packaged Workbench Slang-module sources.
+  workspace focus/editor sessions, and the packaged Workbench Slang-module sources. It
+  has no Scene/Post runtime policy.
 - `rendering` owns `RenderPass` and `SlangRhiWidget`, including QRhi resource lifetime
   and deferred retirement.
 - `editor` and `ui` contain reusable widgets; neither selects a product mode.
-- `modes/render_toy` binds open shader documents to the active Scene/Post passes and
+- `modes/render_toy` owns `RenderToySession`, which explicitly binds open shader documents to the active Scene/Post passes and
   presents controls for `TimeTransport`. It does not define time semantics or own
   compiler and GPU implementations. Its inspector consumes only the workspace's focused
   document; binding signals update the renderer, not inspector ownership.

@@ -1,6 +1,7 @@
 #include <miskeyed/workbench/slang/ShaderWorkspace.h>
 #include <miskeyed/workbench/slang/ShaderDocument.h>
 #include <QFileInfo>
+#include <utility>
 
 namespace miskeyed::workbench::slang_rhi {
 
@@ -9,49 +10,43 @@ ShaderWorkspace::ShaderWorkspace(QObject* parent)
 {
 }
 
+int ShaderWorkspace::indexOf(ShaderDocument* document) const
+{
+    for (int i = 0; i < m_sessions.size(); ++i)
+        if (m_sessions.at(i).document == document)
+            return i;
+    return -1;
+}
+
 ShaderDocument* ShaderWorkspace::documentAt(int index) const
 {
-    return index >= 0 && index < m_documents.size() ? m_documents.at(index).document : nullptr;
+    return index >= 0 && index < m_sessions.size() ? m_sessions.at(index).document : nullptr;
 }
 
-ShaderWorkspace::Entry* ShaderWorkspace::entry(ShaderDocument* document)
+DocumentSession* ShaderWorkspace::session(ShaderDocument* document)
 {
-    for (Entry& item : m_documents)
-        if (item.document == document)
-            return &item;
-    return nullptr;
+    const int index = indexOf(document);
+    return index >= 0 ? &m_sessions[index] : nullptr;
 }
 
-const ShaderWorkspace::Entry* ShaderWorkspace::entry(ShaderDocument* document) const
+const DocumentSession* ShaderWorkspace::session(ShaderDocument* document) const
 {
-    for (const Entry& item : m_documents)
-        if (item.document == document)
-            return &item;
-    return nullptr;
-}
-
-ShaderRole ShaderWorkspace::role(ShaderDocument* document) const
-{
-    const Entry* item = entry(document);
-    return item ? item->role : ShaderRole::Generic;
+    const int index = indexOf(document);
+    return index >= 0 ? &m_sessions.at(index) : nullptr;
 }
 
 QString ShaderWorkspace::displayName(ShaderDocument* document) const
 {
-    const Entry* item = entry(document);
-    return item ? item->name : QString();
+    const auto* item = session(document);
+    return item ? item->displayName : QString();
 }
 
 ShaderDocument* ShaderWorkspace::openSource(
-    const QUrl& identity, const QString& displayName, ShaderRole role, const QString& source)
+    const QUrl& identity, const QString& displayName, const QString& source)
 {
-    for (const Entry& item : m_documents) {
+    for (const DocumentSession& item : std::as_const(m_sessions)) {
         if (item.document->fileUrl() == identity) {
             focusDocument(item.document);
-            if (item.role == ShaderRole::Scene)
-                bindScene(item.document);
-            else if (item.role == ShaderRole::Post)
-                bindPost(item.document);
             return item.document;
         }
     }
@@ -60,64 +55,69 @@ ShaderDocument* ShaderWorkspace::openSource(
     document->setFileUrl(identity);
     document->setSource(source);
     document->markSourceClean();
-    m_documents.push_back({ document, displayName, role });
+    m_sessions.push_back({ document, displayName });
     connect(document, &ShaderDocument::sourceChanged, this,
         [this, document] { emit documentChanged(document); });
     emit documentAdded(document);
     focusDocument(document);
-    if (role == ShaderRole::Scene)
-        bindScene(document);
-    else if (role == ShaderRole::Post)
-        bindPost(document);
     return document;
 }
 
-ShaderDocument* ShaderWorkspace::openFile(const QString& path, ShaderRole role)
+ShaderDocument* ShaderWorkspace::openFile(const QString& path)
 {
     const QFileInfo info(path);
     if (!info.exists())
         return nullptr;
-    if (role == ShaderRole::Generic) {
-        const QString lower = info.fileName().toLower();
-        if (lower.startsWith(QStringLiteral("scene")))
-            role = ShaderRole::Scene;
-        else if (lower.startsWith(QStringLiteral("post")))
-            role = ShaderRole::Post;
+    const QUrl identity = QUrl::fromLocalFile(info.absoluteFilePath());
+    for (const DocumentSession& item : std::as_const(m_sessions)) {
+        if (item.document->fileUrl() == identity) {
+            focusDocument(item.document);
+            return item.document;
+        }
     }
-    auto* document = openSource(
-        QUrl::fromLocalFile(info.absoluteFilePath()), info.fileName(), role, QString());
+    auto* document = openSource(identity, info.fileName(), QString());
     if (!document->load())
         return nullptr;
     document->compile();
-    if (role == ShaderRole::Scene)
-        bindScene(document);
-    else if (role == ShaderRole::Post)
-        bindPost(document);
     return document;
 }
 
 void ShaderWorkspace::focusDocument(ShaderDocument* document)
 {
-    if (!entry(document) || m_focused == document)
+    if (indexOf(document) < 0 || m_focused == document)
         return;
+    emit focusChanging(m_focused, document);
     m_focused = document;
     emit focusedDocumentChanged(document);
 }
 
-void ShaderWorkspace::bindScene(ShaderDocument* document)
+bool ShaderWorkspace::closeDocument(ShaderDocument* document)
 {
-    if (!entry(document) || role(document) != ShaderRole::Scene || m_scene == document)
-        return;
-    m_scene = document;
-    emit renderBindingsChanged(m_scene, m_post);
+    const int index = indexOf(document);
+    if (index < 0)
+        return false;
+    emit documentAboutToClose(document);
+    const bool wasFocused = m_focused == document;
+    m_sessions.removeAt(index);
+    if (wasFocused) {
+        m_focused = nullptr;
+        if (!m_sessions.isEmpty())
+            focusDocument(m_sessions.at(qMin(index, m_sessions.size() - 1)).document);
+        else
+            emit focusedDocumentChanged(nullptr);
+    }
+    document->deleteLater();
+    emit documentClosed();
+    return true;
 }
 
-void ShaderWorkspace::bindPost(ShaderDocument* document)
+bool ShaderWorkspace::moveDocument(int from, int to)
 {
-    if (!entry(document) || role(document) != ShaderRole::Post || m_post == document)
-        return;
-    m_post = document;
-    emit renderBindingsChanged(m_scene, m_post);
+    if (from < 0 || from >= m_sessions.size() || to < 0 || to >= m_sessions.size() || from == to)
+        return false;
+    m_sessions.move(from, to);
+    emit documentOrderChanged();
+    return true;
 }
 
 } // namespace miskeyed::workbench::slang_rhi

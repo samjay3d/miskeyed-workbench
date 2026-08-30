@@ -39,6 +39,7 @@ public:
     bool compileSucceeded() const { return m_compileSucceeded; }
     QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
     QList<SourceDependency> importedDependencies() const { return m_importedDependencies; }
+    QList<ResourceDescriptor> resources() const { return m_resources; }
     void setSystemPrelude(const QString& source) { m_compiler.setSystemPrelude(source); }
 
     ShaderParameterModel* parameters() { return &m_parameters; }
@@ -100,6 +101,7 @@ private:
     QMap<QString, QString> m_generated;
     QStringList m_generatedTargets;
     QList<SourceDependency> m_importedDependencies;
+    QList<ResourceDescriptor> m_resources;
     QList<NodeId> m_moduleNodes;
     NodeId m_sourceNode = 0;
     NodeId m_entryNode = 0;

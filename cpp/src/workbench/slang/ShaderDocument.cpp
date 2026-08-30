@@ -145,6 +145,7 @@ void ShaderDocument::compileNow()
     emit compilingChanged();
     setDiagnostics(r.diagnostics);
     m_importedDependencies = r.dependencies;
+    m_resources = r.resources;
     if (!m_dependencyWatcher.files().isEmpty())
         m_dependencyWatcher.removePaths(m_dependencyWatcher.files());
     QStringList watchedFiles;

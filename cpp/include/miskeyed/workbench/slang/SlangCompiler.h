@@ -26,6 +26,13 @@ struct SourceDependency {
     QStringList imports;
 };
 
+struct ResourceDescriptor {
+    QString name;
+    QString kind;
+    int binding = -1;
+    int space = 0;
+};
+
 struct CompileResult {
     bool ok = false;
     QString diagnostics;
@@ -37,6 +44,7 @@ struct CompileResult {
     QByteArray parameterLayoutDigest;
     QByteArray uiSchemaDigest;
     QList<SourceDependency> dependencies;
+    QList<ResourceDescriptor> resources;
 };
 
 class SlangCompilerPrivate;

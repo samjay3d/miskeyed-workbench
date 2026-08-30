@@ -43,6 +43,23 @@ int main(int argc, char** argv)
     transport.seek(TimeValue(23.5, 24.0));
     assert(context.current().value == 23.5); // seek itself does not clamp evaluation
 
+    transport.setPlaybackRange(TimeValue(12.5, 24.0), TimeValue(60.25, 24.0));
+    transport.seek(TimeValue(24.0, 24.0));
+    transport.setRate(48.0);
+    assert(std::abs(context.current().value - 48.0) < 1.0e-12);
+    assert(std::abs(context.timeSeconds() - 1.0) < 1.0e-12);
+    assert(std::abs(transport.startValue() - 25.0) < 1.0e-12);
+    assert(std::abs(transport.endValue() - 120.5) < 1.0e-12);
+    transport.setRate(24.0);
+    assert(std::abs(context.current().value - 24.0) < 1.0e-12);
+    assert(std::abs(transport.startValue() - 12.5) < 1.0e-12);
+    assert(std::abs(transport.endValue() - 60.25) < 1.0e-12);
+
+    transport.seek(TimeValue(24.0, 24.0));
+    transport.advanceSeconds(0.5);
+    assert(std::abs(context.current().value - 36.0) < 1.0e-12);
+    assert(std::abs(context.deltaSeconds() - 0.5) < 1.0e-12);
+
     const QByteArray contract
         = miskeyed::workbench::slang_rhi::workbenchModuleSource(QStringLiteral("time"));
     assert(contract.contains("WorkbenchTime"));

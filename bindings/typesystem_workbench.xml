@@ -18,6 +18,7 @@
         <enum-type name="DirtyFlag" flags="yes" />
         <enum-type name="ParameterType" />
         <value-type name="SourceDependency" />
+        <value-type name="ResourceDescriptor" />
 
         <object-type name="DependencyGraph" />
         <object-type name="ShaderParameterModel">

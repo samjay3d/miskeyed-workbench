@@ -36,6 +36,9 @@ public:
     void setRate(double rate);
     void seek(TimeValue value);
     void step(double units = 1.0);
+    // Realtime clock adapters report elapsed seconds here. Explicit step/seek remains
+    // deterministic and independent from callback cadence.
+    void advanceSeconds(double elapsedSeconds);
 
 signals:
     void contextChanged();
@@ -44,6 +47,7 @@ signals:
 
 private:
     void evaluate(TimeValue value);
+    void evaluate(TimeValue value, TimeValue delta);
 
     TimeContext* m_context = nullptr;
     TimeRange m_playbackRange;

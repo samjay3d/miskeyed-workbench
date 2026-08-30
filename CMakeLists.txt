@@ -81,6 +81,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     # The current shell is specifically the two-pass Render Toy composition. Future
     # modes belong beside it rather than inside the Slang compiler/runtime folders.
     cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
+    cpp/src/workbench/modes/render_toy/RenderToySession.cpp
     # Q_OBJECT headers live in cpp/include; list them so AUTOMOC scans them (its
     # basename heuristic only checks the source dir, which would skip moc otherwise).
     cpp/include/miskeyed/workbench/core/DependencyGraph.h
@@ -94,6 +95,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
     cpp/include/miskeyed/workbench/editor/LspClient.h
     cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
+    cpp/include/miskeyed/workbench/modes/render_toy/RenderToySession.h
     cpp/include/miskeyed/workbench/core/TimeContext.h
     cpp/include/miskeyed/workbench/core/TimeTransport.h
 )
