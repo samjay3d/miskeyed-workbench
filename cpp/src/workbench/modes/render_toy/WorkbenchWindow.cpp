@@ -471,6 +471,7 @@ void WorkbenchWindow::buildUi()
     documentWorkspace->addWidget(editorBox);
     documentWorkspace->setStretchFactor(0, 3);
     documentWorkspace->setStretchFactor(1, 2);
+    documentWorkspace->setSizes({ 520, 380 });
 
     // The inspector spans result and editor surfaces because it describes the focused
     // document, not either viewport or either Render Toy binding.
