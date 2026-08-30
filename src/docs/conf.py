@@ -1,0 +1,11 @@
+project = "Miskeyed Workbench"
+author = "Miskeyed Workbench contributors"
+release = "0.3.0"
+extensions = []
+source_suffix = ".rst"
+master_doc = "index"
+exclude_patterns = ["_build"]
+html_theme = "alabaster"
+html_static_path = ["_static"]
+html_title = f"Workbench {release}"
+nitpicky = True

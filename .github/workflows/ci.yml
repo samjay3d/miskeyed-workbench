@@ -9,13 +9,14 @@ permissions:
 # fine under the offscreen Qt platform with no GPU on the runner.
 #
 # release.yml calls build-distributions.yml on PRs to main; this workflow adds the
-# actual test
-# run. It triggers on pull requests only, so an open PR runs the suite exactly once
-# instead of racing a duplicate push-event run (which showed up as a cancelled job with
-# an unexpanded matrix name).
+# native tests and reviewable teaching-site artifact. Branch and tag runs use the same
+# build to stage the documented prod/dev path without granting Pages write permission.
 
 on:
     pull_request:
+    push:
+        branches: [main, "release/**"]
+        tags: ["v*"]
     workflow_dispatch:
 
 concurrency:
@@ -54,6 +55,14 @@ jobs:
                           - 'spikes/**'
                           - 'CMakeLists.txt'
                           - 'pyproject.toml'
+                          - 'src/docs/**'
+                          - 'ci/capture_workbench.py'
+                          - 'ci/docs_destination.py'
+                          - 'ci/verify_doc_images.py'
+                          - 'README.md'
+                          - 'ARCHITECTURE.md'
+                          - 'VISION.md'
+                          - 'CHANGELOG.md'
                           - '.github/workflows/ci.yml'
 
     lint:
@@ -301,17 +310,30 @@ jobs:
                   QT_QPA_PLATFORM: offscreen
               run: python -m pytest tests/ -v
 
-            - name: Capture Workbench documentation
+            - name: Build reviewable documentation deployment
               if: matrix.python-version == '3.11'
               shell: pwsh
-              run: python ci\capture_workbench.py docs\images\workbench.png
+              run: |
+                  python -m pip install -r src/docs/requirements.txt
+                  python ci\capture_workbench.py --all --output src\docs\images
+                  python ci\verify_doc_images.py src\docs\images
+                  $docsRef = "${{ github.head_ref }}"
+                  if (-not $docsRef) { $docsRef = "${{ github.ref }}" }
+                  $siteRoot = "$env:RUNNER_TEMP\workbench-documentation"
+                  $version = python -c `
+                    "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])"
+                  $destination = python ci\docs_destination.py `
+                    --ref $docsRef --version $version --root $siteRoot
+                  sphinx-build -W --keep-going -b html src/docs $destination
+                  Set-Content -Path "$siteRoot\destination.txt" `
+                    -Value $destination.Substring($siteRoot.Length + 1).Replace("\", "/")
 
-            - name: Upload Workbench documentation
+            - name: Upload reviewable documentation deployment
               if: matrix.python-version == '3.11'
               uses: actions/upload-artifact@v7
               with:
                   name: workbench-documentation
-                  path: docs/images/workbench.png
+                  path: ${{ runner.temp }}/workbench-documentation
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having

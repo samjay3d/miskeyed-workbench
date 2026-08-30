@@ -55,3 +55,8 @@ aqtinstall.log
 .idea/
 .DS_Store
 Thumbs.db
+
+# ---- Generated documentation ----
+# Sphinx HTML and native UI captures are deployment artifacts, never repository inputs.
+/docs/
+/src/docs/images/
