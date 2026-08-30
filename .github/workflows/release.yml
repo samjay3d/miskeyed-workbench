@@ -65,16 +65,19 @@ jobs:
                   echo "release=false" >> "$GITHUB_OUTPUT"
 
     build-distributions:
-        name: Build distributions
+        name: Main Integration
         needs: detect
-        # The full six-lane platform gate is intentionally reserved for the release
-        # integration PR. Ordinary PRs use ci.yml's focused validation.
+        # Every path into main receives the exhaustive supported wheel matrix. Release
+        # detection controls publication only; it never controls validation confidence.
         if: >-
-            needs.detect.outputs.release == 'true' ||
-            (github.event_name == 'pull_request' &&
-             github.event.pull_request.base.ref == 'main' &&
-             github.event.pull_request.head.ref == 'release/0.3.0')
+            github.event_name == 'pull_request' ||
+            github.ref == 'refs/heads/main' ||
+            startsWith(github.ref, 'refs/tags/v') ||
+            github.event_name == 'workflow_dispatch'
         uses: ./.github/workflows/build-distributions.yml
+        with:
+            confidence: Main Integration
+            python-versions: '["3.11", "3.12", "3.13"]'
         permissions:
             contents: read
 

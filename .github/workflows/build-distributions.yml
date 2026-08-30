@@ -4,7 +4,23 @@ name: build distributions
 # review builds call this workflow, so neither has to inherit the other's permissions.
 on:
     workflow_call:
+        inputs:
+            confidence:
+                description: User-facing validation level shown on every check.
+                type: string
+                default: Main Integration
+            python-versions:
+                description: JSON array of Python versions included in this gate.
+                type: string
+                default: '["3.11", "3.12", "3.13"]'
     workflow_dispatch:
+        inputs:
+            confidence:
+                description: User-facing validation level shown on every check.
+                default: Manual Validation
+            python-versions:
+                description: JSON array of Python versions included in this gate.
+                default: '["3.11", "3.12", "3.13"]'
 
 permissions:
     contents: read
@@ -15,7 +31,7 @@ env:
 
 jobs:
     build-wheels:
-        name: Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Wheel + Contracts + D3D11/Vulkan' || 'Wheel + Contracts' }}
+        name: ${{ inputs.confidence }} · Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Wheel + Contracts + D3D11/Vulkan' || 'Wheel + Contracts' }}
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -24,7 +40,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.11", "3.12", "3.13"]
+                python-version: ${{ fromJSON(inputs.python-versions) }}
         steps:
             - uses: actions/checkout@v7
 
@@ -260,11 +276,11 @@ jobs:
                   path: wheels-${{ matrix.python-version }}.tgz
 
     build-portable-wheels:
-        name: ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
+        name: ${{ inputs.confidence }} · ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.11", "3.12", "3.13"]
+                python-version: ${{ fromJSON(inputs.python-versions) }}
                 target: [linux-x64, macos-arm64, macos-x64]
                 include:
                     - target: linux-x64
@@ -499,7 +515,7 @@ jobs:
                   path: wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz
 
     build-sdist:
-        name: Source distribution
+        name: ${{ inputs.confidence }} · Source distribution
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -524,7 +540,7 @@ jobs:
                   path: ./dist/*.tar.gz
 
     validation-summary:
-        name: Workbench validation summary
+        name: ${{ inputs.confidence }} · Workbench validation summary
         if: always()
         needs: [build-wheels, build-portable-wheels]
         runs-on: ubuntu-latest
@@ -538,5 +554,6 @@ jobs:
             - name: Publish validation table
               run: |
                   python ci/validation_summary.py summary \
-                    --input validation-results --output validation-summary.md
+                    --input validation-results --output validation-summary.md \
+                    --python-versions '${{ inputs.python-versions }}'
                   cat validation-summary.md >> "$GITHUB_STEP_SUMMARY"

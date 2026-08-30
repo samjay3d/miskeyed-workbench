@@ -37,8 +37,11 @@ def summarize(args: argparse.Namespace) -> None:
         item = json.loads(path.read_text(encoding="utf-8"))
         results_by_lane[(item["platform"], item["python"])] = item
     metadata = json.loads(Path(args.metadata).read_text(encoding="utf-8"))
+    python_versions = (
+        json.loads(args.python_versions) if args.python_versions else metadata["python"]
+    )
     for platform in metadata["platforms"]:
-        for python in metadata["python"]:
+        for python in python_versions:
             key = (platform["label"], python)
             results_by_lane.setdefault(
                 key,
@@ -114,6 +117,7 @@ def main() -> None:
     summary.add_argument("--input", required=True)
     summary.add_argument("--output", required=True)
     summary.add_argument("--metadata", default="ci/support-matrix.json")
+    summary.add_argument("--python-versions")
     summary.set_defaults(handler=summarize)
     support = subparsers.add_parser("release-support")
     support.add_argument("--metadata", default="ci/support-matrix.json")

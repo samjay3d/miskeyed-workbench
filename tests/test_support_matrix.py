@@ -20,7 +20,7 @@ def test_support_metadata_agrees_with_package_workflow_and_docs() -> None:
 
     assert support["python"] == ["3.11", "3.12", "3.13"]
     assert project["requires-python"] == ">=3.11,<3.14"
-    assert 'python-version: ["3.11", "3.12", "3.13"]' in workflow
+    assert "python-version: ${{ fromJSON(inputs.python-versions) }}" in workflow
     assert "3.11–3.13" in readme
 
     workflow_contracts = {
@@ -80,3 +80,25 @@ def test_validation_summary_preserves_partial_failure(tmp_path: Path) -> None:
     report = summary.read_text(encoding="utf-8")
     assert "✅ Passed" in report
     assert "❌ Failed — Vulkan/lavapipe" in report
+
+
+def test_stabilization_summary_uses_oldest_and_newest_python_only(tmp_path: Path) -> None:
+    summary = tmp_path / "summary.md"
+    subprocess.run(
+        [
+            sys.executable,
+            "ci/validation_summary.py",
+            "summary",
+            "--input",
+            str(tmp_path / "missing-results"),
+            "--output",
+            str(summary),
+            "--python-versions",
+            '["3.11", "3.13"]',
+        ],
+        check=True,
+    )
+    report = summary.read_text(encoding="utf-8")
+    assert "| 3.11 |" in report
+    assert "| 3.13 |" in report
+    assert "| 3.12 |" not in report

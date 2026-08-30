@@ -151,10 +151,19 @@ def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
 def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
     distributions = Path(".github/workflows/build-distributions.yml").read_text(encoding="utf-8")
     release = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    stabilization = Path(".github/workflows/release-pr-artifacts.yml").read_text(encoding="utf-8")
 
-    assert "github.event.pull_request.base.ref == 'main'" in release
-    assert "github.event.pull_request.head.ref == 'release/0.3.0'" in release
-    assert 'python-version: ["3.11", "3.12", "3.13"]' in distributions
+    assert "github.event_name == 'pull_request'" in release
+    assert "github.ref == 'refs/heads/main'" in release
+    assert "release/0.3.0" not in release
+    assert "confidence: Main Integration" in release
+    assert 'python-versions: \'["3.11", "3.12", "3.13"]\'' in release
+    assert "python-version: ${{ fromJSON(inputs.python-versions) }}" in distributions
+    assert 'branches:\n            - "release/**"' in stabilization
+    assert "confidence: Release Stabilization" in stabilization
+    assert 'python-versions: \'["3.11", "3.13"]\'' in stabilization
+    assert "pypi" not in stabilization.lower()
+    assert "contents: write" not in stabilization
     assert "Wheel + Contracts + D3D11/Vulkan" in distributions
     assert "Wheel + Contracts + Vulkan" in distributions
     assert "Wheel + Contracts + Metal" in distributions
@@ -172,3 +181,13 @@ def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
     assert "name: sdist" in distributions
     assert "pattern: wheel-*" in release
     assert "name: docs-release" in release
+
+
+def test_confidence_ladder_labels_focused_ci_by_destination():
+    workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert '"$BASE_REF" == main' in workflow
+    assert '"$BASE_REF" == release/*' in workflow
+    assert "level='Main Integration'" in workflow
+    assert "level='Release Stabilization'" in workflow
+    assert "level='Development CI'" in workflow
+    assert "name: ${{ needs.changes.outputs.confidence }}" in workflow

@@ -30,13 +30,29 @@ env:
 
 jobs:
     changes:
-        name: Detect changes
+        name: Confidence level
         # Cheap gate so the heavy Windows build below only runs when something that can
         # actually affect the native extension or the tests changed.
         runs-on: ubuntu-latest
         outputs:
             build: ${{ steps.filter.outputs.build }}
+            confidence: ${{ steps.confidence.outputs.level }}
         steps:
+            - name: Classify confidence level
+              id: confidence
+              shell: bash
+              env:
+                  BASE_REF: ${{ github.base_ref }}
+                  REF: ${{ github.ref }}
+              run: |
+                  if [[ "$BASE_REF" == main || "$REF" == refs/heads/main ]]; then
+                    level='Main Integration'
+                  elif [[ "$BASE_REF" == release/* || "$REF" == refs/heads/release/* ]]; then
+                    level='Release Stabilization'
+                  else
+                    level='Development CI'
+                  fi
+                  echo "level=$level" >> "$GITHUB_OUTPUT"
             - uses: actions/checkout@v7
             - uses: dorny/paths-filter@v4
 
@@ -65,9 +81,15 @@ jobs:
                           - 'VISION.md'
                           - 'CHANGELOG.md'
                           - '.github/workflows/ci.yml'
+                          - '.github/workflows/build-distributions.yml'
+                          - '.github/workflows/release-pr-artifacts.yml'
+                          - '.github/workflows/release.yml'
+                          - 'ci/support-matrix.json'
+                          - 'ci/validation_summary.py'
 
     lint:
-        name: Python checks
+        needs: changes
+        name: ${{ needs.changes.outputs.confidence }} · Python checks
         # Pure-Python checks: no Qt/Slang toolchain needed, so they run in seconds on
         # Linux in parallel with the heavy Windows build below. Keep the example contract
         # here because examples/** intentionally does not trigger three native builds.
@@ -87,7 +109,7 @@ jobs:
               run: python -m pytest tests/test_python_tool_example.py -q
 
     anari-backend:
-        name: ANARI backend
+        name: ${{ needs.changes.outputs.confidence }} · ANARI backend
         needs: changes
         if: needs.changes.outputs.build == 'true'
         runs-on: ubuntu-latest
@@ -133,7 +155,7 @@ jobs:
                     "sink,$RUNNER_TEMP/anari-install/lib/"
 
     test:
-        name: Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Source + Native + D3D11/Vulkan' || 'Source contracts' }}
+        name: ${{ needs.changes.outputs.confidence }} · Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Source + Native + D3D11/Vulkan' || 'Source contracts' }}
         needs: changes
         # Skip the ~build-heavy job (and its check reports 'skipped' = success) when only
         # docs/CI-meta changed; the CI gate below still reports so the PR isn't blocked.
@@ -332,7 +354,7 @@ jobs:
                   path: ${{ runner.temp }}/workbench-documentation
 
     publish-dev-docs:
-        name: Public Dev Documentation
+        name: ${{ needs.changes.outputs.confidence }} · Public Dev Documentation
         needs: [changes, test]
         if: >-
             needs.test.result == 'success' &&
@@ -395,7 +417,7 @@ jobs:
     # other job, so requiring just "CI" transitively covers the whole matrix without having
     # to re-edit the rule whenever a Python version is added or removed.
     ci:
-        name: CI
+        name: ${{ needs.changes.outputs.confidence }} · CI
         if: always()
         needs: [changes, lint, anari-backend, test, publish-dev-docs]
         runs-on: ubuntu-latest

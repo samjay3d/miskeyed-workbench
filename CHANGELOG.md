@@ -116,6 +116,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   partial-failure Actions summary, and user-facing PyPI/docs/support release links.
 - Isolated Windows fresh-wheel checks from the provisioned Slang SDK so installed-package
   evidence proves the wheel's bundled runtime rather than an editable-build fallback.
+- Added a branch-independent confidence ladder: focused development checks, read-only
+  ``release/*`` stabilization on Python 3.11/3.13 across every platform, and exhaustive
+  Python 3.11--3.13 main integration before publication detection can proceed.
 
 ## [0.2.1] — 2026-08-30
 
