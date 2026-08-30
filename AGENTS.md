@@ -6,6 +6,10 @@ trivia and long on **boundaries**, because boundaries are what this package is m
 The product intent lives in [VISION.md](VISION.md); the shipped-today design lives in
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
+For active release work, the checked-out code is the source of truth. Read the current
+release implementation before proposing changes; a version name or branch label is
+context, not a substitute for tracing the code that is actually present.
+
 ---
 
 ## What this repo is
@@ -27,7 +31,12 @@ requires it.
 
 ## How to edit this repository
 
-1. **Solve the current problem first.** Do not build speculative infrastructure.
+Before proposing architecture, read the current code, public headers, bindings, tests,
+and canonical docs; trace ownership, lifetime, and call/data flow. For architectural
+work use [.github/skills/architecture-review/SKILL.md](.github/skills/architecture-review/SKILL.md).
+
+1. **Solve the current problem first.** Prefer a small coherent seam to a speculative
+   framework, and preserve ownership boundaries unless the task explicitly changes one.
 2. **Prefer clear boundaries over clever abstractions.**
 3. **Do not create abstractions without at least one concrete reason.**
 4. **Remove obsolete prototype architecture** rather than preserving compatibility.
@@ -43,6 +52,16 @@ requires it.
 12. **Comment *why* a boundary exists,** not what obvious code is doing.
 13. **When uncertain, optimize for** the smallest useful implementation + clean
     ownership + the ability to replace the layer later.
+14. **Update the relevant docs and changelog in the same task.** Use the focused map in
+    [.github/skills/docs/SKILL.md](.github/skills/docs/SKILL.md); do not touch every page
+    mechanically.
+15. **Review public API changes explicitly.** Headers exported by `Export.h`, Qt
+    properties/invokables/signals, and `bindings/typesystem_workbench.xml` are contract
+    surfaces. Shiboken exposure must be intentional and tested.
+16. **Test contracts, not incidental implementation.** UI changes also require checking
+    deterministic documentation capture scenarios and regenerating the focused image.
+17. **Report intentional non-goals.** Every final task report must name what was
+    deliberately not generalized.
 
 ---
 
@@ -54,6 +73,12 @@ requires it.
   draw prep, material evaluation, lighting, raster shaders, compute, post-processing.
 - **C++ owns system work** — app lifecycle, device/resource creation, synchronization,
   command submission, OS/windowing, stable ownership, and Python exposure.
+- **Slang owns language and module resolution.** Workbench owns packaged module bytes,
+  project search-path configuration, and host/editor/runtime composition; it supplies
+  these at Slang's filesystem/session edge rather than resolving imports itself.
+- **Sessions own runtime bindings and entry-point selections.** `ShaderWorkspace` owns
+  documents, focus/editor sessions, and shared evaluation time. Tool contributions
+  adapt sessions into views; they do not become the state owner.
 
 **ANARI Device mode:**
 
@@ -67,6 +92,25 @@ requires it.
 
 **All modes:** Python / PySide exposes only. There is no Python mirror of a render core.
 Do not add one.
+
+## Do not generalize yet
+
+Future SDF, noise, MaterialX, USD, ANARI, ML/compute, and plugin ideas are architecture
+tests, not implementation requirements. Ask “does this seam leave room for that?” Do
+not build a plugin manager, service locator, generalized execution graph, package
+manager, or dependency-injection framework unless a current feature concretely needs
+it. Do not hard-code one future consumer's assumptions into a generic layer.
+
+## Source-of-truth map
+
+- [`README.md`](README.md): supported user entry points and build/run overview.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md): concise shipped architecture; validate it against
+  `cpp/{include,src}/miskeyed/workbench/{core,slang,rendering,editor,ui,modes}`.
+- [`VISION.md`](VISION.md): product direction, not proof that a feature is shipped.
+- [`src/docs/index.rst`](src/docs/index.rst): canonical teaching documentation.
+- [`CHANGELOG.md`](CHANGELOG.md): release record. Put ordinary post-release work under
+  `[Unreleased]`; when working on an active release, follow that release's stated
+  context. The prepare-release skill performs the mechanical version transition.
 
 ---
 

@@ -74,6 +74,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Developer / CI
 
+- Added repository-local architecture-review and documentation checklists, clarified
+  ownership and anti-generalization rules in `AGENTS.md`, and made contextual changelog
+  handling, public API review, deterministic UI captures, and deliberate non-goals part
+  of the contributor workflow without hard-coding a release version.
 - Added Windows D3D11 and Vulkan/SwiftShader draw-recording smoke tests, native
   workspace/time/module/tool contracts, and a pinned ANARI SDK lifecycle check.
 - Added CPython 3.11–3.13 wheel builds for Windows x86_64, Linux x86_64, and macOS
