@@ -92,13 +92,15 @@ def test_release_workflow_gates_package_publication_on_live_docs():
     assert "needs: [detect, build-distributions, publish-documentation]" in workflow
     assert "Verify the public versioned documentation" in workflow
     assert "[Documentation for $v]($docs_url)" in workflow
-    assert "permissions:\n            contents: write" in workflow
+    assert workflow.count("contents: write") == 2
 
 
-def test_ci_keeps_prs_read_only_and_publishes_dev_only_on_trusted_pushes():
+def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "permissions:\n    contents: read" in workflow
     assert 'branches: [main, "release/**"]' in workflow
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
     assert "github.event_name == 'push'" in workflow
+    assert workflow.count("contents: write") == 1
     assert "--site documentation-preview/site --publish-tree publish --channel dev" in workflow
     assert "[Public Dev Documentation]($url)" in workflow

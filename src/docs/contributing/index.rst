@@ -20,18 +20,19 @@ capture, image-manifest validation, and warning-as-error Sphinx build::
 
 The helper writes temporary captures to ignored ``src/docs/images`` before Sphinx
 copies the same verified files into the site. Pull requests upload that complete
-site as a **Documentation Preview Artifact** and have read-only repository
-permission; an artifact is not a public deployment.
+site as a **Documentation Preview Artifact**. The native build remains read-only.
+A same-repository PR may pass that already-built artifact to the dedicated publisher
+and update ``/dev/``; a fork PR can never enter the write-enabled job.
 
 Publication and versioning
 --------------------------
 
-The canonical public entry point is ``|documentation_url|``. Generated output is committed
-only to the disposable ``docs`` deployment branch. A release publishes an immutable
+The canonical public entry point is ``|documentation_url|``. Generated output is
+committed only to the disposable ``docs`` deployment branch. A release publishes an immutable
 version directory such as ``/0.3.0/`` and updates the root redirect to that version.
 Existing version directories are preserved. Trusted pushes to ``main`` or
-``release/**`` use the same built artifact to replace the mutable ``/dev/`` site;
-arbitrary pull requests never publish publicly.
+``release/**`` and same-repository PRs use the same built artifact to replace the
+mutable ``/dev/`` site. Fork PRs remain artifact-only.
 
 The generated branch layout is::
 
@@ -49,8 +50,10 @@ One-time maintainer setup is required **before publishing the package**. Ensure 
 ``docs`` branch exists, then open **Settings → Pages**, choose **Deploy from a
 branch**, select the ``docs`` branch and the ``/ (root)`` folder. The workflow can
 create the branch on its first attempt, but Pages must then be configured and the
-release rerun. Ordinary pull-request jobs never receive content-write permission.
-Repository branch rules must allow ``GITHUB_TOKEN`` to update the generated branch.
+release rerun. Native build/test jobs and fork PRs never receive content-write
+permission. Only the dedicated publisher job does, after checking that a PR head repository equals
+this repository. Branch rules must allow ``GITHUB_TOKEN`` to update the generated
+branch.
 
 The **documentation** environment is used by both trusted development and release
 publication jobs. Pushes to trusted branches publish

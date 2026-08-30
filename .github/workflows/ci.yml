@@ -327,19 +327,22 @@ jobs:
                   name: workbench-documentation
                   path: ${{ runner.temp }}/workbench-documentation
 
-    publish-dev-documentation:
+    publish-dev-docs:
         name: Public Dev Documentation
         needs: [changes, test]
         if: >-
-            github.event_name == 'push' &&
             needs.test.result == 'success' &&
-            (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+            ((github.event_name == 'pull_request' &&
+              github.event.pull_request.head.repo.full_name == github.repository) ||
+             (github.event_name == 'push' &&
+              (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
         runs-on: ubuntu-latest
         concurrency:
             group: documentation-publication
             cancel-in-progress: false
         environment:
             name: documentation
+            url: https://samjay3d.github.io/miskeyed-workbench/dev/
         permissions:
             contents: write
         steps:
@@ -398,7 +401,7 @@ jobs:
     ci:
         name: CI
         if: always()
-        needs: [changes, lint, anari-backend, test, publish-dev-documentation]
+        needs: [changes, lint, anari-backend, test, publish-dev-docs]
         runs-on: ubuntu-latest
         steps:
             - name: Fail if any dependency failed

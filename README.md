@@ -76,8 +76,9 @@ python -m pip install -r src/docs/requirements.txt
 python -m ci.build_docs --output build/documentation/site
 ```
 
-Pull requests upload the complete site as a read-only review artifact. A trusted
-release run publishes the immutable `/0.3.0/` snapshot to the generated `docs` branch
+Pull requests upload the complete site as a read-only review artifact. Trusted
+same-repository PRs also publish that artifact to `/dev/`; fork PRs never publish.
+A release run publishes the immutable `/0.3.0/` snapshot to the generated `docs` branch
 and updates the public root to redirect to that stable version.
 
 ## License
