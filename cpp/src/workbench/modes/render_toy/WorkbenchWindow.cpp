@@ -1173,7 +1173,7 @@ void WorkbenchWindow::refreshDependencyInspector()
         return QStringLiteral("Node");
     };
     std::function<void(NodeId, QTreeWidgetItem*)> addNode;
-    addNode = [graph, &addNode, &kindName](NodeId node, QTreeWidgetItem* parent) {
+    addNode = [this, graph, &addNode, &kindName](NodeId node, QTreeWidgetItem* parent) {
         const QString key = graph->nodeKey(node);
         if (key.isEmpty())
             return;
