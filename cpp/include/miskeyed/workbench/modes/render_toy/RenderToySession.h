@@ -11,8 +11,8 @@ class TimeTransport;
 namespace miskeyed::workbench::slang_rhi {
 class ShaderDocument;
 
-// Mode-owned runtime state. The generic workspace neither knows nor mutates these
-// bindings; opening a document and using it in Render Toy are separate operations.
+// Tool-owned runtime state. The workspace owns documents and evaluation time; this
+// contribution only binds shared documents into Render Toy's two runtime slots.
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT RenderToySession final : public QObject {
     Q_OBJECT
 public:
@@ -22,6 +22,7 @@ public:
     ShaderDocument* postDocument() const { return m_post; }
     core::TimeContext* timeContext() const { return m_timeContext; }
     core::TimeTransport* timeTransport() const { return m_timeTransport; }
+    void setEvaluationContext(core::TimeContext* context, core::TimeTransport* transport);
 
     void bindScene(ShaderDocument* document);
     void bindPost(ShaderDocument* document);

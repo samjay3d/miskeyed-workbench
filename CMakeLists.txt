@@ -79,10 +79,11 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/src/workbench/slang/ShaderDocument.cpp
     cpp/src/workbench/rendering/SlangRhiWidget.cpp
     cpp/src/workbench/ui/ParameterInspector.cpp
-    # The current shell is specifically the two-pass Render Toy composition. Future
-    # modes belong beside it rather than inside the Slang compiler/runtime folders.
+    cpp/src/workbench/ui/WorkbenchToolFactory.cpp
+    # Tool contributions bind shared documents without owning the Workbench shell.
     cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
     cpp/src/workbench/modes/render_toy/RenderToySession.cpp
+    cpp/src/workbench/modes/shader_toy/ShaderToySession.cpp
     # Q_OBJECT headers live in cpp/include; list them so AUTOMOC scans them (its
     # basename heuristic only checks the source dir, which would skip moc otherwise).
     cpp/include/miskeyed/workbench/core/DependencyGraph.h
@@ -98,6 +99,7 @@ add_library(miskeyed_workbench_slang_rhi STATIC
     cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h
     cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
     cpp/include/miskeyed/workbench/modes/render_toy/RenderToySession.h
+    cpp/include/miskeyed/workbench/modes/shader_toy/ShaderToySession.h
     cpp/include/miskeyed/workbench/core/TimeContext.h
     cpp/include/miskeyed/workbench/core/TimeTransport.h
 )
@@ -110,6 +112,13 @@ qt_add_resources(miskeyed_workbench_slang_rhi "workbench_headers"
         shaders/workbench/viewport_camera.slang
         shaders/workbench/time.slang
         shaders/workbench/render_toy.slang
+        shaders/workbench/shader_toy.slang
+)
+
+qt_add_resources(miskeyed_workbench_slang_rhi "shader_toy_samples"
+    PREFIX "/miskeyed/workbench/shader_toy"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader_toy"
+    FILES shaders/shader_toy/default.slang
 )
 
 qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
@@ -148,6 +157,9 @@ if(BUILD_TESTING)
     add_executable(test_render_toy_contract tests/test_render_toy_contract.cpp)
     target_link_libraries(test_render_toy_contract PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME render_toy_contract COMMAND test_render_toy_contract)
+    add_executable(test_shader_toy_contract tests/test_shader_toy_contract.cpp)
+    target_link_libraries(test_shader_toy_contract PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME shader_toy_contract COMMAND test_shader_toy_contract)
     add_executable(test_shader_dependencies tests/test_shader_dependencies.cpp)
     target_link_libraries(test_shader_dependencies PRIVATE miskeyed::workbench::slang_rhi)
     add_test(NAME shader_dependencies COMMAND test_shader_dependencies)

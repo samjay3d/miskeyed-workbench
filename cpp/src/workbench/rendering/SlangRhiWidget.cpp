@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QVector2D>
 #include <limits>
 #include <cmath>
 #include <vector>
@@ -281,6 +282,18 @@ void SlangRhiWidget::initialize(QRhiCommandBuffer*)
     auto* r = rhi();
     if (!r || !renderTarget())
         return;
+
+    // Resolution is presentation state, so the surface supplies it to any provider
+    // document that declares the Shader Toy contract rather than storing it in a session.
+    const QSize pixelSize = renderTarget()->pixelSize();
+    auto applyResolution = [&pixelSize](ShaderDocument* document) {
+        if (!document)
+            return;
+        document->parameters()->setValue(QStringLiteral("shaderToy.resolution"),
+            QVector2D(float(pixelSize.width()), float(pixelSize.height())));
+    };
+    applyResolution(m_scenePass);
+    applyResolution(m_document);
 
     const bool twoPass = m_scenePass && m_scenePass->vertexShader().isValid()
         && m_scenePass->fragmentShader().isValid();

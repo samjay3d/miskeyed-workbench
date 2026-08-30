@@ -12,8 +12,9 @@ cpp/
 │   ├── editor/                    source editor and language-service API
 │   ├── slang/                     Slang compilation, documents, reflection, modules
 │   ├── rendering/                 QRhi pass and viewport API
-│   ├── ui/                        reusable native inspectors
-│   ├── modes/render_toy/          Render Toy composition root
+│   ├── ui/                        reusable inspectors + tool-session interface
+│   ├── modes/render_toy/          Render Toy runtime session
+│   ├── modes/shader_toy/          Shader Toy runtime session
 │   └── anari/                     optional device-neutral ANARI host API
 └── src/workbench/
     ├── core/
@@ -22,6 +23,7 @@ cpp/
     ├── rendering/
     ├── ui/
     ├── modes/render_toy/
+    ├── modes/shader_toy/
     └── anari/
 ```
 
@@ -44,6 +46,8 @@ focused nested namespace such as `core` or `anari`.
 - `editor` and `ui` contain reusable widgets. `WorkspaceEditor` owns tabs and binds
   reusable editor views to workspace document sessions; neither layer selects a product
   mode or runtime binding.
+- `ui/WorkbenchToolFactory` is the native composition seam. Concrete tool UI sessions
+  own and data-bind their contributed surfaces; the shell consumes only an interface list.
 - `modes/render_toy` owns `RenderToySession`, which explicitly binds open shader documents to the active Scene/Post passes and
   presents controls for `TimeTransport`. It does not define time semantics or own
   compiler and GPU implementations. Its inspector consumes only the workspace's focused
@@ -91,5 +95,6 @@ continue through `SessionDesc.searchPaths`. A small `ISlangFileSystem` edge expo
 Workbench sources while delegating ordinary paths to the host filesystem; Slang still owns
 module-name and search-path resolution.
 
-This organization establishes ownership boundaries only. It does not add a speculative
-mode interface, scene abstraction, animation system, or compatibility facade.
+See [Adding a Workbench tool](ADDING_TOOLS.md) for the native checklist and an unshipped
+Python contribution example. This organization does not add a scene abstraction,
+animation system, or compatibility facade.

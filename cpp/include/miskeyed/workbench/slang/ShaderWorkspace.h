@@ -9,6 +9,15 @@ namespace miskeyed::workbench::slang_rhi {
 
 class ShaderDocument;
 
+}
+
+namespace miskeyed::workbench::core {
+class TimeContext;
+class TimeTransport;
+}
+
+namespace miskeyed::workbench::slang_rhi {
+
 // Cheap editor/view state retained per open document. Widgets may be reused; switching
 // focus saves/restores this session instead of treating one editor as the document.
 struct DocumentSession final {
@@ -22,8 +31,8 @@ struct DocumentSession final {
     QString generatedTarget;
 };
 
-// Owns open authoring documents, their view sessions, and exactly one focus. Runtime
-// bindings belong to mode sessions (Render Toy, Lookdev, etc.), never to this workspace.
+// Owns open authoring documents, view sessions, focus and shared evaluation time. Runtime
+// bindings belong to tool sessions (Shader Toy, Render Toy, etc.), never to this workspace.
 class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderWorkspace final : public QObject {
     Q_OBJECT
 public:
@@ -33,6 +42,8 @@ public:
     ShaderDocument* documentAt(int index) const;
     QString displayName(ShaderDocument* document) const;
     ShaderDocument* focusedDocument() const { return m_focused; }
+    core::TimeContext* timeContext() const { return m_timeContext; }
+    core::TimeTransport* timeTransport() const { return m_timeTransport; }
     DocumentSession* session(ShaderDocument* document);
     const DocumentSession* session(ShaderDocument* document) const;
 
@@ -57,6 +68,8 @@ private:
 
     QList<DocumentSession> m_sessions;
     ShaderDocument* m_focused = nullptr;
+    core::TimeContext* m_timeContext = nullptr;
+    core::TimeTransport* m_timeTransport = nullptr;
 };
 
 } // namespace miskeyed::workbench::slang_rhi

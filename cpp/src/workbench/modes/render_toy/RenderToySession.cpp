@@ -6,10 +6,14 @@ namespace miskeyed::workbench::slang_rhi {
 
 RenderToySession::RenderToySession(QObject* parent)
     : QObject(parent)
-    , m_timeContext(new core::TimeContext(this))
-    , m_timeTransport(new core::TimeTransport(this))
 {
-    m_timeTransport->setContext(m_timeContext);
+}
+
+void RenderToySession::setEvaluationContext(
+    core::TimeContext* context, core::TimeTransport* transport)
+{
+    m_timeContext = context;
+    m_timeTransport = transport;
 }
 
 void RenderToySession::bindScene(ShaderDocument* document)

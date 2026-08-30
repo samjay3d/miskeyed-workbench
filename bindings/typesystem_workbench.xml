@@ -33,7 +33,11 @@
             <modify-function signature="render(QRhiCommandBuffer*)" remove="all" />
             <modify-function signature="releaseResources()" remove="all" />
         </object-type>
-        <object-type name="WorkbenchWindow" />
+        <object-type name="WorkbenchWindow">
+            <!-- Native factories pass the abstract session interface. Python studios use
+                 registerTool(id, title, QWidget) and keep their session object in Python. -->
+            <modify-function signature="registerToolSession(WorkbenchToolUiSession*)" remove="all" />
+        </object-type>
        </namespace-type>
       </namespace-type>
     </namespace-type>

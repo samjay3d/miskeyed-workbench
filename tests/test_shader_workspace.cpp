@@ -11,6 +11,8 @@ int main(int argc, char** argv)
     QCoreApplication app(argc, argv);
     ShaderWorkspace workspace;
     RenderToySession renderToy;
+    renderToy.setEvaluationContext(workspace.timeContext(), workspace.timeTransport());
+    assert(renderToy.timeContext() == workspace.timeContext());
     auto* first = workspace.openSource(QUrl(QStringLiteral("workbench:/scene_a.slang")),
         QStringLiteral("scene_a.slang"), QStringLiteral("// A"));
     auto* second = workspace.openSource(QUrl(QStringLiteral("workbench:/scene_b.slang")),
