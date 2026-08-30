@@ -383,10 +383,9 @@ jobs:
               run: |
                   set -euo pipefail
                   url=$(python3 -m ci.docs_metadata --field development_url)
-                  version=$(python3 -m ci.docs_metadata --field version)
                   for attempt in $(seq 1 20); do
                       if page=$(curl --fail --silent --show-error --location "$url") && \
-                         grep -F "Workbench $version documentation" <<<"$page"; then
+                         grep -F "Workbench development documentation" <<<"$page"; then
                           echo "### [Public Dev Documentation]($url)" >> "$GITHUB_STEP_SUMMARY"
                           echo "Published development documentation is live at $url"
                           exit 0

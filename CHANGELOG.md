@@ -83,6 +83,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Developer / CI
 
+- Corrected development-documentation publication verification to check the development
+  page identity rather than the release-version identity after a successful Pages push.
 - Added repository-local architecture-review and documentation checklists, clarified
   ownership and anti-generalization rules in `AGENTS.md`, and made contextual changelog
   handling, public API review, deterministic UI captures, and deliberate non-goals part
