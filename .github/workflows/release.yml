@@ -76,7 +76,6 @@ jobs:
             github.event_name == 'workflow_dispatch'
         uses: ./.github/workflows/build-distributions.yml
         with:
-            confidence: Main Integration
             python-versions: '["3.11", "3.12", "3.13"]'
         permissions:
             contents: read

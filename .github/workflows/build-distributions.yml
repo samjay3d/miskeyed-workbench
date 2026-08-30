@@ -5,19 +5,12 @@ name: build distributions
 on:
     workflow_call:
         inputs:
-            confidence:
-                description: User-facing validation level shown on every check.
-                type: string
-                default: Main Integration
             python-versions:
                 description: JSON array of Python versions included in this gate.
                 type: string
                 default: '["3.11", "3.12", "3.13"]'
     workflow_dispatch:
         inputs:
-            confidence:
-                description: User-facing validation level shown on every check.
-                default: Manual Validation
             python-versions:
                 description: JSON array of Python versions included in this gate.
                 default: '["3.11", "3.12", "3.13"]'
@@ -31,7 +24,7 @@ env:
 
 jobs:
     build-wheels:
-        name: ${{ inputs.confidence }} · Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Wheel + Contracts + D3D11/Vulkan' || 'Wheel + Contracts' }}
+        name: Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Wheel + Contracts + D3D11/Vulkan' || 'Wheel + Contracts' }}
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -276,7 +269,7 @@ jobs:
                   path: wheels-${{ matrix.python-version }}.tgz
 
     build-portable-wheels:
-        name: ${{ inputs.confidence }} · ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
+        name: ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
         strategy:
             fail-fast: false
             matrix:
@@ -515,7 +508,7 @@ jobs:
                   path: wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz
 
     build-sdist:
-        name: ${{ inputs.confidence }} · Source distribution
+        name: Source distribution
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -540,7 +533,7 @@ jobs:
                   path: ./dist/*.tar.gz
 
     validation-summary:
-        name: ${{ inputs.confidence }} · Workbench validation summary
+        name: Workbench validation summary
         if: always()
         needs: [build-wheels, build-portable-wheels]
         runs-on: ubuntu-latest

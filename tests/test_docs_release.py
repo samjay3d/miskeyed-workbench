@@ -156,11 +156,11 @@ def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
     assert "github.event_name == 'pull_request'" in release
     assert "github.ref == 'refs/heads/main'" in release
     assert "release/0.3.0" not in release
-    assert "confidence: Main Integration" in release
+    assert "name: Main Integration" in release
     assert 'python-versions: \'["3.11", "3.12", "3.13"]\'' in release
     assert "python-version: ${{ fromJSON(inputs.python-versions) }}" in distributions
     assert 'branches:\n            - "release/**"' in stabilization
-    assert "confidence: Release Stabilization" in stabilization
+    assert "name: Release Stabilization" in stabilization
     assert 'python-versions: \'["3.11", "3.13"]\'' in stabilization
     assert "pypi" not in stabilization.lower()
     assert "contents: write" not in stabilization
