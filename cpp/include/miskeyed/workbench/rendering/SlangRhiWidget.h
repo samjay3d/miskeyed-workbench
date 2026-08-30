@@ -2,6 +2,7 @@
 
 #include <miskeyed/workbench/Export.h>
 #include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/RhiBackendPolicy.h>
 #include <QRhiWidget>
 #include <QPointF>
 #include <memory>
@@ -21,6 +22,7 @@ class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT SlangRhiWidget final : public QRhiWidg
     Q_OBJECT
     Q_PROPERTY(ShaderDocument* document READ document WRITE setDocument NOTIFY documentChanged)
     Q_PROPERTY(float exposure READ exposure WRITE setExposure NOTIFY exposureChanged)
+    Q_PROPERTY(QString backendName READ backendName CONSTANT)
 
 public:
     explicit SlangRhiWidget(QWidget* parent = nullptr);
@@ -30,6 +32,7 @@ public:
     void setDocument(ShaderDocument* document);
     float exposure() const { return m_exposure; }
     void setExposure(float value);
+    QString backendName() const;
 
     // Optional scene pre-pass. When set, this widget renders the scene document into an
     // offscreen color texture (the "G-buffer") first, then runs its own document as a
@@ -44,6 +47,8 @@ signals:
     void documentChanged();
     void exposureChanged();
     void gpuError(QString message);
+    void backendInitialized(QString backend, QString gpu);
+    void frameRendered(QString backend, QString gpu);
 
 protected:
     void initialize(QRhiCommandBuffer* cb) override;
@@ -75,6 +80,9 @@ private:
     float m_exposure = 1.0f;
     QPointF m_lastDragPos;
     bool m_dragging = false;
+    bool m_reportedBackend = false;
+    bool m_reportedFrame = false;
+    miskeyed::workbench::rendering::RhiBackend m_backend;
     std::unique_ptr<SlangRhiWidgetPrivate> d;
 };
 

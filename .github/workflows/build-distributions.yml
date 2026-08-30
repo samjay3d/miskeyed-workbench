@@ -15,7 +15,7 @@ env:
 
 jobs:
     build-wheels:
-        name: Wheel (py${{ matrix.python-version }})
+        name: Windows wheel (py${{ matrix.python-version }})
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -157,8 +157,146 @@ jobs:
 
             - uses: actions/upload-artifact@v7
               with:
-                  name: dist-wheels-${{ matrix.python-version }}
+                  name: dist-wheels-windows-${{ matrix.python-version }}
                   path: wheels-${{ matrix.python-version }}.tgz
+
+    build-portable-wheels:
+        name: ${{ matrix.label }} wheel (py${{ matrix.python-version }})
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.11", "3.12", "3.13"]
+                target: [linux-x86_64, macos-arm64, macos-x86_64]
+                include:
+                    - target: linux-x86_64
+                      label: Linux x86_64
+                      os: ubuntu-22.04
+                      platform: linux
+                      qt-host: linux
+                      qt-arch: linux_gcc_64
+                    - target: macos-arm64
+                      label: macOS arm64
+                      os: macos-14
+                      platform: macos
+                      qt-host: mac
+                      qt-arch: clang_64
+                    - target: macos-x86_64
+                      label: macOS x86_64
+                      os: macos-15-intel
+                      platform: macos
+                      qt-host: mac
+                      qt-arch: clang_64
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+
+            - name: Install Linux system dependencies
+              if: matrix.platform == 'linux'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libgl-dev libegl-dev libxkbcommon-dev libvulkan-dev
+
+            - name: Install Qt ${{ env.QT_VERSION }} dev SDK
+              uses: jurplel/install-qt-action@v4
+              with:
+                  version: ${{ env.QT_VERSION }}
+                  host: ${{ matrix.qt-host }}
+                  target: desktop
+                  arch: ${{ matrix.qt-arch }}
+                  cache: true
+                  setup-python: false
+
+            - name: Cache Slang SDK
+              uses: actions/cache@v6
+              with:
+                  path: ${{ runner.temp }}/slang
+                  key: slang-${{ runner.os }}-${{ runner.arch }}-${{ env.SLANG_VERSION }}
+
+            - name: Provision Slang SDK
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  arch="$(uname -m)"
+                  case "$arch" in
+                    arm64) arch=aarch64 ;;
+                    amd64) arch=x86_64 ;;
+                  esac
+                  ver="${SLANG_VERSION}"
+                  dest="${RUNNER_TEMP}/slang"
+                  runtime="lib/libslang.$([[ '${{ matrix.platform }}' == macos ]] && echo dylib || echo so)"
+                  if [[ ! -f "$dest/$runtime" ]]; then
+                    rm -rf "$dest"
+                    mkdir -p "$dest"
+                    asset="slang-${ver}-${{ matrix.platform }}-${arch}.zip"
+                    curl --fail --location --retry 3 \
+                      "https://github.com/shader-slang/slang/releases/download/v${ver}/${asset}" \
+                      --output "${RUNNER_TEMP}/slang.zip"
+                    unzip -q "${RUNNER_TEMP}/slang.zip" -d "$dest"
+                  fi
+                  echo "SLANG_ROOT=$dest" >> "$GITHUB_ENV"
+
+            - name: Install build dependencies
+              shell: bash
+              run: |
+                  python -m pip install --upgrade pip
+                  python -m pip install \
+                    --index-url https://download.qt.io/official_releases/QtForPython/ \
+                    --extra-index-url https://pypi.org/simple \
+                    "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" \
+                    "scikit-build-core==1.0.3" ninja
+                  if [[ '${{ matrix.platform }}' == linux ]]; then
+                    python -m pip install auditwheel patchelf
+                  fi
+
+            - name: Build wheel
+              shell: bash
+              env:
+                  CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
+                  CMAKE_GENERATOR: Ninja
+                  MACOSX_DEPLOYMENT_TARGET: "13.0"
+              run: |
+                  python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v
+
+            - name: Repair Linux wheel tag
+              if: matrix.platform == 'linux'
+              shell: bash
+              run: |
+                  mkdir repaired
+                  auditwheel repair wheelhouse/*.whl -w repaired \
+                    --exclude libQt6Core.so.6 \
+                    --exclude libQt6Gui.so.6 \
+                    --exclude libQt6Widgets.so.6 \
+                    --exclude libpyside6.abi3.so.6.8 \
+                    --exclude libshiboken6.abi3.so.6.8
+                  rm wheelhouse/*.whl
+                  mv repaired/*.whl wheelhouse/
+
+            - name: Verify wheel in a fresh environment
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: offscreen
+              run: |
+                  expected="cp${{ matrix.python-version }}"
+                  expected="${expected/.}"
+                  wheel="$(echo wheelhouse/*.whl)"
+                  [[ "$(basename "$wheel")" == *"$expected"* ]]
+                  python ci/wheelzip.py inspect "$wheel"
+                  python -m venv "${RUNNER_TEMP}/wheel-check"
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install "$wheel"
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -c \
+                    "import miskeyed.workbench as w; assert w.WorkbenchWindow"
+
+            - name: Bundle wheel for transport
+              shell: bash
+              run: tar -czf "wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz" -C wheelhouse .
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: dist-wheels-${{ matrix.target }}-${{ matrix.python-version }}
+                  path: wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz
 
     build-sdist:
         name: Source distribution
@@ -184,4 +322,3 @@ jobs:
               with:
                   name: dist-sdist
                   path: ./dist/*.tar.gz
-

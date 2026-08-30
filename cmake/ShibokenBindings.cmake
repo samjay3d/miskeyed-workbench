@@ -24,6 +24,17 @@ function(workbench_add_shiboken_module)
     get_property(qt_gui_includes TARGET Qt6::Gui PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
     get_property(qt_widgets_includes TARGET Qt6::Widgets PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
     set(generator_includes "-I${CMAKE_CURRENT_SOURCE_DIR}/cpp/include")
+    # On Unix the generator wheel carries libclang but not Clang's builtin C headers.
+    # Feed it the active toolchain's resource directory explicitly; otherwise parsing
+    # the C++ standard library fails at <stddef.h> before it reaches our API.
+    find_program(WORKBENCH_CLANG_EXECUTABLE NAMES clang clang-18 clang-17 clang-16)
+    if(WORKBENCH_CLANG_EXECUTABLE)
+        execute_process(COMMAND "${WORKBENCH_CLANG_EXECUTABLE}" -print-resource-dir
+            OUTPUT_VARIABLE _clang_resource_dir OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(EXISTS "${_clang_resource_dir}/include/stddef.h")
+            list(APPEND generator_includes "-I${_clang_resource_dir}/include")
+        endif()
+    endif()
     foreach(dir IN LISTS qt_core_includes qt_gui_includes qt_widgets_includes)
         list(APPEND generator_includes "-I${dir}")
     endforeach()
@@ -61,11 +72,30 @@ function(workbench_add_shiboken_module)
         message(FATAL_ERROR "Shiboken produced no wrapper sources under ${gen_root}/${WB_MODULE_NAME}")
     endif()
 
-    find_library(PYSIDE_LIBRARY NAMES pyside6.abi3 pyside6 HINTS "${PYSIDE_DIR}" REQUIRED)
-    find_library(SHIBOKEN_LIBRARY NAMES shiboken6.abi3 shiboken6 HINTS "${SHIBOKEN_DIR}" REQUIRED)
+    if(WIN32)
+        find_library(PYSIDE_LIBRARY NAMES pyside6.abi3 pyside6 HINTS "${PYSIDE_DIR}" REQUIRED)
+        find_library(SHIBOKEN_LIBRARY NAMES shiboken6.abi3 shiboken6 HINTS "${SHIBOKEN_DIR}" REQUIRED)
+    elseif(APPLE)
+        find_file(PYSIDE_LIBRARY NAMES libpyside6.abi3.6.8.dylib
+            HINTS "${PYSIDE_DIR}" REQUIRED)
+        find_file(SHIBOKEN_LIBRARY NAMES libshiboken6.abi3.6.8.dylib
+            HINTS "${SHIBOKEN_DIR}" REQUIRED)
+    else()
+        find_file(PYSIDE_LIBRARY NAMES libpyside6.abi3.so.6.8
+            HINTS "${PYSIDE_DIR}" REQUIRED)
+        find_file(SHIBOKEN_LIBRARY NAMES libshiboken6.abi3.so.6.8
+            HINTS "${SHIBOKEN_DIR}" REQUIRED)
+    endif()
 
     add_library(${WB_TARGET} MODULE ${generated_sources})
     set_target_properties(${WB_TARGET} PROPERTIES PREFIX "" OUTPUT_NAME "${WB_MODULE_NAME}")
+    # Wheels place the Slang runtime beside the extension. Keep loader policy at this
+    # packaging edge instead of teaching Python or renderer code about ELF/Mach-O.
+    if(APPLE)
+        set_target_properties(${WB_TARGET} PROPERTIES INSTALL_RPATH "@loader_path")
+    elseif(UNIX)
+        set_target_properties(${WB_TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN")
+    endif()
     # Python imports .pyd on Windows; a MODULE lib defaults to .dll otherwise.
     if(WIN32)
         set_target_properties(${WB_TARGET} PROPERTIES SUFFIX ".pyd")

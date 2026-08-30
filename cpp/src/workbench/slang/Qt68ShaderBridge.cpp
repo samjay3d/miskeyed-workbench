@@ -88,7 +88,11 @@ QShader buildQShader(QShader::Stage stage, const QString& entryPoint, const QByt
     shader.setStage(stage);
     shader.setDescription(makeDescription(layout, parameters));
     const auto entry = entryPoint.toUtf8();
-    addCode(shader, QShader::SpirvShader, 100, spirv, entry);
+    // Slang's SPIR-V emitter uses the standardized exported name `main` even when the
+    // authored entry point is called vsMain/psMain. QRhi passes this string to
+    // vkCreateGraphicsPipelines, so using the authored name makes Vulkan reject an
+    // otherwise valid module with "Entry point not found".
+    addCode(shader, QShader::SpirvShader, 100, spirv, QByteArrayLiteral("main"));
     addCode(shader, QShader::HlslShader, 50, hlsl, entry);
     addCode(shader, QShader::MslShader, 20, msl, entry);
     return shader;
