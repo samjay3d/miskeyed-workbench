@@ -1117,6 +1117,7 @@ void WorkbenchWindow::applyTheme()
         }
         QTabBar::tab:selected { background: #22242b; color: #e6e6e6; border-bottom: 2px solid #7aa2f7; }
         QTabBar::tab:hover:!selected { color: #c8ccd4; }
+        QTabWidget#ActiveDocumentInspector QTabBar::tab { padding-left: 8px; padding-right: 8px; }
         QSplitter::handle { background: #0f1013; }
         QSplitter::handle:horizontal { width: 3px; }
         QSplitter::handle:vertical { height: 3px; }
