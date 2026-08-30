@@ -8,7 +8,8 @@ permissions:
 # tests only exercise CPU-side Slang reflection (ShaderDocument.compile), so they run
 # fine under the offscreen Qt platform with no GPU on the runner.
 #
-# release.yml already builds wheels on PRs to main; this workflow adds the actual test
+# release.yml calls build-distributions.yml on PRs to main; this workflow adds the
+# actual test
 # run. It triggers on pull requests only, so an open PR runs the suite exactly once
 # instead of racing a duplicate push-event run (which showed up as a cancelled job with
 # an unexpanded matrix name).
@@ -124,7 +125,8 @@ jobs:
         # Skip the ~build-heavy job (and its check reports 'skipped' = success) when only
         # docs/CI-meta changed; the CI gate below still reports so the PR isn't blocked.
         if: needs.changes.outputs.build == 'true'
-        # Same rationale as release.yml: pin VS 2022 so shiboken 6.8's libclang can parse
+        # Same rationale as build-distributions.yml: pin VS 2022 so shiboken 6.8's
+        # libclang can parse
         # the MSVC STL and the Qt win64_msvc2022_64 ABI matches.
         runs-on: windows-2022
         strategy:
@@ -229,15 +231,28 @@ jobs:
                   python -m pip install . --no-build-isolation --no-deps -v `
                     --config-settings=cmake.define.CMAKE_C_COMPILER_LAUNCHER=sccache `
                     --config-settings=cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=sccache
+                  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
                   sccache --show-stats
 
             - name: Run tests
               shell: pwsh
               env:
                   # SLANG_ROOT is exported by the Provision step; the package adds it to the
-                  # DLL search path so _slang_qrhi.pyd can load slang.dll at import time.
+                  # DLL search path so _workbench.pyd can load slang.dll at import time.
                   QT_QPA_PLATFORM: offscreen
               run: python -m pytest tests/ -v
+
+            - name: Capture Workbench documentation
+              if: matrix.python-version == '3.11'
+              shell: pwsh
+              run: python ci\capture_workbench.py docs\images\workbench.png
+
+            - name: Upload Workbench documentation
+              if: matrix.python-version == '3.11'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: workbench-documentation
+                  path: docs/images/workbench.png
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having

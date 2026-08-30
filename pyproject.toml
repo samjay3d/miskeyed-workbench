@@ -90,9 +90,9 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
-SLANG_QRHI_BUILD_PYTHON = "ON"
+MISKEYED_WORKBENCH_BUILD_PYTHON = "ON"
 # The native standalone executable is not part of the importable wheel.
-SLANG_QRHI_BUILD_APP = "OFF"
+MISKEYED_WORKBENCH_BUILD_APP = "OFF"
 
 # Ruff lints + formats the small hand-written Python surface (the package, tests, and
 # helper scripts). Generated/vendored trees are excluded so it never touches shiboken
@@ -106,7 +106,7 @@ extend-exclude = [
   "shiboken",
   "*_autogen",
   ".venv",
-  "_slang_qrhi*",
+  "_workbench*",
 ]
 
 [tool.ruff.lint]

@@ -1,6 +1,8 @@
 # Miskeyed Workbench architecture
 
-`slang-qrhi` is a new native SDK. The old Python renderer/toolchain API is intentionally not part of this package.
+`miskeyed-workbench` is a native technical-art application and SDK. Slang/QRhi is one
+shipped backend, not the product boundary. The old Python renderer/toolchain API is
+intentionally not part of this package.
 
 This document describes the shipped **Shader Toy** and **Render Toy** modes. The
 planned **ANARI Device** mode is not shipped architecture; its product boundary and
@@ -13,10 +15,15 @@ distinct without presenting ANARI host infrastructure as part of the Slang/QRhi 
 The CMake project is the `miskeyed_workbench` product umbrella. Consumers inside the
 build use the namespaced aliases `miskeyed::workbench::slang_rhi` and, when ANARI is
 enabled, `miskeyed::workbench::anari_backend`. These target names make the product
-boundary explicit. The private `_slang_qrhi` extension name remains backend-specific,
+boundary explicit. The private `_workbench` extension name remains backend-specific,
 while its generated types use the real nested C++ namespace. A compile test includes
 and links both native surfaces to keep that boundary building before ANARI host work
 expands it.
+
+Implementation files are grouped by Workbench responsibility and mode rather than in
+a flat renderer-owned directory. See [the native source layout](docs/SOURCE_LAYOUT.md)
+for the dependency direction and the intended placement of the USD/MaterialX authoring
+lane before ANARI Device UI work begins.
 
 ## Ownership
 
@@ -27,6 +34,66 @@ expands it.
 - **ShaderParameterModel** is the authoritative Qt model for reflected values. It backs both native Qt and Shiboken/PySide consumers.
 - **DependencyGraph** is a shader-specific persistent Merkle DAG. Hashes answer identity; dirty flags answer work scheduling.
 - **SlangRhiWidget** is the embeddable native viewport used by both the standalone executable and PySide6.
+
+### Render Toy documents and views
+
+`ShaderWorkspace` owns open authoring documents, exactly one focused document, and cheap
+per-document editor sessions (cursor, selection, scroll, view mode, and generated target).
+It does not infer or mutate runtime bindings when a document opens. `RenderToySession`
+separately owns the active Scene/Post bindings and transport. Each `ShaderDocument`
+retains source, dependency-graph identity, reflection, diagnostics, and generated
+targets. `SlangRhiWidget` consumes only the two
+active bindings: it does not own the tab list, and inactive tabs do not allocate QRhi
+pipelines or textures. Source, generated output, and compare are views of the focused
+document, while reflection remains an inspector concern. The structured **Dependencies**
+view presents the focused shader and compiler-resolved imports as the default hierarchy,
+including paths, hashes, and dirty state. Selecting a source/module resolves its current
+payload from the live `DependencyGraph`, while compiler/renderer products are available
+under a collapsed Advanced graph branch. Resolved project files are watched, so editing
+an imported module recompiles the document and updates the same graph and inspector in
+place.
+
+`WorkspaceEditor` is the reusable document-editor group. It owns tabs, close/reorder and
+keyboard navigation, the reusable authored/generated editor widgets, view selection, and
+binding those widgets to `DocumentSession`. It observes `ShaderWorkspace`; it has no
+Render Toy slot or GPU ownership. `WorkbenchWindow` composes this editor group with the
+mode action bar, `RenderToySession`, viewports, inspector, and transport.
+
+The right-hand inspector is a single active-document surface: Parameters, Resources,
+Dependencies, and Compilation all switch when workspace focus changes. Viewport clicks
+change workspace focus to the document currently bound to that pass; Render Toy binding
+changes never directly select an inspector model. This keeps focused document, editor,
+and inspector as one state while Scene/Post remain separate runtime bindings. The
+inspector spans the viewport and editor region, and the shared transport sits at the
+bottom of the document workspace as a controller of Render Toy evaluation rather than a
+property of any shader tab.
+
+Resources are compiler-reflected textures, samplers, buffers, and parameter blocks with
+binding/space information. Dependencies default to the authored shader/module stack;
+compiler and renderer DAG products remain collapsed under an Advanced graph branch.
+Compilation presents status, elapsed compile time, entry points, generated targets,
+profile, and diagnostics as structured document information.
+
+### Time and deterministic evaluation
+
+`core::TimeValue` carries a floating-point coordinate and its units-per-second rate;
+`core::TimeRange` describes a domain without clamping samples. `core::TimeContext` holds
+only the current value, delta, and a monotonic evaluation index. It has no playback
+range, playing state, stepping, or looping behavior.
+
+`core::TimeTransport` is the replaceable playback controller used by Render Toy's small
+timeline. It owns range and loop policy and drives the shared context consumed by both
+active passes. USD, OTIO, an offline renderer, or another host can instead set the same
+context directly without translating through an integer frame. Context changes upload
+host-managed uniform bytes without changing shader or dependency identity.
+Rate changes rescale current/range coordinates to preserve seconds. Realtime controllers
+advance it with elapsed monotonic seconds, while explicit seek/step remains deterministic.
+
+The packaged `miskeyed.ui` and `miskeyed.time` modules provide host contracts. Authored
+shaders explicitly import the contracts they use; Render Toy samples import `miskeyed.viewport_camera` and
+`miskeyed.render_toy` according to their role. An `ISlangFileSystem` edge supplies these
+packaged modules to the Slang session, while project and user imports continue through
+Slang session search paths. Slang—not a Workbench header catalog—owns module resolution.
 
 ## Merkle DAG rule
 

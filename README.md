@@ -197,8 +197,8 @@ Digests use a 32-byte BLAKE2b implementation matching
 ## Native C++ API
 
 ```cpp
-#include <miskeyed/workbench/slang_rhi/ShaderDocument.h>
-#include <miskeyed/workbench/slang_rhi/SlangRhiWidget.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
 
 using namespace miskeyed::workbench::slang_rhi;   // internal C++ namespace
 
@@ -275,29 +275,28 @@ Or build the native app directly with CMake:
 cmake -S . -B build -G Ninja `
   -DCMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64 `
   -DSLANG_ROOT=C:\sdk\slang `
-  -DSLANG_QRHI_BUILD_APP=ON
+  -DMISKEYED_WORKBENCH_BUILD_APP=ON
 cmake --build build --config Release
 ```
 
 ## Files that matter
 
 ```text
-cpp/include/miskeyed/workbench/slang_rhi/
-    DependencyGraph.h       live dependency DAG + dirty propagation
-    ShaderParameterModel.h  reflected GPU parameter model
-    ParameterInspector.h    automatic Qt parameter controls
-    ShaderDocument.h        source/compile/state coordinator
-    SlangRhiWidget.h        embeddable QRhiWidget
-    WorkbenchWindow.h       standalone workbench composition
+cpp/include/miskeyed/workbench/
+    core/                   identity and deterministic evaluation contracts
+    editor/                 code editor and language-service API
+    slang/                  compiler, reflection, documents, workspace, modules
+    rendering/              QRhi pass and viewport API
+    ui/                     reusable parameter inspectors
+    modes/render_toy/       Render Toy window/composition API
+    anari/                  optional ANARI host API
 
-cpp/src/
-    SlangCompiler.cpp       in-process Slang API
-    Qt68ShaderBridge.cpp    Slang output/reflection -> QShader
-    DependencyGraph.cpp     incremental invalidation
-    SlangRhiWidget.cpp      QRhi rendering + cheap buffer updates
+cpp/src/workbench/          implementations in the same responsibility layout
+shaders/workbench/          packaged Workbench Slang module sources
+docs/SOURCE_LAYOUT.md       ownership and dependency direction
 
 bindings/
-    typesystem_slang_qrhi.xml
+    typesystem_workbench.xml
 
 app/
     main.cpp                native executable entry point
@@ -306,6 +305,16 @@ python/miskeyed/workbench/
     __init__.py             Shiboken module exposure
     __main__.py             `workbench` console entry point
 ```
+
+Workbench-owned Slang contracts live in `shaders/workbench/` and are packaged with the
+native target. The editor treats generated text as a document view, while the inspector
+separates reflected parameters and compilation from a live dependency view. That view
+walks the focused document's `DependencyGraph`; selecting a node shows the current module
+or source payload, and edits to imported project files update it after recompilation.
+
+CI also captures the native window after compilation and its first rendered frames. The
+`workbench-documentation` artifact provides the current screenshot for review and
+promotion into [`docs/images`](docs/images/README.md) as the interface evolves.
 
 ## Roadmap
 

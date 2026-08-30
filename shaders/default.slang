@@ -1,4 +1,4 @@
-// slang-qrhi 0.2 native reflection demo.
+// Miskeyed Workbench native reflection demo.
 // Add/remove global shader parameters and the Qt inspector rebuilds from Slang reflection.
 
 uniform float3 tint;

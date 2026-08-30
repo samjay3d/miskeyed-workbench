@@ -8,6 +8,43 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A document-oriented workspace and reusable `WorkspaceEditor`. Scene and post-process
+  shaders can remain open in closeable/reorderable tabs; the focused document drives
+  editor, inspector, diagnostics, dependency, and compilation context. Per-document
+  cursor, selection, scroll, generated target, and view-mode state survive tab switches.
+- Source, generated, and side-by-side compare views for the focused shader document,
+  so generated code is available for inspection without permanently occupying a third
+  editor column.
+- Backend-neutral `TimeValue`, `TimeRange`, and `TimeContext` primitives plus a separate
+  `TimeTransport`. Floating-point/subframe samples carry their rate, rate conversion
+  preserves seconds, and playback policy no longer lives in evaluation state.
+- A minimal Render Toy transport bar with play/pause, deterministic stepping, scrubbing,
+  playback range, and frame-rate controls. Elapsed-time playback and explicit sample
+  evaluation both drive one context shared by the active Scene and Post passes.
+- A packaged `miskeyed.time` Slang module. Its host-managed `time`, `deltaTime`, `frame`,
+  and `frameRate` fields update through reflected uniforms without recompiling source.
+- Shared native `ViewportCamera` and `RenderPass` contracts. Camera parameter names are
+  centralized, while pass-local QRhi buffers, bindings, pipelines, and dirty state no
+  longer live directly on the viewport widget.
+- Authored Workbench Slang contracts for reflected UI attributes, viewport camera data,
+  Render Toy pass data, and time, embedded for installed applications and wheels and
+  resolved as ordinary `miskeyed.*` imports through Slang's filesystem/session APIs.
+- Live dependency inspection for the focused shader. The primary tree shows resolved
+  imports, paths, content hashes, source, and dirty state; the internal compiler/render
+  DAG remains available as a progressively disclosed Advanced view. Imported project
+  files are watched and recompile their dependent document in place.
+- Structured active-document inspector views for reflected parameters and resources,
+  import dependencies, entry points, generated targets, compile status/timing, and
+  diagnostics.
+- Authored, packaged Render Toy scene and post-process samples, including animated
+  examples that exercise the shared time contract and restoreable default samples.
+- Native contract tests for viewport-camera and pass bindings, workspace focus/session
+  behavior, module dependencies, and deterministic subframe/time-transport evaluation.
+- CI capture of a canonical native Workbench window image, published as the
+  `workbench-documentation` artifact for review.
+- Read-only wheel and source-distribution artifacts for pull requests targeting a
+  `release/*` branch, using the same reusable distribution build as release publishing
+  without granting review builds OIDC or repository-write permissions.
 - An opt-in, developer-facing ANARI backend foundation. With
   `MISKEYED_WORKBENCH_WITH_ANARI=ON`, native Workbench code can load configured ANARI
   libraries, enumerate device subtypes and extensions, collect status diagnostics, and
@@ -21,6 +58,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Reorganized native implementation and public headers by responsibility: core,
+  editor, Slang, rendering, reusable UI, mode composition, and ANARI integration.
+  Render Toy is now a composition root rather than the owner of shared services.
+- Separated generic workspace state from Render Toy runtime policy. Opening a document
+  only opens and focuses it; `RenderToySession` explicitly owns Scene/Post bindings and
+  the transport, while only the bound pair feeds live QRhi state.
+- Reworked the Render Toy UI around open shader documents and explicit Scene/Post
+  viewport bindings. Clicking a viewport focuses its bound document, while selecting a
+  tab reliably updates the editor and every active-document inspector section.
+- Moved host time updates through the existing reflected global-parameter upload path.
+  Time changes update active GPU evaluation state without changing shader or dependency
+  identity and without triggering Slang compilation.
+- Marked Workbench-provided time fields as host-managed so they do not appear as
+  authored parameter controls or collide with user uniforms that have common names.
+- Replaced the first-class Workbench Headers browser and concatenated shader contracts
+  with explicit Slang imports. Project/user locations remain session search paths, and
+  the small packaged-module filesystem seam can later be replaced without introducing
+  a second package resolver.
+- Updated the native CMake source registration, install layout, Shiboken declarations,
+  README, and architecture documentation to match the responsibility-oriented tree.
 - Defined Shader Toy, Render Toy, and the planned ANARI Device mode as separate product
   boundaries. Device-neutral native code uses `miskeyed::workbench`, while the shipped
   Slang/QRhi renderer retains its existing `slang_qrhi` namespace and behavior.

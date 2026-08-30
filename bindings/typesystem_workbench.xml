@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<typesystem package="_workbench">
+    <load-typesystem name="typesystem_core.xml" generate="no" />
+    <load-typesystem name="typesystem_gui.xml" generate="no" />
+    <load-typesystem name="typesystem_widgets.xml" generate="no" />
+
+    <namespace-type name="miskeyed">
+      <namespace-type name="workbench">
+       <namespace-type name="core">
+        <value-type name="TimeValue" />
+        <value-type name="TimeRange" />
+        <object-type name="TimeContext" />
+        <enum-type name="LoopMode" />
+        <object-type name="TimeTransport" />
+       </namespace-type>
+       <namespace-type name="slang_rhi">
+        <enum-type name="NodeKind" />
+        <enum-type name="DirtyFlag" flags="yes" />
+        <enum-type name="ParameterType" />
+        <value-type name="SourceDependency" />
+        <value-type name="ResourceDescriptor" />
+
+        <object-type name="DependencyGraph" />
+        <object-type name="ShaderParameterModel">
+            <enum-type name="Role" />
+        </object-type>
+        <object-type name="ParameterInspector" />
+        <object-type name="ShaderDocument" />
+        <object-type name="SlangRhiWidget">
+            <!-- Protected overrides use QRhiCommandBuffer, a Qt private-rhi type not
+                 exposed by PySide6; they are C++-only and must not be wrapped. -->
+            <modify-function signature="initialize(QRhiCommandBuffer*)" remove="all" />
+            <modify-function signature="render(QRhiCommandBuffer*)" remove="all" />
+            <modify-function signature="releaseResources()" remove="all" />
+        </object-type>
+        <object-type name="WorkbenchWindow" />
+       </namespace-type>
+      </namespace-type>
+    </namespace-type>
+</typesystem>
