@@ -7,12 +7,11 @@ struct SceneSample
     float4 color : SV_Target0;
 };
 
-// These bindings are owned by Render Toy. User post-process shaders sample the scene
-// through sceneColor rather than redeclaring the host's QRhi binding layout.
-[[vk::binding(1)]] Texture2D sceneColor : register(t1);
-[[vk::binding(2)]] SamplerState sceneSampler : register(s1);
+// This binding is owned by Render Toy. QRhi supplies one combined image sampler at
+// binding 1; Slang splits the same object into HLSL t1/s1 where that backend requires it.
+[[vk::binding(1)]] Sampler2D sceneColor : register(t1) : register(s1);
 
 float4 sampleScene(float2 uv)
 {
-    return sceneColor.Sample(sceneSampler, uv);
+    return sceneColor.Sample(uv);
 }

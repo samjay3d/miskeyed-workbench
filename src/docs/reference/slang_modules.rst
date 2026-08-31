@@ -46,7 +46,7 @@ Slang module reference
 :Purpose: Scene/Post pass interface and scene-target sampling.
 :Host backing: Render Toy's persistent session plus two-pass QRhi renderer.
 :Import: ``import miskeyed.render_toy;``
-:Contract: ``SceneSample``, host-bound ``sceneColor`` and ``sceneSampler``, and
+:Contract: ``SceneSample``, the host-bound combined ``sceneColor`` sampler, and
    ``sampleScene``.
 :Relevant consumer: ``RenderToySession`` Scene/Post bindings.
 :Source trail: ``shaders/workbench/render_toy.slang``, ``RenderToySession.cpp``,

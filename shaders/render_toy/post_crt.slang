@@ -45,9 +45,9 @@ float4 psMain(VSOut input) : SV_Target0
 
     float ab = 0.0015 + aberration * 0.010;
     float3 col;
-    col.r = sceneColor.Sample(sceneSampler, uv + float2(ab, 0.0)).r;
-    col.g = sceneColor.Sample(sceneSampler, uv).g;
-    col.b = sceneColor.Sample(sceneSampler, uv - float2(ab, 0.0)).b;
+    col.r = sceneColor.Sample(uv + float2(ab, 0.0)).r;
+    col.g = sceneColor.Sample(uv).g;
+    col.b = sceneColor.Sample(uv - float2(ab, 0.0)).b;
 
     // scanlines
     float scanPhase = workbenchTime.time * 18.0;

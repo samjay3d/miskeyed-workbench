@@ -60,6 +60,15 @@ int main(int argc, char** argv)
     assert(std::abs(context.current().value - 36.0) < 1.0e-12);
     assert(std::abs(context.deltaSeconds() - 0.5) < 1.0e-12);
 
+    transport.setLoopMode(LoopMode::Clamp);
+    transport.seek(TimeValue(0.0, 24.0));
+    transport.advanceSeconds(0.1);
+    assert(std::abs(context.current().value - transport.startValue()) < 1.0e-12);
+    transport.setLoopMode(LoopMode::Loop);
+    transport.seek(TimeValue(0.0, 24.0));
+    transport.advanceSeconds(0.1);
+    assert(std::abs(context.current().value - transport.endValue()) < 1.0e-12);
+
     const QByteArray contract
         = miskeyed::workbench::slang_rhi::workbenchModuleSource(QStringLiteral("time"));
     assert(contract.contains("WorkbenchTime"));

@@ -607,6 +607,8 @@ void WorkbenchWindow::connectUi()
         });
     connect(m_workspace, &ShaderWorkspace::documentAboutToClose, this,
         [this](ShaderDocument* document) {
+            if (m_lsp)
+                m_lsp->closeDocument(documentUri(document));
             m_renderToySession->removeDocument(document);
             m_shaderToySession->removeDocument(document);
         });

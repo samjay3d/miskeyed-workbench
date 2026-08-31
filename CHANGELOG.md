@@ -66,6 +66,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Matched Render Toy's post-process scene sampler contract to QRhi's combined image
+  sampler binding on Vulkan, and stopped closed documents from retaining live pipelines
+  or stale language-server state.
+- Applied playback clamp/loop policy at the lower range boundary during real-time
+  evaluation as well as explicit timeline steps.
 - Resolved packaged `miskeyed.*` modules when Slang qualifies their paths beneath a
   local document search directory, including when imports are added after an earlier
   import-free compile.

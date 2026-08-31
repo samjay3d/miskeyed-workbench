@@ -82,7 +82,7 @@ float4 psMain(VSOut input) : SV_Target0 { return sampleScene(input.uv); }
     for (const ResourceDescriptor& resource : document.resources())
         resourceNames.push_back(resource.name);
     assert(resourceNames.contains(QStringLiteral("sceneColor")));
-    assert(resourceNames.contains(QStringLiteral("sceneSampler")));
+    assert(!resourceNames.contains(QStringLiteral("sceneSampler")));
     const auto* graph = document.dependencyGraph();
     assert(graph->contains(QStringLiteral("module:miskeyed.time")));
     assert(graph->dependencies(graph->nodeId(QStringLiteral("shader:entrypoints")))

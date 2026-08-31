@@ -103,6 +103,12 @@ void SlangRhiWidget::setDocument(ShaderDocument* document)
         connect(m_document->parameters(), &ShaderParameterModel::packedRangeChanged, this,
             &SlangRhiWidget::onParameterRangeChanged);
         d->main.pendingUniforms = m_document->parameters()->packedBytes();
+    } else {
+        // A closed document must stop drawing immediately. Retire rather than destroy
+        // resources because an earlier frame may still reference the old pipeline.
+        d->main.pendingUniforms.clear();
+        d->retire(std::move(d->main.srb));
+        d->retire(std::move(d->main.pipeline));
     }
     d->main.pipelineDirty = true;
     d->main.uniformsDirty = true;
@@ -135,6 +141,10 @@ void SlangRhiWidget::setScenePass(ShaderDocument* sceneDocument)
         connect(m_scenePass->parameters(), &ShaderParameterModel::packedRangeChanged, this,
             &SlangRhiWidget::onScenePassRangeChanged);
         d->scene.pendingUniforms = m_scenePass->parameters()->packedBytes();
+    } else {
+        d->scene.pendingUniforms.clear();
+        d->retire(std::move(d->scene.srb));
+        d->retire(std::move(d->scene.pipeline));
     }
     // The main pass gains/loses a texture binding, so its pipeline must be rebuilt. Retire
     // the old resources instead of freeing them now in case a frame is still in flight.

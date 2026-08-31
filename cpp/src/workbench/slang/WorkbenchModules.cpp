@@ -53,7 +53,7 @@ QList<WorkbenchModule> workbenchModules()
             readHeader(":/miskeyed/workbench/headers/render_toy.slang"),
             WorkbenchModuleKind::HostContract, QStringLiteral("render-toy"),
             QStringLiteral("Scene and post-process pass interface."),
-            QStringLiteral("SceneSample, sceneColor, sceneSampler, sampleScene"),
+            QStringLiteral("SceneSample, sceneColor, sampleScene"),
             QStringLiteral("Render Toy two-pass renderer"), QStringLiteral("RenderToySession") },
         { QStringLiteral("shader-toy"), QStringLiteral("Shader Toy inputs"),
             QStringLiteral("miskeyed.shader_toy"), QStringLiteral("miskeyed/shader_toy.slang"), {},

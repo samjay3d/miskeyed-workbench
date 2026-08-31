@@ -84,7 +84,9 @@ void TimeTransport::advanceSeconds(double elapsedSeconds)
     const double start = m_playbackRange.start.seconds();
     const double end = m_playbackRange.endTime().seconds();
     double next = m_context->current().seconds() + elapsedSeconds;
-    if (next > end) {
+    if (next < start) {
+        next = m_loopMode == LoopMode::Loop ? end : start;
+    } else if (next > end) {
         if (m_loopMode == LoopMode::Loop && end > start)
             next = start + std::fmod(next - start, end - start);
         else
