@@ -3,21 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import html
 import shutil
 from pathlib import Path
 
 from ci.docs_metadata import project_metadata, versioned_url
-
-
-def tree_digest(root: Path) -> str:
-    digest = hashlib.sha256()
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
-        digest.update(path.relative_to(root).as_posix().encode())
-        digest.update(b"\0")
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
 
 
 def write_redirect(path: Path, target_url: str, title: str) -> None:
@@ -53,10 +43,11 @@ def prepare(site: Path, publish_tree: Path, channel: str, version: str, docs_url
     if channel != "release":
         raise ValueError(f"unsupported documentation channel: {channel}")
     target = publish_tree / version
-    if target.exists():
-        if tree_digest(target) != tree_digest(site):
-            raise ValueError(f"published documentation {version} is immutable and differs")
-    else:
+    # The generated branch is authoritative once a version has been published. A retry
+    # may run from a newer orchestration commit whose teaching sources have moved on;
+    # preserving the existing tree makes immutability idempotent instead of turning the
+    # already-published release documentation into an unrecoverable conflict.
+    if not target.exists():
         shutil.copytree(site, target)
     redirect = versioned_url(version, docs_url)
     write_redirect(

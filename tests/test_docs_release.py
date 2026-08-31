@@ -3,8 +3,6 @@ import zlib
 from pathlib import Path
 from runpy import run_path
 
-import pytest
-
 from ci.docs_metadata import development_url, project_metadata, versioned_url
 from ci.publish_docs import prepare
 from ci.verify_doc_images import EXPECTED, verify
@@ -115,14 +113,16 @@ def test_first_dev_publication_gives_the_empty_root_a_useful_redirect(tmp_path):
     assert f"{DOCS_URL}dev/" in (publish / "index.html").read_text()
 
 
-def test_published_version_is_immutable(tmp_path):
+def test_published_version_is_preserved_when_a_retry_build_differs(tmp_path):
     site = tmp_path / "site"
     publish = tmp_path / "publish"
     write_site(site, "new")
     write_site(publish / VERSION, "already published")
 
-    with pytest.raises(ValueError, match="immutable"):
-        prepare(site, publish, "release", VERSION, DOCS_URL)
+    prepare(site, publish, "release", VERSION, DOCS_URL)
+
+    assert (publish / VERSION / "index.html").read_text() == "already published"
+    assert f"{DOCS_URL}{VERSION}/" in (publish / "index.html").read_text()
 
 
 def test_release_workflow_publishes_docs_without_blocking_packages():
@@ -160,6 +160,9 @@ def test_existing_version_cannot_publish_packages_from_a_main_workflow_change():
 
 def test_packages_and_docs_join_at_final_release():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    # A release-orchestration repair merged while the version is still unpublished must
+    # actually start the repaired workflow on main (and exercise it on the PR first).
+    assert workflow.count("- '.github/workflows/release.yml'") == 2
     assert "needs: [detect, build-distributions]" in workflow
     assert "needs: [detect, publish-testpypi]" in workflow
     assert "needs: [detect, publish-pypi, publish-documentation]" in workflow
@@ -171,10 +174,11 @@ def test_resumed_packages_do_not_wait_for_docs_but_final_release_does():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "resume-testpypi:\n        needs: validate-candidate-run" in workflow
     assert "resume-pypi:\n        needs: [validate-candidate-run, resume-testpypi]" in workflow
-    assert "validate-resumed-documentation:\n        name: Validate resumed release documentation" in workflow
     assert (
-        "needs: [validate-candidate-run, resume-pypi, validate-resumed-documentation]"
-        in workflow
+        "validate-resumed-documentation:\n" "        name: Validate resumed release documentation"
+    ) in workflow
+    assert (
+        "needs: [validate-candidate-run, resume-pypi, validate-resumed-documentation]" in workflow
     )
 
 
