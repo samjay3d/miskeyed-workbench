@@ -130,20 +130,59 @@ def test_release_workflow_gates_package_publication_on_live_docs():
     assert "needs: [detect, build-distributions, publish-documentation]" in workflow
     assert "python -m ci.build_docs --channel release" in workflow
     assert "Verify the public versioned documentation" in workflow
+    assert "actions/upload-pages-artifact@v4" in workflow
+    assert "actions/deploy-pages@v4" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "name: github-pages" in workflow
+    assert "name: documentation" not in workflow
+    assert "group: documentation-publication\n            cancel-in-progress: false" in workflow
+    branch_push = workflow.index("git -C publish push origin docs")
+    artifact_upload = workflow.index("actions/upload-pages-artifact@v4")
+    pages_deploy = workflow.index("actions/deploy-pages@v4")
+    public_verification = workflow.index("Verify the public versioned documentation")
+    assert branch_push < artifact_upload < pages_deploy < public_verification
     assert "[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)" in workflow
     assert workflow.count("contents: write") == 2
+
+
+def test_existing_version_cannot_publish_packages_from_a_main_workflow_change():
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "code=$(curl -sS -o /dev/null -w '%{http_code}'" in workflow
+    assert 'if [[ "$code" == "404" ]]; then' in workflow
+    assert 'echo "release=false" >> "$GITHUB_OUTPUT"' in workflow
+    assert "needs.detect.outputs.release == 'true'" in workflow
+    assert workflow.count("needs.detect.outputs.release == 'true'") == 5
+
+
+def test_package_and_release_ordering_remains_unchanged():
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "needs: [detect, build-distributions, publish-documentation]" in workflow
+    assert "needs: [detect, publish-testpypi]" in workflow
+    assert "needs: [detect, publish-pypi]" in workflow
+    assert "if git ls-remote --tags origin" in workflow
+    assert 'gh release view "$tag"' in workflow
 
 
 def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "permissions:\n    contents: read" in workflow
     assert "branches-ignore: [docs]" in workflow
-    assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
     assert "github.event_name == 'push'" in workflow
+    assert "github.ref == 'refs/heads/main'" in workflow
+    publish_job = workflow[workflow.index("    publish-dev-docs:") :]
+    assert "github.event_name == 'pull_request'" not in publish_job
+    assert "startsWith(github.ref, 'refs/heads/release/')" not in publish_job
     assert workflow.count("contents: write") == 1
     assert "--site documentation-preview/site --publish-tree publish --channel dev" in workflow
     assert "[Development Documentation]($url)" in workflow
-    assert "Pages propagation is asynchronous" in workflow
+    assert "actions/upload-pages-artifact@v4" in workflow
+    assert "actions/deploy-pages@v4" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "name: github-pages" in workflow
+    assert "name: documentation" not in workflow
+    assert "group: documentation-publication\n            cancel-in-progress: false" in workflow
     assert 'grep -F "Workbench development documentation"' not in workflow
     assert 'grep -F "Workbench $version documentation"' not in workflow
 
