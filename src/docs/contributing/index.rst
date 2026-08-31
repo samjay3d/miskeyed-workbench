@@ -44,8 +44,8 @@ The generated branch layout is::
    index.html          stable redirect to the current release
    .nojekyll
    dev/                mutable trusted development site
-   0.3.0/              immutable 0.3.0 release site
-   0.4.0/              future immutable release, without deleting 0.3.0
+   X.Y.Z/              immutable release site
+   next-version/       future immutable release, without deleting X.Y.Z
    previews/           reserved for a future explicit trusted-preview policy
 
 Sphinx names copied image assets ``_images/`` inside each complete site, alongside
@@ -69,11 +69,11 @@ GitHub Pages propagation is asynchronous and is reported, but a CDN delay does n
 invalidate an otherwise correct development publication. Immutable release publication
 retains the stricter public-URL check before TestPyPI and PyPI.
 
-The 0.3.0 gate runs in this order: detect the release; build distributions; install
+The release gate runs in this order: detect the release; build distributions; install
 the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
 verify the ``docs`` branch and retry the public URL while Pages propagates; publish
 TestPyPI; publish PyPI; then create the tag and GitHub Release with a link to
-``/0.3.0/``. A documentation failure therefore blocks
+the immutable ``/<version>/`` documentation. A documentation failure therefore blocks
 the package release.
 
 Release work
