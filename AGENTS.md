@@ -6,20 +6,37 @@ trivia and long on **boundaries**, because boundaries are what this package is m
 The product intent lives in [VISION.md](VISION.md); the shipped-today design lives in
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
+For active release work, the checked-out code is the source of truth. Read the current
+release implementation before proposing changes; a version name or branch label is
+context, not a substitute for tracing the code that is actually present.
+
 ---
 
 ## What this repo is
 
-`miskeyed-workbench`: a native **Slang + Qt 6.8 / QRhi** shader workbench with
-Shiboken6 Python bindings. Keep changes scoped to this package. Do not add
-speculative infrastructure (multi-app networking, DCC adapters, external transports)
-unless the current, concrete problem requires it.
+`miskeyed-workbench`: a native technical-art workbench with three deliberately
+separate modes:
+
+1. **Shader Toy** — the smallest live Slang shader loop;
+2. **Render Toy** — live Slang authoring with a scene pass and a post-process pass; and
+3. **ANARI Device** — a planned device-neutral USD/Hydra workbench for real scene and
+   renderer inspection. Its UX is a design problem and is not shipped yet.
+
+The shipped modes use Qt 6.8 / QRhi and Shiboken6 Python bindings. Keep changes scoped
+to this package. Do not add speculative infrastructure (multi-app networking, custom
+DCC scene extraction, external transports) unless the current, concrete problem
+requires it.
 
 ---
 
 ## How to edit this repository
 
-1. **Solve the current problem first.** Do not build speculative infrastructure.
+Before proposing architecture, read the current code, public headers, bindings, tests,
+and canonical docs; trace ownership, lifetime, and call/data flow. For architectural
+work use [.github/skills/architecture-review/SKILL.md](.github/skills/architecture-review/SKILL.md).
+
+1. **Solve the current problem first.** Prefer a small coherent seam to a speculative
+   framework, and preserve ownership boundaries unless the task explicitly changes one.
 2. **Prefer clear boundaries over clever abstractions.**
 3. **Do not create abstractions without at least one concrete reason.**
 4. **Remove obsolete prototype architecture** rather than preserving compatibility.
@@ -35,17 +52,69 @@ unless the current, concrete problem requires it.
 12. **Comment *why* a boundary exists,** not what obvious code is doing.
 13. **When uncertain, optimize for** the smallest useful implementation + clean
     ownership + the ability to replace the layer later.
+14. **Update the relevant docs and changelog in the same task.** Use the focused map in
+    [.github/skills/docs/SKILL.md](.github/skills/docs/SKILL.md); do not touch every page
+    mechanically.
+15. **Review public API changes explicitly.** Headers exported by `Export.h`, Qt
+    properties/invokables/signals, and `bindings/typesystem_workbench.xml` are contract
+    surfaces. Shiboken exposure must be intentional and tested.
+16. **Test contracts, not incidental implementation.** UI changes also require checking
+    deterministic documentation capture scenarios and regenerating the focused image.
+17. **Report intentional non-goals.** Every final task report must name what was
+    deliberately not generalized.
 
 ---
 
 ## Ownership boundaries (do not blur)
 
+**Shader Toy and Render Toy:**
+
 - **Slang owns GPU work** — geometry prep, deformation/skinning, culling, GPU-driven
   draw prep, material evaluation, lighting, raster shaders, compute, post-processing.
 - **C++ owns system work** — app lifecycle, device/resource creation, synchronization,
   command submission, OS/windowing, stable ownership, and Python exposure.
-- **Python / PySide exposes only.** There is no Python mirror of the render core. Do
-  not add one.
+- **Slang owns language and module resolution.** Workbench owns packaged module bytes,
+  project search-path configuration, and host/editor/runtime composition; it supplies
+  these at Slang's filesystem/session edge rather than resolving imports itself.
+- Host contracts and their Slang modules are related but are not the same object.
+  Module metadata exists only for packaging, introspection, and user discovery: never
+  turn the catalog into a service locator or second resolver, and keep host-backed
+  contracts self-documenting in the Inspector and shader reference.
+- **Sessions own runtime bindings and entry-point selections.** `ShaderWorkspace` owns
+  documents, focus/editor sessions, and shared evaluation time. Tool contributions
+  adapt sessions into views; they do not become the state owner.
+
+**ANARI Device mode:**
+
+- **USD owns authored scene meaning; Hydra owns scene change propagation; hdAnari owns
+  Hydra-to-ANARI translation.** Do not add a parallel USD traversal or scene database.
+- **The selected ANARI implementation owns its GPU rendering work and device resources.**
+  The host owns selection, lifecycle coordination, diagnostics, frame presentation, and
+  the authoring session—not the implementation's render core.
+- **ShaderDocument remains independent.** A future ANARI implementation may consume a
+  shader product through an explicit edge, but it does not own the compiler session.
+
+**All modes:** Python / PySide exposes only. There is no Python mirror of a render core.
+Do not add one.
+
+## Do not generalize yet
+
+Future SDF, noise, MaterialX, USD, ANARI, ML/compute, and plugin ideas are architecture
+tests, not implementation requirements. Ask “does this seam leave room for that?” Do
+not build a plugin manager, service locator, generalized execution graph, package
+manager, or dependency-injection framework unless a current feature concretely needs
+it. Do not hard-code one future consumer's assumptions into a generic layer.
+
+## Source-of-truth map
+
+- [`README.md`](README.md): supported user entry points and build/run overview.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md): concise shipped architecture; validate it against
+  `cpp/{include,src}/miskeyed/workbench/{core,slang,rendering,editor,ui,modes}`.
+- [`VISION.md`](VISION.md): product direction, not proof that a feature is shipped.
+- [`src/docs/index.rst`](src/docs/index.rst): canonical teaching documentation.
+- [`CHANGELOG.md`](CHANGELOG.md): release record. Put ordinary post-release work under
+  `[Unreleased]`; when working on an active release, follow that release's stated
+  context. The prepare-release skill performs the mechanical version transition.
 
 ---
 
@@ -83,8 +152,11 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
 **Identity & naming:**
 
 - Distribution: `miskeyed-workbench`; import: `miskeyed.workbench` (PEP 420 namespace).
-- The native extension is `_slang_qrhi.pyd` and the **C++ namespace stays `slang_qrhi`.**
-  Do **not** rename the C++ internals — it is risky and buys nothing.
+- The native extension remains `_slang_qrhi.pyd`; its C++ API lives in
+  `miskeyed::workbench::slang_rhi`.
+- New device-neutral Workbench backend code uses `miskeyed::workbench`; do not place
+  ANARI host/device infrastructure in `miskeyed::workbench::slang_rhi` merely because
+  that renderer was the repository's first native target.
 
 **Rendering:**
 
@@ -117,10 +189,24 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
   `QTimer` quit. Building one headless without `app.exec()` throws a benign teardown
   AV (slangd/QRhi with no loop) that is a harness artifact, not a real bug.
 
+**Reading release health:**
+
+- Package, fresh installation, installed-package contracts, native contracts, and QRhi
+  runtime smoke are separate evidence levels. Support claims require a real passing lane
+  at the claimed level; never infer rendering from a built wheel or successful import.
+- Installed-wheel contracts use public APIs and packaged resources only. Repository-local
+  fixtures and implementation checks remain source-tree tests. Platform display/driver
+  setup belongs in workflows, and runtime validation uses the canonical
+  `miskeyed-workbench --rhi <backend> --rhi-smoke-test` harness.
+
 ---
 
 ## What "done" looks like
 
-Edit Slang → dependency change detected → in-process compile → minimal QRhi state
-rebuild → viewport updates. Every change leaves the boundaries above intact and the
-core more portable, not less.
+For Shader Toy and Render Toy: edit Slang → dependency change detected → in-process
+compile → minimal QRhi state rebuild → viewport updates.
+
+For the planned ANARI Device mode: edit USD → Hydra/hdAnari emits the minimum ANARI
+delta → the selected device updates → the neutral viewport and diagnostics update.
+Changing devices may rebuild device-side state but must not change USD ownership or
+merge scene state with `ShaderDocument`.

@@ -6,15 +6,16 @@ if(NOT _project_version_line)
     message(FATAL_ERROR "Could not read project version from pyproject.toml")
 endif()
 string(REGEX REPLACE "^version = \"([^\"]+)\"$" "\\1" _project_version "${_project_version_line}")
-project(slang_qrhi VERSION "${_project_version}" LANGUAGES CXX)
+project(miskeyed_workbench VERSION "${_project_version}" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_AUTOMOC ON)
 
-option(SLANG_QRHI_BUILD_APP "Build native standalone workbench" ON)
-option(SLANG_QRHI_BUILD_PYTHON "Build Shiboken6 Python bindings" ON)
+option(MISKEYED_WORKBENCH_BUILD_APP "Build the native standalone workbench" ON)
+option(MISKEYED_WORKBENCH_BUILD_PYTHON "Build the Workbench Shiboken6 bindings" ON)
+option(MISKEYED_WORKBENCH_WITH_ANARI "Build the optional native ANARI backend foundation" OFF)
 
 # Build inputs come from the environment so a clean checkout and CI build identically,
 # with no machine-specific paths:
@@ -26,66 +27,207 @@ find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Slang REQUIRED)
+include(CTest)
 
-add_library(slang_qrhi_core STATIC
-    cpp/src/Digest.cpp
-    cpp/src/DependencyGraph.cpp
-    cpp/src/ShaderParameterModel.cpp
-    cpp/src/ParameterInspector.cpp
-    cpp/src/SlangCompiler.cpp
-    cpp/src/Qt68ShaderBridge.cpp
-    cpp/src/ShaderDocument.cpp
-    cpp/src/SlangRhiWidget.cpp
-    cpp/src/CodeEditor.cpp
-    cpp/src/ShaderHighlighter.cpp
-    cpp/src/LspClient.cpp
-    cpp/src/WorkbenchWindow.cpp
+if(MISKEYED_WORKBENCH_WITH_ANARI)
+    # ANARI stays in a separate native target so the shipped Shader Toy and Render Toy
+    # dependency graph is identical when this experimental backend is disabled.
+    find_package(anari CONFIG REQUIRED)
+
+    add_library(miskeyed_workbench_anari_backend STATIC
+        cpp/src/workbench/anari/AnariCandidates.cpp
+        cpp/src/workbench/anari/AnariDeviceCatalog.cpp
+        cpp/src/workbench/anari/AnariLibrary.cpp
+        cpp/src/workbench/anari/AnariDeviceSession.cpp
+    )
+    target_include_directories(miskeyed_workbench_anari_backend
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
+            $<INSTALL_INTERFACE:include>
+    )
+    target_link_libraries(miskeyed_workbench_anari_backend PUBLIC anari::anari)
+    add_library(miskeyed::workbench::anari_backend ALIAS miskeyed_workbench_anari_backend)
+
+    add_executable(workbench-anari-probe app/anari_probe.cpp)
+    target_link_libraries(workbench-anari-probe PRIVATE miskeyed_workbench_anari_backend)
+
+    if(BUILD_TESTING)
+        add_executable(test_anari_candidates tests/test_anari_candidates.cpp)
+        target_link_libraries(test_anari_candidates PRIVATE miskeyed_workbench_anari_backend)
+        add_test(NAME anari_candidates COMMAND test_anari_candidates)
+    endif()
+endif()
+
+add_library(miskeyed_workbench_slang_rhi STATIC
+    # Shared authoring infrastructure. These directories describe responsibilities;
+    # the public slang_rhi namespace remains stable for the shipped native API.
+    cpp/src/workbench/core/Digest.cpp
+    cpp/src/workbench/core/DependencyGraph.cpp
+    cpp/src/workbench/core/ViewportCamera.cpp
+    cpp/src/workbench/slang/WorkbenchModules.cpp
+    cpp/src/workbench/rendering/RenderPass.cpp
+    cpp/src/workbench/rendering/RhiBackendPolicy.cpp
+    cpp/src/workbench/slang/ShaderWorkspace.cpp
+    cpp/src/workbench/core/TimeContext.cpp
+    cpp/src/workbench/core/TimeTransport.cpp
+    cpp/src/workbench/editor/CodeEditor.cpp
+    cpp/src/workbench/editor/ShaderHighlighter.cpp
+    cpp/src/workbench/editor/LspClient.cpp
+    cpp/src/workbench/platform/SlangToolLocator.cpp
+    cpp/src/workbench/editor/WorkspaceEditor.cpp
+    cpp/src/workbench/slang/ShaderParameterModel.cpp
+    cpp/src/workbench/slang/SlangCompiler.cpp
+    cpp/src/workbench/slang/Qt68ShaderBridge.cpp
+    cpp/src/workbench/slang/ShaderDocument.cpp
+    cpp/src/workbench/rendering/SlangRhiWidget.cpp
+    cpp/src/workbench/ui/ParameterInspector.cpp
+    cpp/src/workbench/ui/WorkbenchToolFactory.cpp
+    cpp/src/workbench/ui/WorkbenchTheme.cpp
+    cpp/src/workbench/ui/TimelineWidget.cpp
+    cpp/src/workbench/ui/ToolViewSelector.cpp
+    # Tool contributions and application theming remain independent from renderer policy.
+    cpp/src/workbench/modes/render_toy/WorkbenchWindow.cpp
+    cpp/src/workbench/modes/render_toy/RenderToySession.cpp
+    cpp/src/workbench/modes/shader_toy/ShaderToySession.cpp
     # Q_OBJECT headers live in cpp/include; list them so AUTOMOC scans them (its
     # basename heuristic only checks the source dir, which would skip moc otherwise).
-    cpp/include/slang_qrhi/DependencyGraph.h
-    cpp/include/slang_qrhi/ShaderParameterModel.h
-    cpp/include/slang_qrhi/ParameterInspector.h
-    cpp/include/slang_qrhi/ShaderDocument.h
-    cpp/include/slang_qrhi/SlangCompiler.h
-    cpp/include/slang_qrhi/SlangRhiWidget.h
-    cpp/include/slang_qrhi/CodeEditor.h
-    cpp/include/slang_qrhi/ShaderHighlighter.h
-    cpp/include/slang_qrhi/LspClient.h
-    cpp/include/slang_qrhi/WorkbenchWindow.h
+    cpp/include/miskeyed/workbench/core/DependencyGraph.h
+    cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h
+    cpp/include/miskeyed/workbench/ui/ParameterInspector.h
+    cpp/include/miskeyed/workbench/ui/WorkbenchTheme.h
+    cpp/include/miskeyed/workbench/ui/TimelineWidget.h
+    cpp/include/miskeyed/workbench/ui/ToolViewSelector.h
+    cpp/include/miskeyed/workbench/slang/ShaderDocument.h
+    cpp/include/miskeyed/workbench/slang/ShaderWorkspace.h
+    cpp/include/miskeyed/workbench/slang/SlangCompiler.h
+    cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h
+    cpp/include/miskeyed/workbench/rendering/RhiBackendPolicy.h
+    cpp/include/miskeyed/workbench/editor/CodeEditor.h
+    cpp/include/miskeyed/workbench/editor/ShaderHighlighter.h
+    cpp/include/miskeyed/workbench/editor/LspClient.h
+    cpp/include/miskeyed/workbench/editor/WorkspaceEditor.h
+    cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h
+    cpp/include/miskeyed/workbench/modes/render_toy/RenderToySession.h
+    cpp/include/miskeyed/workbench/modes/shader_toy/ShaderToySession.h
+    cpp/include/miskeyed/workbench/core/TimeContext.h
+    cpp/include/miskeyed/workbench/core/TimeTransport.h
 )
 
-target_compile_definitions(slang_qrhi_core PUBLIC SLANG_QRHI_STATIC)
-target_include_directories(slang_qrhi_core
+qt_add_resources(miskeyed_workbench_slang_rhi "workbench_headers"
+    PREFIX "/miskeyed/workbench/headers"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/workbench"
+    FILES
+        shaders/workbench/ui.slang
+        shaders/workbench/viewport_camera.slang
+        shaders/workbench/time.slang
+        shaders/workbench/render_toy.slang
+        shaders/workbench/shader_toy.slang
+)
+
+qt_add_resources(miskeyed_workbench_slang_rhi "shader_toy_samples"
+    PREFIX "/miskeyed/workbench/shader_toy"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/shader_toy"
+    FILES shaders/shader_toy/default.slang
+)
+
+qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
+    PREFIX "/miskeyed/workbench/render_toy"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/render_toy"
+    FILES
+        shaders/render_toy/scene_default.slang
+        shaders/render_toy/scene_clouds.slang
+        shaders/render_toy/post_default.slang
+        shaders/render_toy/post_bloom.slang
+        shaders/render_toy/post_crt.slang
+)
+
+target_compile_definitions(miskeyed_workbench_slang_rhi PUBLIC MISKEYED_WORKBENCH_SLANG_RHI_STATIC)
+target_include_directories(miskeyed_workbench_slang_rhi
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
         $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(slang_qrhi_core
-    PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets
-    PRIVATE Qt6::GuiPrivate Slang::slang
+target_link_libraries(miskeyed_workbench_slang_rhi
+    PUBLIC Qt6::Core Qt6::Gui Qt6::Widgets Qt6::GuiPrivate
+    PRIVATE Slang::slang
 )
+add_library(miskeyed::workbench::slang_rhi ALIAS miskeyed_workbench_slang_rhi)
 
-if(SLANG_QRHI_BUILD_APP)
-    add_executable(slang-qrhi app/main.cpp)
-    target_link_libraries(slang-qrhi PRIVATE slang_qrhi_core)
-    install(TARGETS slang-qrhi RUNTIME DESTINATION bin)
+if(BUILD_TESTING)
+    add_executable(test_viewport_camera tests/test_viewport_camera.cpp)
+    target_link_libraries(test_viewport_camera PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME viewport_camera_contract COMMAND test_viewport_camera)
+    add_executable(test_workbench_modules tests/test_workbench_modules.cpp)
+    target_link_libraries(test_workbench_modules PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME workbench_modules_contract COMMAND test_workbench_modules)
+    add_executable(test_shader_workspace tests/test_shader_workspace.cpp)
+    target_link_libraries(test_shader_workspace PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME shader_workspace_contract COMMAND test_shader_workspace)
+    add_executable(test_time_context tests/test_time_context.cpp)
+    target_link_libraries(test_time_context PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME time_context_contract COMMAND test_time_context)
+    add_executable(test_render_toy_contract tests/test_render_toy_contract.cpp)
+    target_link_libraries(test_render_toy_contract PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME render_toy_contract COMMAND test_render_toy_contract)
+    add_executable(test_shader_toy_contract tests/test_shader_toy_contract.cpp)
+    target_link_libraries(test_shader_toy_contract PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME shader_toy_contract COMMAND test_shader_toy_contract)
+    add_executable(test_shader_dependencies tests/test_shader_dependencies.cpp)
+    target_link_libraries(test_shader_dependencies PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME shader_dependencies COMMAND test_shader_dependencies)
+    add_executable(test_rhi_backend_policy tests/test_rhi_backend_policy.cpp)
+    target_link_libraries(test_rhi_backend_policy PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME rhi_backend_policy COMMAND test_rhi_backend_policy)
+    add_executable(test_workbench_ui_hardening tests/test_workbench_ui_hardening.cpp)
+    target_link_libraries(test_workbench_ui_hardening PRIVATE miskeyed::workbench::slang_rhi)
+    add_test(NAME workbench_ui_hardening COMMAND test_workbench_ui_hardening)
+
+    # These contract tests intentionally use assert(). Keep them active in Release CI;
+    # otherwise the executables run without checking any of their invariants.
+    foreach(_contract_test IN ITEMS test_viewport_camera test_workbench_modules test_shader_workspace
+            test_time_context test_render_toy_contract test_shader_toy_contract test_shader_dependencies
+            test_rhi_backend_policy test_workbench_ui_hardening)
+        target_compile_options(${_contract_test} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endforeach()
 endif()
 
-if(SLANG_QRHI_BUILD_PYTHON)
+if(MISKEYED_WORKBENCH_WITH_ANARI AND BUILD_TESTING)
+    # Compile both native surfaces together so later backend work cannot blur the
+    # device-neutral Workbench namespace into the established renderer namespace.
+    add_executable(test_native_namespace_boundaries tests/test_native_namespace_boundaries.cpp)
+    target_link_libraries(test_native_namespace_boundaries
+        PRIVATE
+            miskeyed::workbench::slang_rhi
+            miskeyed::workbench::anari_backend
+    )
+    add_test(NAME native_namespace_boundaries COMMAND test_native_namespace_boundaries)
+endif()
+
+if(MISKEYED_WORKBENCH_BUILD_APP)
+    add_executable(miskeyed-workbench app/main.cpp)
+    target_link_libraries(miskeyed-workbench PRIVATE miskeyed_workbench_slang_rhi)
+    install(TARGETS miskeyed-workbench RUNTIME DESTINATION bin)
+endif()
+
+if(MISKEYED_WORKBENCH_BUILD_PYTHON)
     include(ShibokenBindings)
-    slang_qrhi_add_shiboken_module(
-        TARGET _slang_qrhi
-        MODULE_NAME _slang_qrhi
-        TYPESYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/bindings/typesystem_slang_qrhi.xml"
-        GLOBAL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/bindings/slang_qrhi_bindings.h"
+    workbench_add_shiboken_module(
+        TARGET _workbench
+        MODULE_NAME _workbench
+        TYPESYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/bindings/typesystem_workbench.xml"
+        GLOBAL_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/bindings/workbench_bindings.h"
         WRAPPED_HEADERS
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/DependencyGraph.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/ShaderParameterModel.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/ShaderDocument.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/ParameterInspector.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/SlangRhiWidget.h"
-            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/slang_qrhi/WorkbenchWindow.h"
-        LINK_LIBRARIES slang_qrhi_core
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/DependencyGraph.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang/ShaderParameterModel.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/slang/ShaderDocument.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/ui/ParameterInspector.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/rendering/SlangRhiWidget.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/modes/render_toy/WorkbenchWindow.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/TimeContext.h"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/miskeyed/workbench/core/TimeTransport.h"
+        LINK_LIBRARIES miskeyed_workbench_slang_rhi
     )
 
     # Ship the Slang runtime next to the extension so the wheel imports without
@@ -98,9 +240,31 @@ if(SLANG_QRHI_BUILD_PYTHON)
             file(GLOB _slang_runtime_dlls "${_slang_bin_dir}/*.dll")
             install(FILES ${_slang_runtime_dlls} DESTINATION miskeyed/workbench)
         endif()
+    elseif(APPLE)
+        find_file(SLANG_RUNTIME_LIBRARY NAMES libslang.dylib
+            HINTS "${slang_DIR}/../lib" "${SLANG_ROOT}/lib" "$ENV{SLANG_ROOT}/lib")
+        if(SLANG_RUNTIME_LIBRARY)
+            file(REAL_PATH "${SLANG_RUNTIME_LIBRARY}" _slang_runtime_real)
+            install(FILES "${_slang_runtime_real}" DESTINATION miskeyed/workbench)
+        endif()
+    else()
+        find_file(SLANG_RUNTIME_LIBRARY NAMES libslang.so
+            HINTS "${slang_DIR}/../lib" "${SLANG_ROOT}/lib" "$ENV{SLANG_ROOT}/lib")
+        if(SLANG_RUNTIME_LIBRARY)
+            # Slang SDK archives expose libslang.so as a symlink. Wheels do not preserve
+            # that symlink, while the extension's DT_NEEDED names the versioned target.
+            file(REAL_PATH "${SLANG_RUNTIME_LIBRARY}" _slang_runtime_real)
+            install(FILES "${_slang_runtime_real}" DESTINATION miskeyed/workbench)
+        endif()
     endif()
 endif()
 
-install(TARGETS slang_qrhi_core ARCHIVE DESTINATION lib)
-install(DIRECTORY cpp/include/slang_qrhi DESTINATION include)
+install(TARGETS miskeyed_workbench_slang_rhi ARCHIVE DESTINATION lib)
+install(DIRECTORY cpp/include/miskeyed DESTINATION include)
 install(DIRECTORY shaders/ DESTINATION miskeyed/workbench/shaders)
+
+if(MISKEYED_WORKBENCH_WITH_ANARI)
+    install(TARGETS miskeyed_workbench_anari_backend ARCHIVE DESTINATION lib)
+    install(TARGETS workbench-anari-probe RUNTIME DESTINATION bin)
+    install(DIRECTORY cpp/include/miskeyed DESTINATION include)
+endif()

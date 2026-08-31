@@ -1,0 +1,24 @@
+name: release stabilization
+
+# Release branches are stabilization surfaces. Reviewers need the exact candidate
+# distributions, but review builds must have no publishing or repository-write access.
+on:
+    pull_request:
+        branches:
+            - "release/**"
+    push:
+        branches:
+            - "release/**"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    stabilize:
+        name: Release Stabilization
+        uses: ./.github/workflows/build-distributions.yml
+        with:
+            python-versions: '["3.11", "3.13"]'
+        permissions:
+            contents: read

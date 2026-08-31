@@ -17,7 +17,7 @@ def _register_dll_directories() -> None:
     if not hasattr(os, "add_dll_directory"):  # Windows only
         return
     candidates = [Path(__file__).resolve().parent]  # slang DLLs bundled in the wheel
-    env_dirs = os.environ.get("SLANG_QRHI_DLL_DIRS")
+    env_dirs = os.environ.get("MISKEYED_WORKBENCH_DLL_DIRS")
     if env_dirs:
         candidates += [Path(p) for p in env_dirs.split(os.pathsep)]
     slang_root = os.environ.get("SLANG_ROOT")
@@ -64,11 +64,11 @@ def app_icon():
     return QIcon(str(svg))
 
 
-from . import _slang_qrhi as _ext  # noqa: E402
+from . import _workbench as _ext  # noqa: E402
 
-# The C++ classes live in the `slang_qrhi` namespace inside the extension; surface
-# them at the top level so callers use `miskeyed.workbench.WorkbenchWindow` directly.
-_ns = _ext.slang_qrhi
+# The private extension mirrors the native backend namespace. Surface its classes at
+# the package top level so callers use `miskeyed.workbench.WorkbenchWindow` directly.
+_ns = _ext.miskeyed.workbench.slang_rhi
 __all__ = [name for name in dir(_ns) if not name.startswith("_")]
 for _name in __all__:
     globals()[_name] = getattr(_ns, _name)

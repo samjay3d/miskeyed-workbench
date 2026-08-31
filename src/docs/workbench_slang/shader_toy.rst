@@ -1,0 +1,15 @@
+ShaderToy contract
+==================
+
+``import miskeyed.shader_toy;`` provides the host-managed ``shaderToy.resolution``
+field for the minimal fullscreen contract. A ShaderToy session binds one document and selects vertex/fragment entries; the QRhi
+consumer presents it directly without a scene pre-pass.
+
+The contract shares Workbench time and does not turn ShaderToy into a separate
+application or document owner.
+
+Implementation
+--------------
+
+Relevant source: ``shaders/workbench/shader_toy.slang`` and
+``modes/shader_toy/ShaderToySession.*``.

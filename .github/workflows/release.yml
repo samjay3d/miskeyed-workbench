@@ -1,6 +1,6 @@
 name: release
 
-# Builds Windows binary wheels + an sdist on GitHub-hosted runners, and publishes them to
+# Builds Windows, Linux, and macOS binary wheels plus an sdist on GitHub-hosted runners, and publishes them to
 # PyPI via Trusted Publishing (OIDC — no stored tokens). Publishing is automatic: when a
 # version bump lands on `main` (the pyproject version isn't on PyPI yet), this run builds
 # and publishes, then records the `vX.Y.Z` tag + a GitHub Release. Pushing a `v*` tag by
@@ -10,10 +10,11 @@ name: release
 # One-time maintainer setup:
 #   1. PyPI + TestPyPI -> add a GitHub trusted publisher (owner, repo, workflow
 #      `release.yml`, environments `pypi` / `testpypi`).
-#   2. Repo -> Settings -> Environments -> create `pypi` and `testpypi`.
-#   3. Keep SLANG_VERSION below on the Slang release you build against.
+#   2. Repo -> Settings -> Environments -> create `documentation`, `pypi`, and `testpypi`.
+#   3. Repo -> Settings -> Pages -> deploy the `docs` branch from `/ (root)`.
+#   4. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
 #
-# This project is Windows / Direct3D 11. macOS/Linux wheels are future work.
+# Windows wheels default to D3D11, Linux wheels to Vulkan, and macOS wheels to Metal.
 
 on:
     push:
@@ -23,9 +24,10 @@ on:
         branches: [main]
     workflow_dispatch:
 
-env:
-    SLANG_VERSION: "2026.14.1"
-    QT_VERSION: "6.8.3"
+# Default to read-only. Publishing opts into OIDC per job; only the trusted documentation
+# and final tag jobs receive the minimal repository write permission they require.
+permissions:
+    contents: read
 
 jobs:
     detect:
@@ -62,185 +64,132 @@ jobs:
                   fi
                   echo "release=false" >> "$GITHUB_OUTPUT"
 
-    build-wheels:
-        name: Wheel (py${{ matrix.python-version }})
+    build-distributions:
+        name: Main Integration
         needs: detect
-        # Build for a real release, and on PRs to main for validation.
-        if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
-        # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
-        # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
-        # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
-        # Qt's win64_msvc2022_64 ABI, so it's the correct toolchain regardless.
+        # Every path into main receives the exhaustive supported wheel matrix. Release
+        # detection controls publication only; it never controls validation confidence.
+        if: >-
+            github.event_name == 'pull_request' ||
+            github.ref == 'refs/heads/main' ||
+            startsWith(github.ref, 'refs/tags/v') ||
+            github.event_name == 'workflow_dispatch'
+        uses: ./.github/workflows/build-distributions.yml
+        with:
+            python-versions: '["3.11", "3.12", "3.13"]'
+        permissions:
+            contents: read
+
+    build-documentation:
+        name: Build release documentation
+        needs: [detect, build-distributions]
+        if: needs.detect.outputs.release == 'true'
         runs-on: windows-2022
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: ["3.11", "3.12", "3.13"]
+        permissions:
+            contents: read
         steps:
             - uses: actions/checkout@v7
-
             - uses: actions/setup-python@v5
               with:
-                  python-version: ${{ matrix.python-version }}
-
-            - name: Cache pip downloads
-              uses: actions/cache@v6
+                  python-version: "3.11"
+            - uses: actions/download-artifact@v8
               with:
-                  path: ~\AppData\Local\pip\Cache
-                  key: pip-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('.github/workflows/release.yml') }}
-                  restore-keys: |
-                      pip-${{ runner.os }}-py${{ matrix.python-version }}-
-
-            - name: Install Qt ${{ env.QT_VERSION }} dev SDK
-              uses: jurplel/install-qt-action@v4
-              with:
-                  version: ${{ env.QT_VERSION }}
-                  host: windows
-                  target: desktop
-                  arch: win64_msvc2022_64
-                  # Cache the (large) Qt install between runs, keyed on version/arch.
-                  cache: true
-                  # Must be false: the default installs its OWN Python 3.12 for aqtinstall
-                  # and prepends it to PATH, so every matrix job would build a cp312 wheel
-                  # (they then overwrite each other on publish). Leaving our setup-python
-                  # interpreter in place makes each job produce its correct cp3xx wheel.
-                  setup-python: false
-
-            - name: Set up MSVC environment (x64)
-              # Ninja (below) needs cl.exe on PATH; the VS generator finds MSVC on its own
-              # but ignores compiler launchers, so we switch to Ninja to enable sccache.
-              uses: ilammy/msvc-dev-cmd@v1
-              with:
-                  arch: x64
-
-            - name: Set up sccache
-              # Content-addressed compiler cache. Uses a LOCAL DISK backend (not the GitHub
-              # Actions cache service): a GHAC outage would otherwise fail sccache's server
-              # startup and take the whole build down. The dir is persisted below.
-              uses: mozilla-actions/sccache-action@v0.0.11
-
-            - name: Cache sccache objects
-              uses: actions/cache@v6
-              with:
-                  path: ${{ runner.temp }}\sccache
-                  key: sccache-${{ runner.os }}-py${{ matrix.python-version }}-${{ github.sha }}
-                  restore-keys: |
-                      sccache-${{ runner.os }}-py${{ matrix.python-version }}-
-
-            - name: Cache Slang SDK
-              id: slang-cache
-              uses: actions/cache@v6
-              with:
-                  path: ${{ runner.temp }}\slang
-                  key: slang-${{ runner.os }}-${{ env.SLANG_VERSION }}
-
-            - name: Provision Slang SDK
+                  name: wheel-windows-x64-py3.11
+                  path: incoming
+            - name: Install the release wheel and documentation tools
               shell: pwsh
               run: |
-                  $ErrorActionPreference = "Stop"
-                  $ver = "${{ env.SLANG_VERSION }}"
-                  $dest = "$env:RUNNER_TEMP\slang"
-                  if (-not (Test-Path "$dest\bin\slang.dll")) {
-                      $zip = "$env:RUNNER_TEMP\slang.zip"
-                      $url = "https://github.com/shader-slang/slang/releases/download/v$ver/slang-$ver-windows-x86_64.zip"
-                      Write-Host "Downloading $url"
-                      Invoke-WebRequest -Uri $url -OutFile $zip
-                      Expand-Archive -Path $zip -DestinationPath $dest -Force
-                  } else {
-                      Write-Host "Using cached Slang SDK at $dest"
+                  New-Item -ItemType Directory -Force wheelhouse | Out-Null
+                  tar -xzf incoming\wheels-3.11.tgz -C wheelhouse
+                  $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
+                  python -m pip install $wheel
+                  python -m pip install -r src/docs/requirements.txt
+            - name: Capture, verify, and build the release documentation
+              shell: pwsh
+              run: |
+                  $metadataVersion = python ci\docs_metadata.py --field version
+                  if ($metadataVersion -ne "${{ needs.detect.outputs.version }}") {
+                      throw "Documentation version $metadataVersion does not match release version"
                   }
-                  "SLANG_ROOT=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-            - name: Install build dependencies (Qt index)
-              shell: pwsh
-              run: |
-                  python -m pip install --upgrade pip
-                  # shiboken6-generator only exists on Qt's index; the rest resolve from PyPI.
-                  # scikit-build-core is pinned: newer wheel writers emit a ZIP record PyPI
-                  # rejects ("Unknown record signature"); 1.0.3 is verified compliant.
-                  python -m pip install `
-                    --index-url https://download.qt.io/official_releases/QtForPython/ `
-                    --extra-index-url https://pypi.org/simple `
-                    "PySide6==6.8.*" "shiboken6==6.8.*" "shiboken6-generator==6.8.*" `
-                    "scikit-build-core==1.0.3"
-                  python -m pip install ninja
-
-            - name: Build wheel
-              shell: pwsh
-              env:
-                  CMAKE_PREFIX_PATH: ${{ env.QT_ROOT_DIR }}
-                  # Ninja honors the compiler launcher; the VS generator does not.
-                  CMAKE_GENERATOR: Ninja
-                  # Local disk cache (see "Set up sccache"): resilient to GHAC outages.
-                  SCCACHE_DIR: ${{ runner.temp }}\sccache
-              run: |
-                  # Build isolation is off because shiboken6-generator is not on PyPI;
-                  # the build deps installed above are used directly. CMake finds Qt via
-                  # CMAKE_PREFIX_PATH and Slang via SLANG_ROOT (see cmake/FindSlang.cmake).
-                  python -m pip wheel . --no-build-isolation --no-deps -w wheelhouse -v `
-                    --config-settings=cmake.define.CMAKE_C_COMPILER_LAUNCHER=sccache `
-                    --config-settings=cmake.define.CMAKE_CXX_COMPILER_LAUNCHER=sccache
-                  sccache --show-stats
-
-            - name: Verify fresh wheel is not corrupt
-              shell: pwsh
-              # FATAL on purpose: (1) the wheel's ABI tag must match this matrix Python,
-              # else the wrong interpreter built it and the tars would collide on publish;
-              # (2) validate every member's CRC-32 before transport (corruption was proven
-              # to come from upload/download-artifact, hence the tar bundling below).
-              run: |
-                  $expected = "cp" + "${{ matrix.python-version }}".Replace(".", "")
-                  $whls = (Get-ChildItem wheelhouse\*.whl).FullName
-                  foreach ($w in $whls) {
-                      if ((Split-Path $w -Leaf) -notmatch $expected) {
-                          throw "Wheel '$(Split-Path $w -Leaf)' is not tagged '$expected' - wrong interpreter built it."
-                      }
-                  }
-                  python ci\wheelzip.py inspect $whls
-
-            - name: Bundle wheel for transport
-              shell: pwsh
-              # Ship one gzip'd tar instead of loose .whl files. upload-artifact@v4
-              # corrupts the bundled binaries when it re-zips a wheel; wrapping in a tar.gz
-              # makes the payload opaque and gives it a gzip CRC, so any transport
-              # corruption fails `tar -xzf` on download instead of reaching PyPI.
-              run: tar -czf "wheels-${{ matrix.python-version }}.tgz" -C wheelhouse .
-
+                  python -m ci.build_docs --channel release --output build\documentation-site
             - uses: actions/upload-artifact@v7
               with:
-                  name: dist-wheels-${{ matrix.python-version }}
-                  path: wheels-${{ matrix.python-version }}.tgz
+                  name: docs-release
+                  path: build/documentation-site
 
-    build-sdist:
-        name: Source distribution
-        needs: detect
-        if: needs.detect.outputs.release == 'true' || github.event_name == 'pull_request'
+    publish-documentation:
+        name: Publish versioned documentation
+        needs: [detect, build-documentation]
+        if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
+        concurrency:
+            group: documentation-publication
+            cancel-in-progress: false
+        environment:
+            name: documentation
+        permissions:
+            contents: write
         steps:
             - uses: actions/checkout@v7
-            - uses: actions/setup-python@v5
+            - uses: actions/download-artifact@v8
               with:
-                  python-version: "3.12"
-            - name: Build sdist
+                  name: docs-release
+                  path: generated-site
+            - name: Prepare the generated docs branch
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
               run: |
-                  # Pinned: newer scikit-build-core wheel writers emit a ZIP record PyPI's
-                  # strict validator rejects ("Unknown record signature"); 1.0.3 is verified
-                  # compliant. Kept identical in the wheel job for reproducibility.
-                  python -m pip install "scikit-build-core==1.0.3"
-                  mkdir -p dist
-                  # Call the sdist backend directly. `python -m build` (even with
-                  # --no-isolation) refuses to run unless every build-system.requires is
-                  # installed, but the Qt-only PySide6/shiboken6/shiboken6-generator are
-                  # irrelevant to packaging source — scikit-build-core just collects files.
-                  python -c "import scikit_build_core.build as b; print(b.build_sdist('dist'))"
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: dist-sdist
-                  path: ./dist/*.tar.gz
+                  set -euo pipefail
+                  if git ls-remote --exit-code --heads origin docs >/dev/null 2>&1; then
+                      git fetch origin docs
+                      git worktree add -B docs publish origin/docs
+                  else
+                      git worktree add --detach publish
+                      git -C publish checkout --orphan docs
+                      git -C publish rm -rf . >/dev/null 2>&1 || true
+                  fi
+                  python3 -m ci.publish_docs \
+                    --site generated-site --publish-tree publish \
+                    --channel release --version "$VERSION"
+                  test -f "publish/$VERSION/index.html"
+                  grep -F "/$VERSION/" publish/index.html
+            - name: Publish the generated site
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  git -C publish config user.name github-actions[bot]
+                  git -C publish config user.email 41898282+github-actions[bot]@users.noreply.github.com
+                  git -C publish add --all
+                  if git -C publish diff --cached --quiet; then
+                      echo "Documentation $VERSION is already published."
+                  else
+                      git -C publish commit -m "docs: publish Workbench $VERSION"
+                      git -C publish push origin docs
+                  fi
+                  git ls-remote --exit-code --heads origin docs
+            - name: Verify the public versioned documentation
+              env:
+                  VERSION: ${{ needs.detect.outputs.version }}
+              run: |
+                  set -euo pipefail
+                  url=$(python3 ci/docs_metadata.py --field versioned_url --version "$VERSION")
+                  for attempt in $(seq 1 20); do
+                      if page=$(curl --fail --silent --show-error --location "$url") && \
+                         grep -F "Workbench $VERSION documentation" <<<"$page"; then
+                          echo "### [Published Release Documentation $VERSION]($url)" >> "$GITHUB_STEP_SUMMARY"
+                          echo "Published documentation is live at $url"
+                          exit 0
+                      fi
+                      echo "Pages has not propagated yet (attempt $attempt/20); waiting 15 seconds."
+                      sleep 15
+                  done
+                  echo "Documentation did not become public at $url" >&2
+                  exit 1
 
     publish-testpypi:
         name: Publish to TestPyPI
-        needs: [detect, build-wheels, build-sdist]
+        needs: [detect, build-distributions, publish-documentation]
         if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         environment:
@@ -252,9 +201,13 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: dist-*
+                  pattern: wheel-*
                   path: incoming
                   merge-multiple: true
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sdist
+                  path: incoming
             - name: Assemble dist/
               # Wheels arrive as wheels-*.tgz (gzip CRC = transport integrity); the sdist
               # arrives as a plain *.tar.gz and passes through untouched.
@@ -288,9 +241,13 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: dist-*
+                  pattern: wheel-*
                   path: incoming
                   merge-multiple: true
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sdist
+                  path: incoming
             - name: Assemble dist/
               run: |
                   set -euo pipefail
@@ -306,10 +263,9 @@ jobs:
     tag-release:
         name: Tag + GitHub Release
         needs: [detect, publish-pypi]
-        # Record the release AFTER publishing. Uses the default token; the tag it pushes
-        # deliberately does NOT re-trigger this workflow (we already published). Skipped on
-        # manual tag runs (the tag already exists).
-        if: needs.detect.outputs.release == 'true' && !startsWith(github.ref, 'refs/tags/')
+        # Record the release AFTER documentation and package publication. Uses the default
+        # token; an existing manual tag is reused rather than pushed again.
+        if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -332,5 +288,9 @@ jobs:
                       echo "Release $tag already exists."
                   else
                       notes=$(awk -v v="$v" '$0 ~ "^## \\["v"\\]"{f=1;next} /^## \[/{f=0} f' CHANGELOG.md)
-                      gh release create "$tag" --title "$tag" --notes "${notes:-Release $tag}"
+                      docs_url=$(python3 ci/docs_metadata.py --field versioned_url --version "$v")
+                      pypi_url="https://pypi.org/project/miskeyed-workbench/$v/"
+                      support=$(python3 ci/validation_summary.py release-support)
+                      notes="${notes:-Release $tag}"$'\n\n'"$support"$'\n\n'"[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)"
+                      gh release create "$tag" --title "Workbench $tag" --notes "$notes"
                   fi

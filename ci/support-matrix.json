@@ -1,0 +1,37 @@
+{
+  "python": ["3.11", "3.12", "3.13"],
+  "platforms": [
+    {
+      "id": "windows-x64",
+      "label": "Windows x64",
+      "wheel": true,
+      "default_backend": "D3D11",
+      "runtime_python": "3.11",
+      "runtime_backends": ["D3D11", "Vulkan/SwiftShader"]
+    },
+    {
+      "id": "linux-x64",
+      "label": "Linux x64",
+      "wheel": true,
+      "default_backend": "Vulkan",
+      "runtime_python": "3.11",
+      "runtime_backends": ["Vulkan/lavapipe"]
+    },
+    {
+      "id": "macos-arm64",
+      "label": "macOS arm64",
+      "wheel": true,
+      "default_backend": "Metal",
+      "runtime_python": "3.11",
+      "runtime_backends": ["Metal"]
+    },
+    {
+      "id": "macos-x64",
+      "label": "macOS x86_64",
+      "wheel": true,
+      "default_backend": "Metal",
+      "runtime_python": "3.11",
+      "runtime_backends": ["Metal"]
+    }
+  ]
+}

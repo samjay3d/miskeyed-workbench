@@ -1,0 +1,88 @@
+Workbench
+=========
+
+|docs_identity|
+
+Workbench is a native technical-art application for editing Slang, inspecting what
+the compiler understood, and seeing the result through Qt's QRhi rendering layer.
+The documentation starts with visible tasks, then develops the mental model, then
+opens the implementation and extension boundaries.
+
+.. image:: images/workbench_overview.png
+   :alt: Whole Workbench application showing viewport, workspace, Inspector, and timeline
+   :align: center
+
+Choose a path
+-------------
+
+**Learn**
+   Start Workbench without installing a development environment, edit a first
+   shader, and learn the visible vocabulary. Begin with :doc:`learn/index`.
+
+**Use**
+   Follow short tasks for the workspace, Inspector, timeline, tools, and generated
+   code. Go to :doc:`using/index`.
+
+**Understand**
+   Build mental models for documents and bindings, entry points, reflection,
+   dependency identity, time, and tool sessions. Go to :doc:`concepts/index`.
+
+**Extend**
+   Author against the packaged Slang modules or add a tool through the native and
+   Python exposure boundaries. Start at :doc:`workbench_slang/index` or
+   :doc:`extending/index`.
+
+Progressive depth
+-----------------
+
+::
+
+   use the product -> learn the concepts -> study architecture -> extend -> reference
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Learn
+
+   learn/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Using Workbench
+
+   using/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Concepts
+
+   concepts/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Workbench Slang
+
+   workbench_slang/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architecture
+
+   architecture/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Extending Workbench
+
+   extending/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
+
+   reference/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Research
+
+   research/index

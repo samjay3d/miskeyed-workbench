@@ -1,0 +1,9 @@
+#pragma once
+#include <miskeyed/workbench/core/DependencyGraph.h>
+#include <miskeyed/workbench/slang/ShaderParameterModel.h>
+#include <miskeyed/workbench/ui/ParameterInspector.h>
+#include <miskeyed/workbench/slang/ShaderDocument.h>
+#include <miskeyed/workbench/rendering/SlangRhiWidget.h>
+#include <miskeyed/workbench/modes/render_toy/WorkbenchWindow.h>
+#include <miskeyed/workbench/core/TimeContext.h>
+#include <miskeyed/workbench/core/TimeTransport.h>

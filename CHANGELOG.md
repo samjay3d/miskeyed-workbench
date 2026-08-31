@@ -6,6 +6,127 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-30
+
+### Highlights
+
+- Reframed Workbench as a document-centric shell with persistent Render Toy and
+  Shader Toy sessions rather than a Render Toy-owned application.
+- Added deterministic evaluation time, explicit Slang module imports,
+  program-shaped entry-point reflection, and a reflection-driven semantic Inspector.
+- Separated dependency identity from required work and extended QRhi packaging and
+  backend policy beyond the original Windows-only package path.
+
+### Added
+
+- Made built-in Workbench Slang host contracts discoverable through semantic module
+  metadata and a focused Host / Slang Inspector page, including host availability,
+  compiler-resolved import state, provided values/resources, and provider/session context.
+- `ShaderWorkspace` and reusable `WorkspaceEditor` ownership for open/focused
+  documents, per-document cursor/scroll/view state, and Source, Generated, and Compare
+  presentation.
+- `TimeValue`, `TimeRange`, `TimeContext`, and `TimeTransport`, plus a shared timeline
+  with deterministic seek/step, subframes, rate conversion, elapsed-time playback,
+  range controls, and a monotonic evaluation index.
+- Packaged `miskeyed.ui`, `miskeyed.time`, `miskeyed.viewport_camera`,
+  `miskeyed.render_toy`, and `miskeyed.shader_toy` Slang modules resolved through the
+  Slang filesystem/session edge.
+- Reflected entry-point records and per-consumer entry selection, allowing one program
+  to expose multiple vertex, fragment, or compute capabilities without treating
+  `vsMain`/`psMain` as architectural requirements.
+- Active-document Inspector pages for parameters, resources, compiler-resolved
+  dependencies, compilation status/timing, diagnostics, entry points, and generated
+  targets. Imported project modules are watched and invalidate dependent documents.
+- Explicit `RenderToySession` Scene/Post bindings and a minimal `ShaderToySession`
+  fullscreen contribution; both remain alive while the view selector changes layout.
+- A shared UI theme, reusable viewport-camera/render-pass contracts, and authored
+  Render Toy/Shader Toy samples exercising metadata, imports, and shared time.
+- An opt-in ANARI host foundation and standalone probe for configured library/device
+  discovery, extension/status reporting, and deterministic lifecycle testing. It is
+  not exposed as an application mode.
+- Sphinx teaching documentation and deterministic native screenshot scenarios for
+  the shell, tools, Inspector, compilation, Compare editor, and timeline, plus a
+  version-preserving GitHub Pages publication path for stable and release docs.
+
+### Changed
+
+- Reorganized native code by core, editor, Slang, rendering, UI, mode, and optional
+  ANARI responsibilities. Device-neutral code uses `miskeyed::workbench`; the shipped
+  Slang/QRhi surface retains `miskeyed::workbench::slang_rhi`.
+- Replaced concatenated Workbench headers/private UI prelude behavior with explicit
+  imports. Slang owns module resolution; packaged modules and project paths enter at
+  its normal filesystem/session boundary.
+- Made generated output a per-document view instead of a permanent third editor and
+  made the Inspector follow workspace focus rather than Render Toy binding changes.
+- Routed host-managed time through reflected uniform uploads, keeping evaluation
+  changes out of compiler and dependency identity paths.
+- Added host-owned QRhi policy: Auto selects D3D11 on Windows, Vulkan on Linux, and
+  Metal on macOS. Runtime RHI selection remains independent of generated-code
+  inspection targets.
+
+### Fixed
+
+- Restored the stable aggregate `CI` check name required by branch protection while
+  retaining confidence labels on the component jobs.
+- Matched Render Toy's post-process scene sampler contract to QRhi's combined image
+  sampler binding on Vulkan, and stopped closed documents from retaining live pipelines
+  or stale language-server state.
+- Applied playback clamp/loop policy at the lower range boundary during real-time
+  evaluation as well as explicit timeline steps.
+- Resolved packaged `miskeyed.*` modules when Slang qualifies their paths beneath a
+  local document search directory, including when imports are added after an earlier
+  import-free compile.
+- Made the Open control name its destination explicitly and resolve/compile project
+  imports before binding a selected file to Render Toy or Shader Toy. Failed reads no
+  longer leave an empty focused document, and failed compiles preserve existing bindings.
+- Vulkan packages execute Slang's exported SPIR-V entry name while preserving authored
+  names for reflection and consumer selection.
+- Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
+  Qt framework, and private-header search paths on Unix/macOS.
+- Labelled Slang 2026.14 Metal source as MSL 2.3 in its QShader package, matching the
+  language level required by the generated stage attributes on both macOS architectures.
+- Corrected Linux wheel handling of the versioned Slang shared library and kept native
+  contract assertions enabled in release builds.
+- Deferred QRhi resource retirement across the maximum frame latency, avoiding D3D11
+  use-after-free during live pipeline replacement.
+
+### Developer / CI
+
+- Corrected development-documentation publication verification to check the development
+  page identity rather than the release-version identity after a successful Pages push.
+- Added repository-local architecture-review and documentation checklists, clarified
+  ownership and anti-generalization rules in `AGENTS.md`, and made contextual changelog
+  handling, public API review, deterministic UI captures, and deliberate non-goals part
+  of the contributor workflow without hard-coding a release version.
+- Added Windows D3D11 and Vulkan/SwiftShader draw-recording smoke tests, native
+  workspace/time/module/tool contracts, Linux Vulkan/lavapipe and macOS Metal native
+  smoke lanes, and a pinned ANARI SDK lifecycle check.
+- Added CPython 3.11–3.13 wheel builds for Windows x86_64, Linux x86_64, and macOS
+  arm64/x86_64. Fresh-wheel install/import and Python contracts validate packaging on
+  every target; the explicit 3.11 native lanes separately exercise D3D11 and Vulkan on
+  Windows, Vulkan on Linux, and Metal on macOS through the same draw-submission harness.
+- Validated the 0.3.0 native runtime lanes: Windows x86_64 rendered with D3D11 and
+  Vulkan/SwiftShader, Linux x86_64 rendered with Vulkan/lavapipe, and macOS arm64 and
+  x86_64 rendered with Metal. Python 3.12/3.13 remain fresh-wheel contract lanes.
+- Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
+  review-only release artifacts without publishing permissions.
+- Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for
+  same-repository PRs and trusted `main`/`release/**` pushes, and a release gate that
+  publishes the immutable versioned site before TestPyPI/PyPI publication.
+- Made `/dev/` publication gate the generated `docs` branch push rather than eventual
+  Pages/CDN propagation, while retaining strict public URL verification for immutable
+  release documentation before package publication.
+- Split fresh-wheel contracts from checkout-dependent tests and made each release lane
+  report wheel, installation, contract, and actual QRhi runtime outcomes separately.
+- Added a concise repository status header and evidence-based platform matrix, readable
+  platform/backend job names, intentional wheel/docs artifact envelopes, an aggregate
+  partial-failure Actions summary, and user-facing PyPI/docs/support release links.
+- Isolated Windows fresh-wheel checks from the provisioned Slang SDK so installed-package
+  evidence proves the wheel's bundled runtime rather than an editable-build fallback.
+- Added a branch-independent confidence ladder: focused development checks, read-only
+  ``release/*`` stabilization on Python 3.11/3.13 across every platform, and exhaustive
+  Python 3.11--3.13 main integration before publication detection can proceed.
+
 ## [0.2.1] — 2026-08-30
 
 ### Fixed

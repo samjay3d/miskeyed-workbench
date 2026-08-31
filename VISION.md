@@ -1,67 +1,45 @@
 # Miskeyed Workbench — Vision
 
-`miskeyed-workbench` is a **native Slang + Qt 6.8 / QRhi shader workbench** with
-Shiboken6 Python bindings. This document states what the package is for and the
-principles that constrain how it is built. The shipped-today design lives in
-[ARCHITECTURE.md](ARCHITECTURE.md); the rules for AI agents live in
-[AGENTS.md](AGENTS.md).
-
----
-
 ## Purpose
 
-Edit a Slang shader and see the result immediately, through a real native runtime —
-not a subprocess pipeline. Shaders are compiled in-process through Slang's
-compilation API, rendered with QRhi, and driven by a live, reflection-based
-parameter UI. The same native Qt objects are usable from C++ and from PySide6.
+Workbench explores how a native technical-art application can make shader and tool
+iteration immediate without collapsing authoring, evaluation, compiler, UI, and
+rendering ownership into one object. It should be useful to technical artists and
+also legible to tools and graphics engineers learning modern DCC architecture.
 
----
+## Direction
 
-## Guiding principles
+The near-term product is a small shell in which Shader Toy and Render Toy demonstrate
+coexisting tool sessions over shared documents, reflection, time, and QRhi services.
+Longer-term work may add Lookdev, rendering, USD/MaterialX, and device-neutral ANARI
+workflows, but research does not become shipped architecture until its ownership and
+runtime evidence are proven.
 
-- **Compile in-process.** Use Slang's native compilation API; no `slangc` / `qsb`
-  subprocesses at runtime.
-- **Reflection is the source of truth.** Parameter UI comes from Slang reflection, not
-  comment parsing or hand-maintained schemas.
-- **Deterministic and incremental.** A change does the minimum work: a slider updates a
-  uniform buffer, a body edit recompiles only what changed, a metadata edit rebuilds
-  only the inspector.
-- **Content-addressed identity.** Invalidation is tracked by a live Merkle/CAS
-  dependency graph; hash identity and required work are separate concepts.
-- **Clean boundaries.** Keep native systems native; integrations attach at the edges so
-  the core stays portable.
-- **No compatibility baggage.** Delete obsolete scaffolding rather than wrapping it.
+## Principles
 
----
+1. **Documents are authored state; bindings are runtime policy.** A tool consumes a
+   document without owning it.
+2. **Evaluation is explicit and deterministic.** Time is a typed sample, not a side
+   effect of a playback widget.
+3. **Language semantics stay with Slang.** Workbench integrates modules, reflection,
+   and compiler products rather than inventing a parallel shader language.
+4. **Identity and required work stay separate.** Content hashes establish sameness;
+   dirty state schedules the minimum useful update.
+5. **Native systems remain native.** C++/Qt/QRhi own lifecycle and execution. Python
+   exposes the same objects without becoming a second render core.
+6. **Tools contribute to a shell.** View selection is presentation, not session
+   ownership or application mode switching.
+7. **Portability claims follow evidence.** Package, construction, and runtime-render
+   validation are distinct.
+8. **Research stays at the edges.** USD owns authored scene meaning, Hydra owns change
+   propagation, hdAnari owns translation, and ANARI devices own their render cores.
 
-## Who owns what
+## Success
 
-The GPU / system split is a hard boundary, not a suggestion.
+Editing an authored dependency should produce an in-process compile, the minimum
+semantic invalidation, and an updated native viewport. A contributor should be able
+to understand why each update occurs, replace one layer without taking over its
+neighbors, and extend the shell without making an existing tool the application.
 
-- **Slang owns GPU work** — geometry prep, deformation/skinning, culling, GPU-driven
-  draw prep, material evaluation, lighting, raster shaders, compute, post-processing.
-- **C++ owns system work** — app lifecycle, device/resource creation, synchronization,
-  command submission, OS/windowing, stable ownership, and Python exposure.
-- **Python / PySide exposes; it does not own.** There is no Python mirror of the render
-  core, and none should be added.
-
----
-
-## Building blocks
-
-We reach for these before inventing equivalents:
-
-| Block | Role in this package |
-| --- | --- |
-| **Slang** | In-process shader compilation and reflection |
-| **Qt / QRhi** | Portable rendering, windowing, and UI |
-| **Shiboken6** | Native Qt objects exposed to PySide6 |
-| **Merkle / CAS** | Identity, incremental invalidation, determinism |
-
----
-
-## What success looks like
-
-Edit Slang → dependency change detected → in-process compile → minimal QRhi state
-rebuild → viewport updates — with the ownership boundaries above intact and the core
-more portable, not less.
+Current implementation belongs in [ARCHITECTURE.md](ARCHITECTURE.md); the detailed
+learning path begins at [src/docs/index.rst](src/docs/index.rst).

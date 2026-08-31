@@ -82,7 +82,7 @@ def inspect(path: str) -> bool:
             print(
                 f"          !! UNKNOWN RECORD SIGNATURE 0x{sig:08X} at offset {off} (after {n} locals)"
             )
-            print(f"             context: {data[off:off+16].hex()}")
+            print(f"             context: {data[off : off + 16].hex()}")
             return False
     print(f"          raw scan: {'OK' if ok else 'ISSUES ABOVE'} ({n} local records)")
     return ok

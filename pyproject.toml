@@ -11,7 +11,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "miskeyed-workbench"
-version = "0.2.1"
+version = "0.3.0"
 description = "Workbench — a native Qt 6.8 / QRhi Slang shader workbench."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -35,6 +35,8 @@ classifiers = [
   "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Developers",
   "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS :: MacOS X",
   "Programming Language :: C++",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -43,9 +45,9 @@ classifiers = [
   "Topic :: Multimedia :: Graphics :: 3D Rendering",
 ]
 
-# Replace samjay3d once the repository is published on GitHub.
 [project.urls]
 Homepage = "https://github.com/samjay3d/miskeyed-workbench"
+Documentation = "https://samjay3d.github.io/miskeyed-workbench/"
 Repository = "https://github.com/samjay3d/miskeyed-workbench"
 Issues = "https://github.com/samjay3d/miskeyed-workbench/issues"
 Changelog = "https://github.com/samjay3d/miskeyed-workbench/blob/main/CHANGELOG.md"
@@ -90,9 +92,9 @@ sdist.exclude = [
 ]
 
 [tool.scikit-build.cmake.define]
-SLANG_QRHI_BUILD_PYTHON = "ON"
+MISKEYED_WORKBENCH_BUILD_PYTHON = "ON"
 # The native standalone executable is not part of the importable wheel.
-SLANG_QRHI_BUILD_APP = "OFF"
+MISKEYED_WORKBENCH_BUILD_APP = "OFF"
 
 # Ruff lints + formats the small hand-written Python surface (the package, tests, and
 # helper scripts). Generated/vendored trees are excluded so it never touches shiboken
@@ -106,7 +108,7 @@ extend-exclude = [
   "shiboken",
   "*_autogen",
   ".venv",
-  "_slang_qrhi*",
+  "_workbench*",
 ]
 
 [tool.ruff.lint]

@@ -1,0 +1,21 @@
+Reflection pipeline
+===================
+
+::
+
+   authored attributes
+      -> Slang reflection
+      -> ParameterDescriptor
+      -> ShaderParameterModel
+      -> ParameterInspector
+
+Uniform globals arrive wrapped in an implicit constant buffer layout, which the
+compiler adapter unwraps before reading fields. Values are packed by reflected offset,
+not UI order. Host-managed descriptors participate in binding but are filtered from
+artist controls.
+
+Implementation
+--------------
+
+Relevant source: ``ShaderParameterModel.*``, ``ParameterInspector.*``, and reflection
+handling in ``SlangCompiler.cpp``.

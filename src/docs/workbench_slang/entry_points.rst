@@ -1,0 +1,14 @@
+Entry points
+============
+
+A document may reflect multiple vertex, fragment, and compute entries. Tools select
+what their pass requires::
+
+   document entries -> session selection -> QRhi consumer
+
+Authored names remain stable for the user. Generated SPIR-V may expose a standardized
+backend executable name. Generated code inspection and runtime execution target are
+separate choices.
+
+See :doc:`../concepts/entry_points` for the mental model and
+:doc:`../architecture/compilation` for linking and packaging.

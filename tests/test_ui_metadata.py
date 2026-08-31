@@ -18,11 +18,11 @@ import miskeyed.workbench as workbench  # noqa: E402
 from miskeyed.workbench import ShaderDocument, ShaderParameterModel  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-# NOTE: the shader below deliberately does NOT declare the UI* attribute types. The
-# compiler injects them as a private "system prelude", so user shaders can annotate
-# uniforms with [UIName], [UIRange], ... without pasting any boilerplate. These tests
-# therefore also prove that injection: if it regressed, reflection would come back empty.
+# Workbench contracts are ordinary Slang modules. Authored shaders import the contracts
+# they use, so compiler dependency discovery and diagnostics see the same module stack.
 SHADER = """
+import miskeyed.ui;
+import miskeyed.time;
 [UIGroup("Camera")] [UIName("Field of View")] [UIWidget("slider")]
 [UIRange(10.0, 120.0)] [UIStep(1.0)] [UITooltip("Vertical FOV")] [UIUnits("deg")]
 uniform float camFov;
@@ -95,6 +95,23 @@ def test_uniform_without_metadata_uses_defaults(app):
     assert not _value(model, "plain", Role.WidgetRole)
 
 
+def test_host_time_contract_is_reflected_but_not_authored_ui(app):
+    doc = ShaderDocument()
+    doc.setSource(SHADER)
+    doc.compile()
+
+    model = doc.parameters()
+    Role = ShaderParameterModel.Role
+    assert _value(model, "workbenchTime.time", Role.GroupRole) == "workbenchTime"
+    assert _value(model, "workbenchTime.time", Role.HostManagedRole) is True
+
+    graph = doc.dependencyGraph()
+    source = graph.nodeId("source:user")
+    source_identity = graph.digestHex(source)
+    assert model.setValue("workbenchTime.time", 2.0)
+    assert graph.digestHex(source) == source_identity
+
+
 def test_metadata_only_edit_live_updates_parameter_model(app):
     doc = ShaderDocument()
     doc.setSource(SHADER)
@@ -138,8 +155,7 @@ def test_app_icon_available(app):
 
 def test_diagnostics_map_to_user_source_line(app):
     # An undefined identifier on line 1 of the user's source. The compiler injects a
-    # multi-line system prelude ahead of it; a #line reset must make the error report
-    # line 1, not a number shifted by the prelude length.
+    # optional compiler prelude ahead of it; diagnostics must still map to authored lines.
     doc = ShaderDocument()
     doc.setSource("float4 psMain() : SV_Target0 { return nope_undefined; }\n")
     doc.compile()

@@ -1,42 +1,74 @@
-# slang-qrhi architecture
+# Miskeyed Workbench architecture
 
-`slang-qrhi` is a new native SDK. The old Python renderer/toolchain API is intentionally not part of this package.
-
-## Ownership
-
-- **Qt 6.8 / QRhi** owns the graphics device, render targets, command buffers, and widget lifecycle.
-- **Slang C++ API** owns source compilation, module composition, linking, reflection, entry-point hashes, and backend shader generation.
-- **QShader bridge** packages in-memory Slang output for QRhi. There are no runtime compiler subprocesses.
-- **ShaderDocument** is the live authoring state and connects source, reflection, parameters, dependency state, and generated shader packages.
-- **ShaderParameterModel** is the authoritative Qt model for reflected values. It backs both native Qt and Shiboken/PySide consumers.
-- **DependencyGraph** is a shader-specific persistent Merkle DAG. Hashes answer identity; dirty flags answer work scheduling.
-- **SlangRhiWidget** is the embeddable native viewport used by both the standalone executable and PySide6.
-
-## Merkle DAG rule
-
-A source edit does not make every semantic product a hash-child of source. Compiler outputs become independent semantic nodes after compilation.
-
-For example, an implementation-only source edit may change `EntryPoint` while `ParameterLayout` retains the same digest. The viewport then rebuilds the shader/pipeline while the parameter inspector remains untouched.
+This is the concise map of the shipped 0.3.0 architecture. The canonical teaching
+explanations live in [`src/docs/`](src/docs/index.rst), beginning with the
+[system overview](src/docs/architecture/overview.rst).
 
 ```text
-Source -> EntryPoint ---------------------> Pipeline
-                 ^                           ^
-                 |                           |
-          Slang compile                ParameterLayout
-                                            |      |
-                                            v      v
-                                        UiSchema  Values
+Workbench shell
+├── ShaderWorkspace
+│   ├── ShaderDocument(s) + DocumentSession(s)
+│   ├── focused document
+│   └── shared TimeContext + TimeTransport
+├── WorkspaceEditor + active-document Inspector
+├── tool contributions / persistent sessions
+│   ├── RenderToySession  (Scene/Post bindings)
+│   └── ShaderToySession  (one shader binding)
+├── in-process Slang modules, compilation, reflection, and entry points
+└── QRhi consumers selected by one RhiBackendPolicy
 ```
 
-This is deliberately different from a serialized snapshot Merkle tree: the graph is long-lived, shared dependencies form a DAG, dependency ordering is canonicalized, and invalidation semantics are node-kind specific.
+## Ownership boundaries
 
-## Runtime update classes
+- `ShaderWorkspace` owns open documents, focus, cheap editor sessions, and shared
+  evaluation objects. Opening/focusing a document does not bind a renderer.
+- `ShaderDocument` owns authored source, compiler diagnostics, imports, reflection,
+  resources, entry points, generated targets, and dependency identity.
+- Tool sessions own runtime bindings and selected entry points. A view selector swaps
+  presentation only; Render Toy and Shader Toy sessions remain alive together.
+- Slang owns language semantics, module resolution, linking, reflection, entry-point
+  compilation, and backend code generation. Workbench supplies packaged modules and
+  project search paths at the filesystem/session edge. Value-only Workbench module
+  descriptors relate host capability identity to the shader-facing contract for
+  discovery; they contain no providers and do not participate in resolution.
+- C++ owns application/resource lifetime, synchronization, command recording and
+  submission, and Shiboken exposure. Python exposes native objects; it does not mirror
+  the render core.
+- Qt/QRhi owns the platform graphics abstraction. `SlangRhiWidget` and `RenderPass`
+  hold consumer-side QRhi state and retire in-flight resources safely.
 
-- parameter value: uniform buffer update only
-- UI metadata: inspector/model update only
-- texture/resource content: resource upload only
-- reflected binding layout: bindings + pipeline rebuild
-- shader implementation: compile + shader package + pipeline rebuild
-- render state: pipeline rebuild only
+The open/focused/bound distinction is taught in
+[Workspace and documents](src/docs/architecture/workspace.rst). Tool composition is
+covered in [Tool sessions and contributions](src/docs/concepts/tool_sessions.rst).
 
-The target UX is Substance/Houdini-like: edit shader declarations, let reflection generate controls, and keep ordinary control changes out of the compiler path.
+## Data flow
+
+```text
+authored source
+  → ShaderDocument
+  → in-process Slang module resolution / compile
+  → compiler-resolved imports compared with host/module descriptors for inspection
+  → reflected entry points, parameters, resources, generated targets
+  → DependencyGraph identity + dirty work
+  → session-selected capabilities
+  → QShader bridge / QRhi consumer
+```
+
+Hashes answer “is this product the same?”; dirty flags answer “what work must run?”
+A UI-label change need not rebuild parameter layout, and a value change normally
+uploads only uniform bytes. See
+[Dependency identity](src/docs/architecture/dependency_graph.rst).
+
+`TimeTransport` owns playback policy and evaluates `TimeContext`; consumers translate
+that sample into host-managed Slang uniforms without changing shader identity. See
+[Time is evaluation](src/docs/architecture/time.rst).
+
+## Scope and status
+
+Shader Toy and Render Toy are shipped. The optional ANARI host foundation and probe
+are research; there is no ANARI application mode yet. Future USD/Hydra/hdAnari work
+must preserve their scene-ownership boundary and remain independent of
+`ShaderDocument`. See [ANARI research](src/docs/research/anari.rst).
+
+Native placement and namespace rules are in the
+[source-layout chapter](src/docs/architecture/source_layout.rst).

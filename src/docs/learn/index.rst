@@ -1,0 +1,12 @@
+Learn Workbench
+===============
+
+This path is for a first session. No compiler SDK or source checkout is required.
+
+.. toctree::
+   :maxdepth: 1
+
+   what_is_workbench
+   installation
+   first_shader
+   first_module
