@@ -67,26 +67,14 @@ jobs:
                           - 'app/**'
                           - 'bindings/**'
                           - 'shaders/**'
-                          - 'python/**'
+                          - 'python/miskeyed/**'
                           - 'tests/**'
+                          - '!tests/test_release_assembly.py'
                           - 'cmake/**'
                           - 'spikes/**'
                           - 'CMakeLists.txt'
                           - 'pyproject.toml'
-                          - 'src/docs/**'
-                          - 'ci/capture_workbench.py'
-                          - 'ci/build_docs.py'
-                          - 'ci/docs_metadata.py'
-                          - 'ci/publish_docs.py'
-                          - 'ci/verify_doc_images.py'
-                          - 'README.md'
-                          - 'ARCHITECTURE.md'
-                          - 'VISION.md'
-                          - 'CHANGELOG.md'
-                          - '.github/workflows/ci.yml'
                           - '.github/workflows/build-distributions.yml'
-                          - '.github/workflows/release-pr-artifacts.yml'
-                          - '.github/workflows/release.yml'
                           - 'ci/support-matrix.json'
                           - 'ci/validation_summary.py'
 
@@ -109,7 +97,7 @@ jobs:
             - name: Format check
               run: ruff format --check .
             - name: Check Python tool example
-              run: python -m pytest tests/test_python_tool_example.py -q
+              run: python -m pytest tests/test_python_tool_example.py tests/test_release_assembly.py -q
 
     anari-backend:
         name: ${{ needs.changes.outputs.confidence }} · ANARI backend

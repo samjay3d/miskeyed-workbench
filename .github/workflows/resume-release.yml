@@ -1,0 +1,122 @@
+name: Resume release from candidate
+
+# Uses the current publication implementation with a previously sealed candidate.
+# It never invokes the native build workflow.
+on:
+    workflow_dispatch:
+        inputs:
+            source_run_id:
+                description: Successful candidate-producing Actions run ID
+                required: true
+            version:
+                description: Expected release version
+                required: true
+
+permissions:
+    contents: read
+
+jobs:
+    validate-candidate-run:
+        name: Validate candidate run and manifest
+        runs-on: ubuntu-latest
+        outputs:
+            source_sha: ${{ steps.run.outputs.source_sha }}
+        steps:
+            - uses: actions/checkout@v7
+            - name: Validate trusted source run
+              id: run
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RUN_ID: ${{ inputs.source_run_id }}
+                  EXPECTED_VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+                  run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+                  conclusion=$(jq -r .conclusion <<<"$run")
+                  workflow=$(jq -r .path <<<"$run")
+                  branch=$(jq -r .head_branch <<<"$run")
+                  sha=$(jq -r .head_sha <<<"$run")
+                  [[ "$conclusion" == success ]] || { echo "source run did not succeed: $conclusion" >&2; exit 1; }
+                  [[ "$workflow" == .github/workflows/release.yml || "$workflow" == .github/workflows/build-distributions.yml ]] || {
+                    echo "source run used untrusted workflow: $workflow" >&2; exit 1;
+                  }
+                  [[ "$branch" == main || "$branch" == release/* ]] || {
+                    echo "source run has disallowed branch: $branch" >&2; exit 1;
+                  }
+                  gh api "repos/$GITHUB_REPOSITORY/commits/$sha" >/dev/null
+                  source_version=$(gh api -H 'Accept: application/vnd.github.raw+json' \
+                    "repos/$GITHUB_REPOSITORY/contents/pyproject.toml?ref=$sha" \
+                    | sed -nE 's/^version = "([^"]+)"/\1/p')
+                  [[ "$source_version" == "$EXPECTED_VERSION" ]] || {
+                    echo "source version $source_version does not match requested $EXPECTED_VERSION" >&2; exit 1;
+                  }
+                  echo "source_sha=$sha" >> "$GITHUB_OUTPUT"
+            - uses: actions/download-artifact@v8
+              with:
+                  name: release-candidate
+                  path: candidate
+                  run-id: ${{ inputs.source_run_id }}
+                  github-token: ${{ github.token }}
+            - name: Verify manifest, digests, archives, wheels, and count
+              run: |
+                  python3 ci/assemble_release.py assemble --candidate candidate --output dist \
+                    --source-sha "${{ steps.run.outputs.source_sha }}" --version "${{ inputs.version }}"
+                  python3 ci/wheelzip.py normalize dist/*.whl
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: resumed-dist
+                  path: dist
+                  retention-days: 7
+
+    testpypi:
+        needs: validate-candidate-run
+        runs-on: ubuntu-latest
+        environment: testpypi
+        permissions:
+            id-token: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with: {name: resumed-dist, path: dist}
+            - uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  repository-url: https://test.pypi.org/legacy/
+                  skip-existing: true
+
+    pypi:
+        needs: [validate-candidate-run, testpypi]
+        runs-on: ubuntu-latest
+        environment: pypi
+        permissions:
+            id-token: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with: {name: resumed-dist, path: dist}
+            - uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  skip-existing: true
+
+    tag-release:
+        needs: [validate-candidate-run, pypi]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with: {fetch-depth: 0}
+            - name: Create or verify tag and release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  SHA: ${{ needs.validate-candidate-run.outputs.source_sha }}
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+                  tag="v$VERSION"
+                  remote=$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)
+                  [[ -z "$remote" || "$remote" == "$SHA" ]] || { echo "$tag points to $remote, not $SHA" >&2; exit 1; }
+                  if [[ -z "$remote" ]]; then git tag "$tag" "$SHA"; git push origin "$tag"; fi
+                  if gh release view "$tag" >/dev/null 2>&1; then
+                    release_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq .object.sha)
+                    [[ "$release_sha" == "$SHA" ]] || exit 1
+                  else
+                    gh release create "$tag" --target "$SHA" --title "Workbench $tag" --generate-notes
+                  fi

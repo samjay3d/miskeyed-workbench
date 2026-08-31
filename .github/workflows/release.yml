@@ -23,8 +23,30 @@ on:
     push:
         branches: [main]
         tags: ["v*"]
+        paths:
+            - 'cpp/**'
+            - 'app/**'
+            - 'bindings/**'
+            - 'shaders/**'
+            - 'python/miskeyed/**'
+            - 'tests/installed/**'
+            - 'cmake/**'
+            - 'CMakeLists.txt'
+            - 'pyproject.toml'
+            - '.github/workflows/build-distributions.yml'
     pull_request:
         branches: [main]
+        paths:
+            - 'cpp/**'
+            - 'app/**'
+            - 'bindings/**'
+            - 'shaders/**'
+            - 'python/miskeyed/**'
+            - 'tests/installed/**'
+            - 'cmake/**'
+            - 'CMakeLists.txt'
+            - 'pyproject.toml'
+            - '.github/workflows/build-distributions.yml'
     workflow_dispatch:
 
 # Default to read-only. Publishing opts into OIDC per job; only the trusted documentation
@@ -103,7 +125,7 @@ jobs:
               shell: pwsh
               run: |
                   New-Item -ItemType Directory -Force wheelhouse | Out-Null
-                  tar -xzf incoming\wheels-3.11.tgz -C wheelhouse
+                  tar -xzf incoming\wheels-windows-x64-py3.11.tgz -C wheelhouse
                   $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
                   python -m pip install $wheel
                   python -m pip install -r src/docs/requirements.txt
@@ -218,22 +240,15 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: wheel-*
-                  path: incoming
-                  merge-multiple: true
-            - uses: actions/download-artifact@v8
-              with:
-                  name: sdist
-                  path: incoming
+                  name: release-candidate
+                  path: candidate
             - name: Assemble dist/
               # Wheels arrive as wheels-*.tgz (gzip CRC = transport integrity); the sdist
               # arrives as a plain *.tar.gz and passes through untouched.
               run: |
                   set -euo pipefail
-                  shopt -s nullglob
-                  mkdir -p dist
-                  for f in incoming/*.tar.gz; do cp "$f" dist/; done
-                  for t in incoming/*.tgz; do tar -xzf "$t" -C dist; done
+                  python3 ci/assemble_release.py assemble --candidate candidate --output dist \
+                    --source-sha "$GITHUB_SHA" --version "${{ needs.detect.outputs.version }}"
                   ls -la dist/
             - name: Normalize wheel ZIPs for PyPI
               # Rewrites each wheel as a canonical, seekable archive (member bytes verbatim,
@@ -258,24 +273,19 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: wheel-*
-                  path: incoming
-                  merge-multiple: true
-            - uses: actions/download-artifact@v8
-              with:
-                  name: sdist
-                  path: incoming
+                  name: release-candidate
+                  path: candidate
             - name: Assemble dist/
               run: |
                   set -euo pipefail
-                  shopt -s nullglob
-                  mkdir -p dist
-                  for f in incoming/*.tar.gz; do cp "$f" dist/; done
-                  for t in incoming/*.tgz; do tar -xzf "$t" -C dist; done
+                  python3 ci/assemble_release.py assemble --candidate candidate --output dist \
+                    --source-sha "$GITHUB_SHA" --version "${{ needs.detect.outputs.version }}"
                   ls -la dist/
             - name: Normalize wheel ZIPs for PyPI
               run: python3 ci/wheelzip.py normalize dist/*.whl
             - uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  skip-existing: true
 
     tag-release:
         name: Tag + GitHub Release

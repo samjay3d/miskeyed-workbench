@@ -261,12 +261,13 @@ jobs:
               # corrupts the bundled binaries when it re-zips a wheel; wrapping in a tar.gz
               # makes the payload opaque and gives it a gzip CRC, so any transport
               # corruption fails `tar -xzf` on download instead of reaching PyPI.
-              run: tar -czf "wheels-${{ matrix.python-version }}.tgz" -C wheelhouse .
+              run: tar -czf "wheels-windows-x64-py${{ matrix.python-version }}.tgz" -C wheelhouse .
 
             - uses: actions/upload-artifact@v7
               with:
                   name: wheel-windows-x64-py${{ matrix.python-version }}
-                  path: wheels-${{ matrix.python-version }}.tgz
+                  path: wheels-windows-x64-py${{ matrix.python-version }}.tgz
+                  retention-days: 60
 
     build-portable-wheels:
         name: ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
@@ -500,12 +501,13 @@ jobs:
 
             - name: Bundle wheel for transport
               shell: bash
-              run: tar -czf "wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz" -C wheelhouse .
+              run: tar -czf "wheels-${{ matrix.target }}-py${{ matrix.python-version }}.tgz" -C wheelhouse .
 
             - uses: actions/upload-artifact@v7
               with:
                   name: wheel-${{ matrix.target }}-py${{ matrix.python-version }}
-                  path: wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz
+                  path: wheels-${{ matrix.target }}-py${{ matrix.python-version }}.tgz
+                  retention-days: 60
 
     build-sdist:
         name: Source distribution
@@ -531,6 +533,7 @@ jobs:
               with:
                   name: sdist
                   path: ./dist/*.tar.gz
+                  retention-days: 60
 
     validation-summary:
         name: Workbench validation summary
@@ -550,3 +553,39 @@ jobs:
                     --input validation-results --output validation-summary.md \
                     --python-versions '${{ inputs.python-versions }}'
                   cat validation-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+    release-candidate:
+        name: Seal validated release candidate
+        needs: [build-wheels, build-portable-wheels, build-sdist, validation-summary]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            # Keep artifact directories: flattening caused same-named transport archives
+            # to overwrite one another before tar could diagnose the offending producer.
+            - uses: actions/download-artifact@v8
+              with:
+                  pattern: wheel-*
+                  path: candidate-input
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sdist
+                  path: candidate-input/sdist
+            - uses: actions/download-artifact@v8
+              with:
+                  pattern: validation-*
+                  path: candidate-input
+            - name: Create checksummed candidate manifest
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  version=$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml)
+                  versions=$(python3 -c 'import json; print(len(json.loads("""${{ inputs.python-versions }}""")))')
+                  python3 ci/assemble_release.py create \
+                    --input candidate-input --output release-candidate \
+                    --version "$version" --source-sha "$GITHUB_SHA" \
+                    --expected-wheel-count "$((versions * 4))"
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: release-candidate
+                  path: release-candidate
+                  retention-days: 60
