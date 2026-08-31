@@ -416,6 +416,35 @@ the package release.</p>
 </section>
 <section id="release-work">
 <h2>Release work<a class="headerlink" href="#release-work" title="Link to this heading">¶</a></h2>
+<p>Release distributions cross an explicit candidate boundary. The reusable
+<code class="docutils literal notranslate"><span class="pre">build-distributions.yml</span></code> workflow builds and validates the native matrix, then seals
+the uniquely named wheel transports, sdist, validation identities, source SHA, version,
+and SHA-256 digests into the <code class="docutils literal notranslate"><span class="pre">release-candidate</span></code> artifact. Candidate artifacts are
+retained for 60 days. Publication consumes that envelope through
+<code class="docutils literal notranslate"><span class="pre">ci/assemble_release.py</span></code>; it does not rediscover or flatten matrix payloads.</p>
+<p>If TestPyPI, PyPI, or tag creation fails after the candidate was sealed, dispatch the
+<strong>release</strong> workflow from the Actions page. Supply the failed source run ID and expected
+version and source SHA. GitHub’s artifact action retrieves the named candidate directly
+from that run; no custom run-discovery layer sits in front of it. The candidate manifest
+must identify this repository and <code class="docutils literal notranslate"><span class="pre">release.yml</span></code> on <code class="docutils literal notranslate"><span class="pre">main</span></code> or <code class="docutils literal notranslate"><span class="pre">release/*</span></code>. The
+Workbench assembler checks those identities, all digests, tar safety, wheel identities,
+and wheel CRCs before it
+promotes anything. The manifest must contain all 12 Windows, Linux, macOS arm64, and
+macOS x64 wheels for Python 3.11–3.13. Resume invokes no compiler, Qt SDK, Slang SDK,
+or native matrix job and retains the existing <code class="docutils literal notranslate"><span class="pre">release.yml</span></code> trusted-publisher identity.
+TestPyPI and PyPI use skip-existing behavior; an existing tag/release is accepted only
+when it identifies the candidate source commit.</p>
+<p>GitHub’s <strong>Re-run failed jobs</strong> and a dispatched release resume are intentionally
+different. A rerun uses the original run’s source SHA and workflow definition. Resume
+uses the current, corrected publication workflow with the old immutable candidate. Use
+resume when publication orchestration itself has been fixed. An expired artifact, a
+different manifest/version/SHA, a failed source run, or a disallowed source branch must
+be rebuilt rather than bypassed.</p>
+<p>Product/package inputs (<code class="docutils literal notranslate"><span class="pre">cpp/**</span></code>, <code class="docutils literal notranslate"><span class="pre">bindings/**</span></code>, <code class="docutils literal notranslate"><span class="pre">shaders/**</span></code>,
+<code class="docutils literal notranslate"><span class="pre">python/miskeyed/**</span></code>, CMake/package metadata, installed contracts, and the candidate
+build workflow) invalidate the native candidate. Publication helpers/workflows and
+documentation orchestration run their focused Python or documentation checks without
+starting the release matrix. Documentation changes still rebuild and verify the site.</p>
 <p>Read release health by evidence level: <strong>Package</strong> is a produced wheel, <strong>Installed</strong>
 is a fresh-environment install/import, <strong>Contracts</strong> is the installed-package or native
 contract suite, and <strong>Runtime</strong> is an actual QRhi draw through
