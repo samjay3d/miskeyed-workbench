@@ -160,6 +160,9 @@ def test_existing_version_cannot_publish_packages_from_a_main_workflow_change():
 
 def test_packages_and_docs_join_at_final_release():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    # A release-orchestration repair merged while the version is still unpublished must
+    # actually start the repaired workflow on main (and exercise it on the PR first).
+    assert workflow.count("- '.github/workflows/release.yml'") == 2
     assert "needs: [detect, build-distributions]" in workflow
     assert "needs: [detect, publish-testpypi]" in workflow
     assert "needs: [detect, publish-pypi, publish-documentation]" in workflow
