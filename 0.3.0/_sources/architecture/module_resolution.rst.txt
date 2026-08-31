@@ -1,0 +1,15 @@
+Module resolution
+=================
+
+Packaged ``miskeyed.*`` sources enter the Slang session through a narrow
+``ISlangFileSystem`` edge. Project modules use Slang search paths. Slang remains the
+only authority for names, imports, visibility, and composition.
+
+After compilation, Workbench records the compiler-resolved paths and content
+identities, watches project files, and invalidates dependent documents. It does not
+pre-parse imports or concatenate a header catalog.
+
+Implementation
+--------------
+
+Relevant source: ``WorkbenchModules.cpp`` and ``SlangCompiler.cpp``.

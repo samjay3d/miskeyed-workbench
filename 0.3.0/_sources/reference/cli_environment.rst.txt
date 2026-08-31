@@ -1,0 +1,23 @@
+CLI and environment
+===================
+
+Commands
+--------
+
+``uvx miskeyed-workbench``
+   Zero-install user launch.
+``miskeyed-workbench [shader.slang]``
+   Persistent-install launch and optional initial document.
+Native executable only: ``--rhi auto|d3d11|vulkan|metal``
+   Runtime backend policy for a CMake-built standalone executable. The Python wheel
+   launcher currently treats its optional argument as a shader path.
+
+Environment
+-----------
+
+``SLANG_ROOT``
+   Slang SDK for source builds; released wheels bundle the runtime.
+``SLANGD_PATH``
+   Optional explicit language-server location.
+``CMAKE_PREFIX_PATH``
+   Qt development SDK lookup for native builds.

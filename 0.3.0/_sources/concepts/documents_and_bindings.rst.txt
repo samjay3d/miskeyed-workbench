@@ -1,0 +1,47 @@
+Documents and bindings
+======================
+
+Overview
+--------
+
+A document is a Slang source open in the Workbench workspace. **Open**,
+**focused**, and **bound** are different states.
+
+Mental model
+------------
+
+::
+
+   Workspace
+   +-- A.slang
+   +-- B.slang
+   `-- C.slang
+
+   Focused: C.slang
+
+   Render Toy  Scene -> A.slang
+               Post  -> B.slang
+   ShaderToy   Shader -> C.slang
+
+.. image:: ../images/documents_and_bindings.png
+   :alt: Workbench region showing document context and tool bindings
+   :align: center
+
+Why it exists
+-------------
+
+Focus answers “what am I editing and inspecting?” A binding answers “what does this
+runtime consumer execute?” Keeping them separate prevents tab navigation from
+silently changing a render. One document can be consumed by multiple sessions without
+being copied.
+
+How Workbench uses it
+---------------------
+
+Opening retains source and view state. Focusing updates the editor and Inspector.
+Binding stores a document reference and selected entry points in a tool session.
+
+See also
+--------
+
+:doc:`tool_sessions`, :doc:`entry_points`, and :doc:`../architecture/workspace`.
