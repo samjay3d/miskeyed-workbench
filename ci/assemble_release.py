@@ -33,11 +33,20 @@ def _safe_members(archive: tarfile.TarFile, source: Path) -> list[tarfile.TarInf
 
 
 def create_candidate(
-    source: Path, output: Path, version: str, source_sha: str, expected: int
+    source: Path, output: Path, version: str, source_sha: str, python_versions: list[str]
 ) -> None:
     artifact_dirs = sorted(path for path in source.glob("wheel-*") if path.is_dir())
-    if len(artifact_dirs) != expected:
-        raise CandidateError(f"expected {expected} wheel artifacts, found {len(artifact_dirs)}")
+    targets = ("windows-x64", "linux-x64", "macos-arm64", "macos-x64")
+    expected_artifacts = {
+        f"wheel-{target}-py{python_version}"
+        for target in targets
+        for python_version in python_versions
+    }
+    actual_artifacts = {path.name for path in artifact_dirs}
+    if actual_artifacts != expected_artifacts:
+        missing = sorted(expected_artifacts - actual_artifacts)
+        extra = sorted(actual_artifacts - expected_artifacts)
+        raise CandidateError(f"wheel artifact matrix mismatch; missing={missing}, extra={extra}")
     output.mkdir(parents=True, exist_ok=True)
     transports: list[dict[str, object]] = []
     wheel_names: dict[str, str] = {}
@@ -87,12 +96,19 @@ def create_candidate(
         raise CandidateError(f"expected one sdist, found {len(sdists)}")
     shutil.copy2(sdists[0], output / sdists[0].name)
     validations = sorted(path.parent.name for path in source.glob("validation-*/validation.json"))
-    if len(validations) != expected:
-        raise CandidateError(f"expected {expected} validation results, found {len(validations)}")
+    expected_validations = sorted(
+        name.replace("wheel-", "validation-", 1) for name in expected_artifacts
+    )
+    if validations != expected_validations:
+        raise CandidateError(
+            f"validation matrix mismatch; expected={expected_validations}, actual={validations}"
+        )
     manifest = {
         "schema": 1,
         "version": version,
         "source_sha": source_sha,
+        "python_versions": python_versions,
+        "platforms": list(targets),
         "wheels": transports,
         "sdist": {"file": sdists[0].name, "sha256": _sha256(sdists[0])},
         "validation": validations,
@@ -154,7 +170,7 @@ def main() -> None:
     create.add_argument("--output", type=Path, required=True)
     create.add_argument("--version", required=True)
     create.add_argument("--source-sha", required=True)
-    create.add_argument("--expected-wheel-count", type=int, required=True)
+    create.add_argument("--python-versions", required=True, help="JSON list")
     consume = commands.add_parser("assemble")
     consume.add_argument("--candidate", type=Path, required=True)
     consume.add_argument("--output", type=Path, required=True)
@@ -164,7 +180,11 @@ def main() -> None:
     try:
         if args.command == "create":
             create_candidate(
-                args.input, args.output, args.version, args.source_sha, args.expected_wheel_count
+                args.input,
+                args.output,
+                args.version,
+                args.source_sha,
+                json.loads(args.python_versions),
             )
         else:
             assemble(args.candidate, args.output, args.source_sha, args.version)

@@ -48,6 +48,13 @@ on:
             - 'pyproject.toml'
             - '.github/workflows/build-distributions.yml'
     workflow_dispatch:
+        inputs:
+            source_run_id:
+                description: Existing release run ID to resume; leave blank for a new candidate
+                required: false
+            version:
+                description: Expected version when resuming an existing candidate
+                required: false
 
 # Default to read-only. Publishing opts into OIDC per job; only the trusted documentation
 # and final tag jobs receive the minimal write permissions they require.
@@ -95,10 +102,12 @@ jobs:
         # Every path into main receives the exhaustive supported wheel matrix. Release
         # detection controls publication only; it never controls validation confidence.
         if: >-
-            github.event_name == 'pull_request' ||
-            github.ref == 'refs/heads/main' ||
-            startsWith(github.ref, 'refs/tags/v') ||
-            github.event_name == 'workflow_dispatch'
+            inputs.source_run_id == '' && (
+              github.event_name == 'pull_request' ||
+              github.ref == 'refs/heads/main' ||
+              startsWith(github.ref, 'refs/tags/v') ||
+              github.event_name == 'workflow_dispatch'
+            )
         uses: ./.github/workflows/build-distributions.yml
         with:
             python-versions: '["3.11", "3.12", "3.13"]'
@@ -320,4 +329,119 @@ jobs:
                       support=$(python3 ci/validation_summary.py release-support)
                       notes="${notes:-Release $tag}"$'\n\n'"$support"$'\n\n'"[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)"
                       gh release create "$tag" --title "Workbench $tag" --notes "$notes"
+                  fi
+    validate-candidate-run:
+        name: Validate candidate run and manifest
+        if: github.event_name == 'workflow_dispatch' && inputs.source_run_id != ''
+        runs-on: ubuntu-latest
+        outputs:
+            source_sha: ${{ steps.run.outputs.source_sha }}
+        steps:
+            - uses: actions/checkout@v7
+            - name: Validate trusted source run
+              id: run
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RUN_ID: ${{ inputs.source_run_id }}
+                  EXPECTED_VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+                  run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID")
+                  workflow=$(jq -r .path <<<"$run")
+                  branch=$(jq -r .head_branch <<<"$run")
+                  sha=$(jq -r .head_sha <<<"$run")
+                  [[ -n "$EXPECTED_VERSION" ]] || { echo "version is required when resuming" >&2; exit 1; }
+                  [[ "$workflow" == .github/workflows/release.yml ]] || {
+                    echo "source run used untrusted workflow: $workflow" >&2; exit 1;
+                  }
+                  [[ "$branch" == main || "$branch" == release/* ]] || {
+                    echo "source run has disallowed branch: $branch" >&2; exit 1;
+                  }
+                  gh api "repos/$GITHUB_REPOSITORY/commits/$sha" >/dev/null
+                  candidate_result=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+                    --jq '[.jobs[] | select(.name | endswith("Seal validated release candidate")) | .conclusion] | first // "missing"')
+                  [[ "$candidate_result" == success ]] || {
+                    echo "candidate sealing job did not succeed: $candidate_result" >&2; exit 1;
+                  }
+                  source_version=$(gh api -H 'Accept: application/vnd.github.raw+json' \
+                    "repos/$GITHUB_REPOSITORY/contents/pyproject.toml?ref=$sha" \
+                    | sed -nE 's/^version = "([^"]+)"/\1/p')
+                  [[ "$source_version" == "$EXPECTED_VERSION" ]] || {
+                    echo "source version $source_version does not match requested $EXPECTED_VERSION" >&2; exit 1;
+                  }
+                  echo "source_sha=$sha" >> "$GITHUB_OUTPUT"
+            - uses: actions/download-artifact@v8
+              with:
+                  name: release-candidate
+                  path: candidate
+                  run-id: ${{ inputs.source_run_id }}
+                  github-token: ${{ github.token }}
+            - name: Verify manifest, digests, archives, wheels, and count
+              run: |
+                  jq -e '.python_versions == ["3.11", "3.12", "3.13"] and
+                    .platforms == ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"] and
+                    (.wheels | length) == 12' candidate/candidate-manifest.json >/dev/null || {
+                      echo "candidate does not contain the complete Windows/Linux/macOS release matrix" >&2
+                      exit 1
+                  }
+                  python3 ci/assemble_release.py assemble --candidate candidate --output dist \
+                    --source-sha "${{ steps.run.outputs.source_sha }}" --version "${{ inputs.version }}"
+                  python3 ci/wheelzip.py normalize dist/*.whl
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: resumed-dist
+                  path: dist
+                  retention-days: 7
+
+    resume-testpypi:
+        needs: validate-candidate-run
+        runs-on: ubuntu-latest
+        environment: testpypi
+        permissions:
+            id-token: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with: {name: resumed-dist, path: dist}
+            - uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  repository-url: https://test.pypi.org/legacy/
+                  skip-existing: true
+
+    resume-pypi:
+        needs: [validate-candidate-run, resume-testpypi]
+        runs-on: ubuntu-latest
+        environment: pypi
+        permissions:
+            id-token: write
+        steps:
+            - uses: actions/download-artifact@v8
+              with: {name: resumed-dist, path: dist}
+            - uses: pypa/gh-action-pypi-publish@release/v1
+              with:
+                  skip-existing: true
+
+    resume-tag-release:
+        needs: [validate-candidate-run, resume-pypi]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+              with: {fetch-depth: 0}
+            - name: Create or verify tag and release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  SHA: ${{ needs.validate-candidate-run.outputs.source_sha }}
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+                  tag="v$VERSION"
+                  remote=$(git ls-remote --tags origin "refs/tags/$tag" | cut -f1)
+                  [[ -z "$remote" || "$remote" == "$SHA" ]] || { echo "$tag points to $remote, not $SHA" >&2; exit 1; }
+                  if [[ -z "$remote" ]]; then git tag "$tag" "$SHA"; git push origin "$tag"; fi
+                  if gh release view "$tag" >/dev/null 2>&1; then
+                    release_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq .object.sha)
+                    [[ "$release_sha" == "$SHA" ]] || exit 1
+                  else
+                    gh release create "$tag" --target "$SHA" --title "Workbench $tag" --generate-notes
                   fi

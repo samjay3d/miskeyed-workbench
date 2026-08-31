@@ -92,16 +92,18 @@ and SHA-256 digests into the ``release-candidate`` artifact. Candidate artifacts
 retained for 60 days. Publication consumes that envelope through
 ``ci/assemble_release.py``; it does not rediscover or flatten matrix payloads.
 
-If TestPyPI, PyPI, or tag creation fails after the candidate was sealed, run **Resume
-release from candidate** from the Actions page. Supply the successful source run ID and
-expected version. The workflow accepts only a successful candidate-producing workflow
+If TestPyPI, PyPI, or tag creation fails after the candidate was sealed, dispatch the
+**release** workflow from the Actions page. Supply the failed source run ID and expected
+version. The workflow accepts only a release run whose candidate-sealing job succeeded
 from ``main`` or ``release/*``, verifies that the source commit and version exist, then
 checks the manifest, all digests, tar safety, wheel identities, and wheel CRCs before it
-promotes anything. It invokes no compiler, Qt SDK, Slang SDK, or native matrix job.
+promotes anything. The manifest must contain all 12 Windows, Linux, macOS arm64, and
+macOS x64 wheels for Python 3.11--3.13. Resume invokes no compiler, Qt SDK, Slang SDK,
+or native matrix job and retains the existing ``release.yml`` trusted-publisher identity.
 TestPyPI and PyPI use skip-existing behavior; an existing tag/release is accepted only
 when it identifies the candidate source commit.
 
-GitHub's **Re-run failed jobs** and **Resume release from candidate** are intentionally
+GitHub's **Re-run failed jobs** and a dispatched release resume are intentionally
 different. A rerun uses the original run's source SHA and workflow definition. Resume
 uses the current, corrected publication workflow with the old immutable candidate. Use
 resume when publication orchestration itself has been fixed. An expired artifact, a

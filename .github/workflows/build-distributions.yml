@@ -579,11 +579,10 @@ jobs:
               run: |
                   set -euo pipefail
                   version=$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml)
-                  versions=$(python3 -c 'import json; print(len(json.loads("""${{ inputs.python-versions }}""")))')
                   python3 ci/assemble_release.py create \
                     --input candidate-input --output release-candidate \
                     --version "$version" --source-sha "$GITHUB_SHA" \
-                    --expected-wheel-count "$((versions * 4))"
+                    --python-versions '${{ inputs.python-versions }}'
             - uses: actions/upload-artifact@v7
               with:
                   name: release-candidate
