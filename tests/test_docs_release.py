@@ -174,7 +174,10 @@ def test_resumed_packages_do_not_wait_for_docs_but_final_release_does():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
     assert "resume-testpypi:\n        needs: validate-candidate-run" in workflow
     assert "resume-pypi:\n        needs: [validate-candidate-run, resume-testpypi]" in workflow
-    assert "validate-resumed-documentation:\n        name: Validate resumed release documentation" in workflow
+    assert (
+        "validate-resumed-documentation:\n"
+        "        name: Validate resumed release documentation"
+    ) in workflow
     assert (
         "needs: [validate-candidate-run, resume-pypi, validate-resumed-documentation]"
         in workflow
