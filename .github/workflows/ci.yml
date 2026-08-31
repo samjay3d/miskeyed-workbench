@@ -363,10 +363,8 @@ jobs:
         needs: [changes, test]
         if: >-
             needs.test.result == 'success' &&
-            ((github.event_name == 'pull_request' &&
-              github.event.pull_request.head.repo.full_name == github.repository) ||
-             (github.event_name == 'push' &&
-              (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))))
+            github.event_name == 'push' &&
+            github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         concurrency:
             group: documentation-publication

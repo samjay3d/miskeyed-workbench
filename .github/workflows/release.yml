@@ -10,8 +10,11 @@ name: release
 # One-time maintainer setup:
 #   1. PyPI + TestPyPI -> add a GitHub trusted publisher (owner, repo, workflow
 #      `release.yml`, environments `pypi` / `testpypi`).
-#   2. Repo -> Settings -> Environments -> create `github-pages`, `pypi`, and `testpypi`.
-#   3. Repo -> Settings -> Pages -> set Source to `GitHub Actions`.
+#   2. Repo -> Settings -> Environments -> create `pypi` and `testpypi`.
+#   3. Repo -> Settings -> Pages -> set Source to `GitHub Actions`. GitHub creates the
+#      `github-pages` environment automatically; do not add required reviewers. If its
+#      deployment branches are restricted, allow `main` and any intentionally pushed
+#      `v*` tags used by the manual re-release path.
 #   4. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
 #
 # Windows wheels default to D3D11, Linux wheels to Vulkan, and macOS wheels to Metal.
