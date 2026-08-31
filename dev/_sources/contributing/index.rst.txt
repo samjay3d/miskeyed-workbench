@@ -51,28 +51,34 @@ The generated branch layout is::
 Sphinx names copied image assets ``_images/`` inside each complete site, alongside
 ``_static/``, architecture, Slang, rendering, and tool pages.
 
-One-time maintainer setup is required **before publishing the package**. Ensure a
-``docs`` branch exists, then open **Settings → Pages**, choose **Deploy from a
-branch**, select the ``docs`` branch and the ``/ (root)`` folder. The workflow can
-create the branch on its first attempt, but Pages must then be configured and the
-release rerun. Native build/test jobs and fork PRs never receive content-write
-permission. Only the dedicated publisher job does, after checking that a PR head repository equals
-this repository. Branch rules must allow ``GITHUB_TOKEN`` to update the generated
-branch.
+One-time maintainer setup is required **before publishing the package**. Open
+**Settings → Pages** and choose **GitHub Actions** as the deployment source. The
+publisher keeps the ``docs`` branch as generated history, then uploads that complete
+tree with ``actions/upload-pages-artifact`` and deploys it with
+``actions/deploy-pages``. It does not rely on the ``GITHUB_TOKEN`` branch push to
+trigger Pages. Native build/test jobs and fork PRs never receive publication
+permission. Only the dedicated publisher job receives ``contents: write``,
+``pages: write``, and ``id-token: write``. Branch rules must allow ``GITHUB_TOKEN`` to
+update the generated branch.
 
-The **documentation** environment is used by both trusted development and release
-publication jobs. Pushes to trusted branches publish
-|development_url| and place that clickable URL
-in the Actions job summary. The mutable ``/dev/`` gate verifies the build, screenshots,
-artifact, generated branch contents, and successful ``docs`` branch push separately.
-GitHub Pages propagation is asynchronous and is reported, but a CDN delay does not
-invalidate an otherwise correct development publication. Immutable release publication
-retains the stricter public-URL check before TestPyPI and PyPI.
+GitHub creates the **github-pages** environment automatically when the Actions source
+is configured; maintainers do not need to pre-create it. Do not add required reviewers,
+because that would introduce a manual release gate. If deployment branch/tag rules are
+enabled, allow ``main`` and any intentionally pushed ``v*`` tags used by the manual
+re-release path.
+
+The environment is shared by development and release publication jobs. Only a trusted
+``main`` push replaces |development_url| and performs a development deployment;
+pull requests retain their reviewable documentation artifact without publishing the
+repository's live site. The mutable ``/dev/`` gate verifies the build, screenshots,
+generated branch contents, Pages artifact, and explicit deployment. Immutable release
+publication additionally retains the stricter public-URL check before TestPyPI and PyPI.
 
 The release gate runs in this order: detect the release; build distributions; install
-the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
-verify the ``docs`` branch and retry the public URL while Pages propagates; publish
-TestPyPI; publish PyPI; then create the tag and GitHub Release with a link to
+the Windows 3.11 release wheel; capture and verify images; build Sphinx; update and
+verify the ``docs`` history branch; upload and deploy the complete Pages site; retry
+the public URL while Pages propagates; publish TestPyPI; publish PyPI; then create the
+tag and GitHub Release with a link to
 the immutable ``/<version>/`` documentation. A documentation failure therefore blocks
 the package release.
 

@@ -386,26 +386,31 @@ mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span
 </div>
 <p>Sphinx names copied image assets <code class="docutils literal notranslate"><span class="pre">_images/</span></code> inside each complete site, alongside
 <code class="docutils literal notranslate"><span class="pre">_static/</span></code>, architecture, Slang, rendering, and tool pages.</p>
-<p>One-time maintainer setup is required <strong>before publishing the package</strong>. Ensure a
-<code class="docutils literal notranslate"><span class="pre">docs</span></code> branch exists, then open <strong>Settings → Pages</strong>, choose <strong>Deploy from a
-branch</strong>, select the <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch and the <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">(root)</span></code> folder. The workflow can
-create the branch on its first attempt, but Pages must then be configured and the
-release rerun. Native build/test jobs and fork PRs never receive content-write
-permission. Only the dedicated publisher job does, after checking that a PR head repository equals
-this repository. Branch rules must allow <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code> to update the generated
-branch.</p>
-<p>The <strong>documentation</strong> environment is used by both trusted development and release
-publication jobs. Pushes to trusted branches publish
-<a class="reference external" href="https://samjay3d.github.io/miskeyed-workbench/dev/">https://samjay3d.github.io/miskeyed-workbench/dev/</a> and place that clickable URL
-in the Actions job summary. The mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span></code> gate verifies the build, screenshots,
-artifact, generated branch contents, and successful <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch push separately.
-GitHub Pages propagation is asynchronous and is reported, but a CDN delay does not
-invalidate an otherwise correct development publication. Immutable release publication
-retains the stricter public-URL check before TestPyPI and PyPI.</p>
+<p>One-time maintainer setup is required <strong>before publishing the package</strong>. Open
+<strong>Settings → Pages</strong> and choose <strong>GitHub Actions</strong> as the deployment source. The
+publisher keeps the <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch as generated history, then uploads that complete
+tree with <code class="docutils literal notranslate"><span class="pre">actions/upload-pages-artifact</span></code> and deploys it with
+<code class="docutils literal notranslate"><span class="pre">actions/deploy-pages</span></code>. It does not rely on the <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code> branch push to
+trigger Pages. Native build/test jobs and fork PRs never receive publication
+permission. Only the dedicated publisher job receives <code class="docutils literal notranslate"><span class="pre">contents:</span> <span class="pre">write</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pages:</span> <span class="pre">write</span></code>, and <code class="docutils literal notranslate"><span class="pre">id-token:</span> <span class="pre">write</span></code>. Branch rules must allow <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code> to
+update the generated branch.</p>
+<p>GitHub creates the <strong>github-pages</strong> environment automatically when the Actions source
+is configured; maintainers do not need to pre-create it. Do not add required reviewers,
+because that would introduce a manual release gate. If deployment branch/tag rules are
+enabled, allow <code class="docutils literal notranslate"><span class="pre">main</span></code> and any intentionally pushed <code class="docutils literal notranslate"><span class="pre">v*</span></code> tags used by the manual
+re-release path.</p>
+<p>The environment is shared by development and release publication jobs. Only a trusted
+<code class="docutils literal notranslate"><span class="pre">main</span></code> push replaces <a class="reference external" href="https://samjay3d.github.io/miskeyed-workbench/dev/">https://samjay3d.github.io/miskeyed-workbench/dev/</a> and performs a development deployment;
+pull requests retain their reviewable documentation artifact without publishing the
+repository’s live site. The mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span></code> gate verifies the build, screenshots,
+generated branch contents, Pages artifact, and explicit deployment. Immutable release
+publication additionally retains the stricter public-URL check before TestPyPI and PyPI.</p>
 <p>The release gate runs in this order: detect the release; build distributions; install
-the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
-verify the <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch and retry the public URL while Pages propagates; publish
-TestPyPI; publish PyPI; then create the tag and GitHub Release with a link to
+the Windows 3.11 release wheel; capture and verify images; build Sphinx; update and
+verify the <code class="docutils literal notranslate"><span class="pre">docs</span></code> history branch; upload and deploy the complete Pages site; retry
+the public URL while Pages propagates; publish TestPyPI; publish PyPI; then create the
+tag and GitHub Release with a link to
 the immutable <code class="docutils literal notranslate"><span class="pre">/&lt;version&gt;/</span></code> documentation. A documentation failure therefore blocks
 the package release.</p>
 </section>
