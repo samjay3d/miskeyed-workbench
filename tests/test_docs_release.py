@@ -137,7 +137,7 @@ def test_release_workflow_gates_package_publication_on_live_docs():
 def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     workflow = Path(".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "permissions:\n    contents: read" in workflow
-    assert 'branches: [main, "release/**"]' in workflow
+    assert "branches-ignore: [docs]" in workflow
     assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
     assert "github.event_name == 'push'" in workflow
     assert workflow.count("contents: write") == 1
@@ -192,3 +192,4 @@ def test_confidence_ladder_labels_focused_ci_by_destination():
     assert "level='Development CI'" in workflow
     assert "name: ${{ needs.changes.outputs.confidence }}" in workflow
     assert 'python-version: ["3.11"]' in workflow
+    assert "branches-ignore: [docs]" in workflow

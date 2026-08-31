@@ -15,7 +15,9 @@ permissions:
 on:
     pull_request:
     push:
-        branches: [main, "release/**"]
+        # Every development push gets focused confidence. The generated documentation
+        # branch is deployment output, not a source branch, and must not recurse into CI.
+        branches-ignore: [docs]
     workflow_dispatch:
 
 concurrency:
