@@ -136,6 +136,7 @@ def test_release_workflow_gates_package_publication_on_live_docs():
     assert "id-token: write" in workflow
     assert "name: github-pages" in workflow
     assert "name: documentation" not in workflow
+    assert 'grep -F "<p>Workbench $VERSION</p>"' in workflow
     assert "group: documentation-publication\n            cancel-in-progress: false" in workflow
     branch_push = workflow.index("git -C publish push origin docs")
     artifact_upload = workflow.index("actions/upload-pages-artifact@v4")

@@ -190,13 +190,15 @@ jobs:
                   set -euo pipefail
                   url=$(python3 ci/docs_metadata.py --field versioned_url --version "$VERSION")
                   for attempt in $(seq 1 20); do
-                      if page=$(curl --fail --silent --show-error --location "$url") && \
-                         grep -F "Workbench $VERSION documentation" <<<"$page"; then
+                      if ! page=$(curl --fail --silent --show-error --location "$url"); then
+                          echo "Pages request failed (attempt $attempt/20); waiting 15 seconds."
+                      elif grep -F "<p>Workbench $VERSION</p>" <<<"$page" >/dev/null; then
                           echo "### [Published Release Documentation $VERSION]($url)" >> "$GITHUB_STEP_SUMMARY"
                           echo "Published documentation is live at $url"
                           exit 0
+                      else
+                          echo "Pages loaded without the Workbench $VERSION release marker (attempt $attempt/20); waiting 15 seconds."
                       fi
-                      echo "Pages has not propagated yet (attempt $attempt/20); waiting 15 seconds."
                       sleep 15
                   done
                   echo "Documentation did not become public at $url" >&2
