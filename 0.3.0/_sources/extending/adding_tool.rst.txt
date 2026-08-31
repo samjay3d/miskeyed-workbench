@@ -1,0 +1,11 @@
+Add a Workbench tool
+====================
+
+1. Create a session with explicit runtime bindings/state.
+2. Implement ``WorkbenchToolContribution`` at the composition edge.
+3. Reference workspace documents; do not copy or own them.
+4. Supply primary views, local actions, status, and a summary.
+5. Register through ``WorkbenchToolFactory`` or the host composition root.
+
+The view selector is presentation, not session lifetime. The unshipped
+``examples/python_tool_mode.py`` demonstrates exposure, not a Python render core.
