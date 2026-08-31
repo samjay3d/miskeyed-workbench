@@ -21,8 +21,9 @@ on:
     workflow_dispatch:
 
 concurrency:
-    # One in-flight run per PR/branch; a newer push cancels the previous run.
-    group: ci-${{ github.head_ref || github.ref_name }}
+    # Keep PR and push runs separate so they cannot cancel each other's required gate.
+    # Within each event type, a newer run for the same branch still replaces stale work.
+    group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
     cancel-in-progress: true
 
 env:
