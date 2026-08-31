@@ -1,0 +1,17 @@
+Backend policy
+==============
+
+``RhiBackendPolicy`` selects one live backend for a composed viewport set:
+
+::
+
+   Workbench -> QRhi -> D3D11 | Vulkan | Metal
+
+The runtime backend is independent of the generated-code viewer. Windows D3D11 and
+Vulkan have draw-recording smoke coverage. Linux/macOS wheel import validates package
+construction, not equivalent runtime rendering.
+
+Implementation
+--------------
+
+Relevant source: ``rendering/RhiBackendPolicy.*`` and ``app/main.cpp``.

@@ -1,0 +1,13 @@
+Use Render Toy
+==============
+
+.. image:: ../images/render_toy.png
+   :alt: Focused Render Toy region with Scene and Post viewport consumers
+   :align: center
+
+Render Toy binds a Scene program and a Post program. Scene renders into an offscreen
+texture; Post samples it and presents the result. Both consume the shared evaluation
+time. Clicking a viewport focuses its bound document without changing either binding.
+
+See :doc:`../concepts/documents_and_bindings` and
+:doc:`../architecture/rendering_pipeline`.
