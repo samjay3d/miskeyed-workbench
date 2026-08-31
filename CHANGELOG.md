@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Split validated native release candidates from promotion, with globally unique wheel
+  transport names, a checksummed source/version manifest, deterministic archive and wheel
+  validation, 60-day retention, and a guarded resume-from-run workflow that can retry
+  TestPyPI/PyPI/tag publication without rebuilding the native matrix. Publication-only
+  changes now receive focused tests rather than invalidating product distributions.
 - Made release and trusted-main development documentation publication upload and deploy
   the complete generated site through the official GitHub Pages Actions, rather than
   relying on a `GITHUB_TOKEN` push to the history branch to trigger a branch-source

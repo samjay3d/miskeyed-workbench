@@ -85,6 +85,39 @@ the package release.
 Release work
 ------------
 
+Release distributions cross an explicit candidate boundary. The reusable
+``build-distributions.yml`` workflow builds and validates the native matrix, then seals
+the uniquely named wheel transports, sdist, validation identities, source SHA, version,
+and SHA-256 digests into the ``release-candidate`` artifact. Candidate artifacts are
+retained for 60 days. Publication consumes that envelope through
+``ci/assemble_release.py``; it does not rediscover or flatten matrix payloads.
+
+If TestPyPI, PyPI, or tag creation fails after the candidate was sealed, dispatch the
+**release** workflow from the Actions page. Supply the failed source run ID and expected
+version and source SHA. GitHub's artifact action retrieves the named candidate directly
+from that run; no custom run-discovery layer sits in front of it. The candidate manifest
+must identify this repository and ``release.yml`` on ``main`` or ``release/*``. The
+Workbench assembler checks those identities, all digests, tar safety, wheel identities,
+and wheel CRCs before it
+promotes anything. The manifest must contain all 12 Windows, Linux, macOS arm64, and
+macOS x64 wheels for Python 3.11--3.13. Resume invokes no compiler, Qt SDK, Slang SDK,
+or native matrix job and retains the existing ``release.yml`` trusted-publisher identity.
+TestPyPI and PyPI use skip-existing behavior; an existing tag/release is accepted only
+when it identifies the candidate source commit.
+
+GitHub's **Re-run failed jobs** and a dispatched release resume are intentionally
+different. A rerun uses the original run's source SHA and workflow definition. Resume
+uses the current, corrected publication workflow with the old immutable candidate. Use
+resume when publication orchestration itself has been fixed. An expired artifact, a
+different manifest/version/SHA, a failed source run, or a disallowed source branch must
+be rebuilt rather than bypassed.
+
+Product/package inputs (``cpp/**``, ``bindings/**``, ``shaders/**``,
+``python/miskeyed/**``, CMake/package metadata, installed contracts, and the candidate
+build workflow) invalidate the native candidate. Publication helpers/workflows and
+documentation orchestration run their focused Python or documentation checks without
+starting the release matrix. Documentation changes still rebuild and verify the site.
+
 Read release health by evidence level: **Package** is a produced wheel, **Installed**
 is a fresh-environment install/import, **Contracts** is the installed-package or native
 contract suite, and **Runtime** is an actual QRhi draw through
