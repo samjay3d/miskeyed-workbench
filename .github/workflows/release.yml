@@ -240,7 +240,7 @@ jobs:
 
     publish-testpypi:
         name: Publish to TestPyPI
-        needs: [detect, build-distributions, publish-documentation]
+        needs: [detect, build-distributions]
         if: needs.detect.outputs.release == 'true'
         runs-on: ubuntu-latest
         environment:
@@ -301,7 +301,7 @@ jobs:
 
     tag-release:
         name: Tag + GitHub Release
-        needs: [detect, publish-pypi]
+        needs: [detect, publish-pypi, publish-documentation]
         # Record the release AFTER documentation and package publication. Uses the default
         # token; an existing manual tag is reused rather than pushed again.
         if: needs.detect.outputs.release == 'true'
@@ -389,8 +389,24 @@ jobs:
               with:
                   skip-existing: true
 
+    validate-resumed-documentation:
+        name: Validate resumed release documentation
+        needs: validate-candidate-run
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - name: Verify the public versioned documentation
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+                  url=$(python3 ci/docs_metadata.py --field versioned_url --version "$VERSION")
+                  page=$(curl --fail --silent --show-error --location "$url")
+                  grep -F "<p>Workbench $VERSION</p>" <<<"$page" >/dev/null
+                  echo "Confirmed release documentation at $url"
+
     resume-tag-release:
-        needs: [validate-candidate-run, resume-pypi]
+        needs: [validate-candidate-run, resume-pypi, validate-resumed-documentation]
         runs-on: ubuntu-latest
         permissions:
             contents: write

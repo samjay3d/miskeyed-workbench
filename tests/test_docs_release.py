@@ -125,9 +125,10 @@ def test_published_version_is_immutable(tmp_path):
         prepare(site, publish, "release", VERSION, DOCS_URL)
 
 
-def test_release_workflow_gates_package_publication_on_live_docs():
+def test_release_workflow_publishes_docs_without_blocking_packages():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
-    assert "needs: [detect, build-distributions, publish-documentation]" in workflow
+    assert "needs: [detect, build-distributions]" in workflow
+    assert "needs: [detect, publish-pypi, publish-documentation]" in workflow
     assert "python -m ci.build_docs --channel release" in workflow
     assert "Verify the public versioned documentation" in workflow
     assert "actions/upload-pages-artifact@v4" in workflow
@@ -157,13 +158,24 @@ def test_existing_version_cannot_publish_packages_from_a_main_workflow_change():
     assert workflow.count("needs.detect.outputs.release == 'true'") == 5
 
 
-def test_package_and_release_ordering_remains_unchanged():
+def test_packages_and_docs_join_at_final_release():
     workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
-    assert "needs: [detect, build-distributions, publish-documentation]" in workflow
+    assert "needs: [detect, build-distributions]" in workflow
     assert "needs: [detect, publish-testpypi]" in workflow
-    assert "needs: [detect, publish-pypi]" in workflow
+    assert "needs: [detect, publish-pypi, publish-documentation]" in workflow
     assert "if git ls-remote --tags origin" in workflow
     assert 'gh release view "$tag"' in workflow
+
+
+def test_resumed_packages_do_not_wait_for_docs_but_final_release_does():
+    workflow = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "resume-testpypi:\n        needs: validate-candidate-run" in workflow
+    assert "resume-pypi:\n        needs: [validate-candidate-run, resume-testpypi]" in workflow
+    assert "validate-resumed-documentation:\n        name: Validate resumed release documentation" in workflow
+    assert (
+        "needs: [validate-candidate-run, resume-pypi, validate-resumed-documentation]"
+        in workflow
+    )
 
 
 def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
