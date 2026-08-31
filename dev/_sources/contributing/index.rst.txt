@@ -98,6 +98,10 @@ distribution matrix. Stabilization is read-only and can never publish. Release d
 after the main gate alone decides whether immutable docs, TestPyPI, PyPI, a tag, and a
 GitHub Release follow.
 
+Branch protection requires the stable aggregate ``CI`` check. Confidence labels remain on
+the component jobs so changing a destination label cannot leave the required context
+waiting for a name that no workflow emits.
+
 Keep ``CHANGELOG.md`` release-oriented, update the single package version in
 ``pyproject.toml``, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs

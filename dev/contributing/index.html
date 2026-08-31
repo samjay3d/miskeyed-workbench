@@ -428,6 +428,9 @@ and every push to <code class="docutils literal notranslate"><span class="pre">m
 distribution matrix. Stabilization is read-only and can never publish. Release detection
 after the main gate alone decides whether immutable docs, TestPyPI, PyPI, a tag, and a
 GitHub Release follow.</p>
+<p>Branch protection requires the stable aggregate <code class="docutils literal notranslate"><span class="pre">CI</span></code> check. Confidence labels remain on
+the component jobs so changing a destination label cannot leave the required context
+waiting for a name that no workflow emits.</p>
 <p>Keep <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> release-oriented, update the single package version in
 <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs
