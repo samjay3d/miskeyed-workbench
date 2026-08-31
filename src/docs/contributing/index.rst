@@ -79,6 +79,25 @@ the package release.
 Release work
 ------------
 
+Read release health by evidence level: **Package** is a produced wheel, **Installed**
+is a fresh-environment install/import, **Contracts** is the installed-package or native
+contract suite, and **Runtime** is an actual QRhi draw through
+``miskeyed-workbench --rhi <backend> --rhi-smoke-test``. A release support claim must
+have a passing lane at the claimed level. Checkout-dependent architecture tests stay
+in the source-tree suite; the installed-wheel suite must exercise only public package
+behavior and packaged resources. Runner and ICD setup belongs in the workflow.
+
+Validation follows a three-level confidence ladder. Ordinary development PRs run the
+focused Python 3.11 source/native checks. A push to, or PR targeting, any ``release/*``
+branch additionally runs **Release Stabilization** across Windows, Linux, and both macOS
+architectures on
+Python 3.11 and 3.13; Python 3.11 owns native contracts and runtime smoke, while 3.13
+proves the newest supported wheel and installed contracts. Any PR targeting ``main``
+and every push to ``main`` runs **Main Integration**, the exhaustive Python 3.11--3.13
+distribution matrix. Stabilization is read-only and can never publish. Release detection
+after the main gate alone decides whether immutable docs, TestPyPI, PyPI, a tag, and a
+GitHub Release follow.
+
 Keep ``CHANGELOG.md`` release-oriented, update the single package version in
 ``pyproject.toml``, run native/package checks, regenerate images, and build Sphinx
 with warnings as errors. Deployment permissions are intentionally outside the docs

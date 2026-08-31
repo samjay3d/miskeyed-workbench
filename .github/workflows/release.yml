@@ -65,16 +65,18 @@ jobs:
                   echo "release=false" >> "$GITHUB_OUTPUT"
 
     build-distributions:
-        name: Build distributions
+        name: Main Integration
         needs: detect
-        # The full six-lane platform gate is intentionally reserved for the release
-        # integration PR. Ordinary PRs use ci.yml's focused validation.
+        # Every path into main receives the exhaustive supported wheel matrix. Release
+        # detection controls publication only; it never controls validation confidence.
         if: >-
-            needs.detect.outputs.release == 'true' ||
-            (github.event_name == 'pull_request' &&
-             github.event.pull_request.base.ref == 'main' &&
-             github.event.pull_request.head.ref == 'release/0.3.0')
+            github.event_name == 'pull_request' ||
+            github.ref == 'refs/heads/main' ||
+            startsWith(github.ref, 'refs/tags/v') ||
+            github.event_name == 'workflow_dispatch'
         uses: ./.github/workflows/build-distributions.yml
+        with:
+            python-versions: '["3.11", "3.12", "3.13"]'
         permissions:
             contents: read
 
@@ -92,7 +94,7 @@ jobs:
                   python-version: "3.11"
             - uses: actions/download-artifact@v8
               with:
-                  name: dist-wheels-windows-3.11
+                  name: wheel-windows-x64-py3.11
                   path: incoming
             - name: Install the release wheel and documentation tools
               shell: pwsh
@@ -112,7 +114,7 @@ jobs:
                   python -m ci.build_docs --channel release --output build\documentation-site
             - uses: actions/upload-artifact@v7
               with:
-                  name: documentation-site
+                  name: docs-release
                   path: build/documentation-site
 
     publish-documentation:
@@ -131,7 +133,7 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  name: documentation-site
+                  name: docs-release
                   path: generated-site
             - name: Prepare the generated docs branch
               env:
@@ -199,9 +201,13 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: dist-*
+                  pattern: wheel-*
                   path: incoming
                   merge-multiple: true
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sdist
+                  path: incoming
             - name: Assemble dist/
               # Wheels arrive as wheels-*.tgz (gzip CRC = transport integrity); the sdist
               # arrives as a plain *.tar.gz and passes through untouched.
@@ -235,9 +241,13 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
               with:
-                  pattern: dist-*
+                  pattern: wheel-*
                   path: incoming
                   merge-multiple: true
+            - uses: actions/download-artifact@v8
+              with:
+                  name: sdist
+                  path: incoming
             - name: Assemble dist/
               run: |
                   set -euo pipefail
@@ -279,6 +289,8 @@ jobs:
                   else
                       notes=$(awk -v v="$v" '$0 ~ "^## \\["v"\\]"{f=1;next} /^## \[/{f=0} f' CHANGELOG.md)
                       docs_url=$(python3 ci/docs_metadata.py --field versioned_url --version "$v")
-                      notes="${notes:-Release $tag}"$'\n\n'"[Documentation for $v]($docs_url)"
-                      gh release create "$tag" --title "$tag" --notes "$notes"
+                      pypi_url="https://pypi.org/project/miskeyed-workbench/$v/"
+                      support=$(python3 ci/validation_summary.py release-support)
+                      notes="${notes:-Release $tag}"$'\n\n'"$support"$'\n\n'"[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)"
+                      gh release create "$tag" --title "Workbench $tag" --notes "$notes"
                   fi

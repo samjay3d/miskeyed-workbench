@@ -94,7 +94,10 @@ QShader buildQShader(QShader::Stage stage, const QString& entryPoint, const QByt
     // otherwise valid module with "Entry point not found".
     addCode(shader, QShader::SpirvShader, 100, spirv, QByteArrayLiteral("main"));
     addCode(shader, QShader::HlslShader, 50, hlsl, entry);
-    addCode(shader, QShader::MslShader, 20, msl, entry);
+    // Slang 2026.14 emits the standard [[vertex]] / [[fragment]] function attributes.
+    // Apple accepts that spelling starting with MSL 2.3; labelling the source as 2.0
+    // makes QRhi deliberately compile it with an older language mode and reject it.
+    addCode(shader, QShader::MslShader, 23, msl, entry);
     return shader;
 }
 

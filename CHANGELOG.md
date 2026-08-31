@@ -76,6 +76,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names for reflection and consumer selection.
 - Removed the obsolete Metal 2.0 profile request and supplied Shiboken's required Clang,
   Qt framework, and private-header search paths on Unix/macOS.
+- Labelled Slang 2026.14 Metal source as MSL 2.3 in its QShader package, matching the
+  language level required by the generated stage attributes on both macOS architectures.
 - Corrected Linux wheel handling of the versioned Slang shared library and kept native
   contract assertions enabled in release builds.
 - Deferred QRhi resource retirement across the maximum frame latency, avoiding D3D11
@@ -96,6 +98,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   arm64/x86_64. Fresh-wheel install/import and Python contracts validate packaging on
   every target; the explicit 3.11 native lanes separately exercise D3D11 and Vulkan on
   Windows, Vulkan on Linux, and Metal on macOS through the same draw-submission harness.
+- Validated the 0.3.0 native runtime lanes: Windows x86_64 rendered with D3D11 and
+  Vulkan/SwiftShader, Linux x86_64 rendered with Vulkan/lavapipe, and macOS arm64 and
+  x86_64 rendered with Metal. Python 3.12/3.13 remain fresh-wheel contract lanes.
 - Hardened Slang runtime bundling and platform-correct Qt/Shiboken discovery, and added
   review-only release artifacts without publishing permissions.
 - Added read-only PR Documentation Preview Artifacts, mutable public `/dev/` docs for
@@ -104,6 +109,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Made `/dev/` publication gate the generated `docs` branch push rather than eventual
   Pages/CDN propagation, while retaining strict public URL verification for immutable
   release documentation before package publication.
+- Split fresh-wheel contracts from checkout-dependent tests and made each release lane
+  report wheel, installation, contract, and actual QRhi runtime outcomes separately.
+- Added a concise repository status header and evidence-based platform matrix, readable
+  platform/backend job names, intentional wheel/docs artifact envelopes, an aggregate
+  partial-failure Actions summary, and user-facing PyPI/docs/support release links.
+- Isolated Windows fresh-wheel checks from the provisioned Slang SDK so installed-package
+  evidence proves the wheel's bundled runtime rather than an editable-build fallback.
+- Added a branch-independent confidence ladder: focused development checks, read-only
+  ``release/*`` stabilization on Python 3.11/3.13 across every platform, and exhaustive
+  Python 3.11--3.13 main integration before publication detection can proceed.
 
 ## [0.2.1] — 2026-08-30
 

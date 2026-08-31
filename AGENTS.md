@@ -189,6 +189,16 @@ $env:SLANG_ROOT        = "<path-to>\slang"                  # Slang SDK
   `QTimer` quit. Building one headless without `app.exec()` throws a benign teardown
   AV (slangd/QRhi with no loop) that is a harness artifact, not a real bug.
 
+**Reading release health:**
+
+- Package, fresh installation, installed-package contracts, native contracts, and QRhi
+  runtime smoke are separate evidence levels. Support claims require a real passing lane
+  at the claimed level; never infer rendering from a built wheel or successful import.
+- Installed-wheel contracts use public APIs and packaged resources only. Repository-local
+  fixtures and implementation checks remain source-tree tests. Platform display/driver
+  setup belongs in workflows, and runtime validation uses the canonical
+  `miskeyed-workbench --rhi <backend> --rhi-smoke-test` harness.
+
 ---
 
 ## What "done" looks like

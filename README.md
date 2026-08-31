@@ -1,8 +1,41 @@
 # Workbench
 
+[![PyPI](https://img.shields.io/pypi/v/miskeyed-workbench.svg)](https://pypi.org/project/miskeyed-workbench/)
+[![Python](https://img.shields.io/pypi/pyversions/miskeyed-workbench.svg)](https://pypi.org/project/miskeyed-workbench/)
+[![CI](https://github.com/samjay3d/miskeyed-workbench/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/samjay3d/miskeyed-workbench/actions/workflows/ci.yml?query=branch%3Amain)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://samjay3d.github.io/miskeyed-workbench/)
+[![License](https://img.shields.io/pypi/l/miskeyed-workbench.svg)](LICENSE)
+
 Workbench is a native Qt 6.8 technical-art application for editing Slang programs,
 inspecting compiler/reflection results, and seeing changes through QRhi without an
 export/relaunch loop.
+
+## Run Workbench
+
+For a zero-install launch on Python 3.11–3.13:
+
+```text
+uvx miskeyed-workbench
+```
+
+The equivalent command is `pipx run miskeyed-workbench`. For a persistent command,
+use `pipx install miskeyed-workbench` or `uv tool install miskeyed-workbench`.
+
+## Platform support
+
+| Platform | Wheel | Python | Default backend | CI runtime validation |
+|---|---|---|---|---|
+| Windows x64 | ✅ Packaged | 3.11–3.13 | D3D11 | ✅ D3D11 + Vulkan/SwiftShader on Py3.11 |
+| Linux x64 | ✅ Packaged | 3.11–3.13 | Vulkan | ✅ Vulkan/lavapipe on Py3.11 |
+| macOS arm64 | ✅ Packaged | 3.11–3.13 | Metal | ✅ Metal on Py3.11 |
+| macOS x86_64 | ✅ Packaged | 3.11–3.13 | Metal | ✅ Metal on Py3.11 |
+
+**Supported** is the intended product contract. **Packaged** means a wheel is
+published. **Tested** means installed-package and native contracts run. **Runtime
+validated** means the named QRhi backend recorded a draw in the release matrix. See
+the detailed [installation and platform support](src/docs/reference/portability.rst).
+
+## What Workbench is
 
 It currently ships two contributions inside one document-centric shell:
 
@@ -24,23 +57,6 @@ C++ owns lifecycle, synchronization, command submission, resources, and Python
 exposure. There is no Python-owned renderer and no runtime `slangc` or `qsb`
 subprocess.
 
-## Run Workbench
-
-For a zero-install user launch, install `uv` and run:
-
-```text
-uvx miskeyed-workbench
-```
-
-The equivalent one-shot `pipx` command is:
-
-```text
-pipx run miskeyed-workbench
-```
-
-For a persistent command, use `pipx install miskeyed-workbench` or
-`uv tool install miskeyed-workbench`, then run `miskeyed-workbench`.
-
 The distribution is `miskeyed-workbench`; the developer/library import is
 `miskeyed.workbench`. Wheels target CPython 3.11–3.13 on Windows x86_64, Linux
 x86_64, and macOS arm64/x86_64.
@@ -48,10 +64,9 @@ x86_64, and macOS arm64/x86_64.
 ## Platform and backend status
 
 `Auto` selects D3D11 on Windows, Vulkan on Linux, and Metal on macOS; Windows may
-also request Vulkan with `--rhi vulkan`. Packaging/import validation covers all
-wheel platforms. Runtime draw smoke tests currently cover Windows D3D11 and Windows
-Vulkan (SwiftShader). Linux/macOS packaging or UI construction should not be read as
-full runtime-rendering validation. The active runtime backend is independent of the
+also request Vulkan with `--rhi vulkan`. The release matrix separately records whether
+each wheel built, installed in a fresh environment, passed installed-package contracts,
+and rendered through a QRhi backend. The active runtime backend is independent of the
 HLSL/GLSL/SPIR-V/Metal target selected in the Generated viewer.
 
 ## Build from source

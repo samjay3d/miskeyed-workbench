@@ -4,7 +4,16 @@ name: build distributions
 # review builds call this workflow, so neither has to inherit the other's permissions.
 on:
     workflow_call:
+        inputs:
+            python-versions:
+                description: JSON array of Python versions included in this gate.
+                type: string
+                default: '["3.11", "3.12", "3.13"]'
     workflow_dispatch:
+        inputs:
+            python-versions:
+                description: JSON array of Python versions included in this gate.
+                default: '["3.11", "3.12", "3.13"]'
 
 permissions:
     contents: read
@@ -15,7 +24,7 @@ env:
 
 jobs:
     build-wheels:
-        name: Windows / Python ${{ matrix.python-version }} / ${{ matrix.python-version == '3.11' && 'Package + Contracts + Native D3D11 + Vulkan' || 'Package + Contracts' }}
+        name: Windows x64 · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && 'Wheel + Contracts + D3D11/Vulkan' || 'Wheel + Contracts' }}
         # Pin to VS 2022, not windows-latest: the latest image (windows-2025-vs2026,
         # MSVC 14.5x) ships an STL that uses __builtin_verbose_trap, which shiboken
         # 6.8's bundled libclang can't parse (ApiExtractor fails). VS 2022 also matches
@@ -24,7 +33,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.11", "3.12", "3.13"]
+                python-version: ${{ fromJSON(inputs.python-versions) }}
         steps:
             - uses: actions/checkout@v7
 
@@ -132,6 +141,7 @@ jobs:
                   sccache --show-stats
 
             - name: Verify fresh wheel is not corrupt
+              id: package
               shell: pwsh
               # FATAL on purpose: (1) the wheel's ABI tag must match this matrix Python,
               # else the wrong interpreter built it and the tars would collide on publish;
@@ -147,16 +157,29 @@ jobs:
                   }
                   python ci\wheelzip.py inspect $whls
 
-            - name: Verify fresh wheel install, import, and Python contracts
+            - name: Verify fresh wheel install and import
+              id: installed
               shell: pwsh
               env:
                   QT_QPA_PLATFORM: offscreen
+                  SLANG_ROOT: ""
               run: |
+                  $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -notlike "$env:RUNNER_TEMP\slang*" }) -join ';'
                   $wheel = (Get-ChildItem wheelhouse\*.whl).FullName
                   python -m venv "$env:RUNNER_TEMP\wheel-check"
-                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install $wheel pytest
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install $wheel
                   & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -c "import miskeyed.workbench as w; assert w.WorkbenchWindow"
-                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pytest tests -v
+
+            - name: Run installed-wheel contracts
+              id: contracts
+              shell: pwsh
+              env:
+                  QT_QPA_PLATFORM: offscreen
+                  SLANG_ROOT: ""
+              run: |
+                  $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -notlike "$env:RUNNER_TEMP\slang*" }) -join ';'
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pip install pytest
+                  & "$env:RUNNER_TEMP\wheel-check\Scripts\python.exe" -m pytest tests\installed -v
 
             - name: Build canonical native contract and RHI smoke harness
               if: matrix.python-version == '3.11'
@@ -172,6 +195,7 @@ jobs:
                   cmake --build build-native --parallel 2
 
             - name: Run native contracts
+              id: native-contracts
               if: matrix.python-version == '3.11'
               shell: pwsh
               env:
@@ -181,6 +205,7 @@ jobs:
                   ctest --test-dir build-native --output-on-failure
 
             - name: Run D3D11 RHI smoke
+              id: d3d11
               if: matrix.python-version == '3.11'
               shell: pwsh
               run: |
@@ -188,6 +213,7 @@ jobs:
                   .\build-native\miskeyed-workbench.exe --rhi d3d11 --rhi-smoke-test
 
             - name: Run Vulkan RHI smoke with SwiftShader
+              id: vulkan
               if: matrix.python-version == '3.11'
               shell: pwsh
               run: |
@@ -206,6 +232,29 @@ jobs:
                   $env:PATH = "$([IO.Path]::GetDirectoryName($driver));$env:SLANG_ROOT\bin;$env:PATH"
                   .\build-native\miskeyed-workbench.exe --rhi vulkan --rhi-smoke-test
 
+            - name: Record validation result
+              if: always()
+              shell: pwsh
+              run: |
+                  $native = if ('${{ matrix.python-version }}' -eq '3.11') { '${{ steps.native-contracts.outcome }}' } else { 'not-run' }
+                  $runtime = if ('${{ matrix.python-version }}' -eq '3.11') { 'D3D11 + Vulkan/SwiftShader' } else { 'Platform runtime covered by Py3.11' }
+                  $runtimeResult = if ('${{ matrix.python-version }}' -eq '3.11') {
+                      if ('${{ steps.d3d11.outcome }}' -eq 'success' -and '${{ steps.vulkan.outcome }}' -eq 'success') { 'success' }
+                      elseif ('${{ steps.d3d11.outcome }}' -eq 'failure' -or '${{ steps.vulkan.outcome }}' -eq 'failure') { 'failure' }
+                      else { 'skipped' }
+                  } else { 'not-run' }
+                  python ci\validation_summary.py lane --platform "Windows x64" --python "${{ matrix.python-version }}" `
+                    --wheel "${{ steps.package.outcome }}" --installed "${{ steps.installed.outcome }}" `
+                    --installed-contracts "${{ steps.contracts.outcome }}" --native-contracts "$native" `
+                    --runtime "$runtime" --runtime-result "$runtimeResult" --output validation.json
+
+            - name: Upload validation result
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: validation-windows-x64-py${{ matrix.python-version }}
+                  path: validation.json
+
             - name: Bundle wheel for transport
               shell: pwsh
               # Ship one gzip'd tar instead of loose .whl files. upload-artifact@v4
@@ -216,34 +265,34 @@ jobs:
 
             - uses: actions/upload-artifact@v7
               with:
-                  name: dist-wheels-windows-${{ matrix.python-version }}
+                  name: wheel-windows-x64-py${{ matrix.python-version }}
                   path: wheels-${{ matrix.python-version }}.tgz
 
     build-portable-wheels:
-        name: ${{ matrix.label }} / Python ${{ matrix.python-version }} / ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Package + Contracts' }}
+        name: ${{ matrix.label }} · Py${{ matrix.python-version }} · ${{ matrix.python-version == '3.11' && matrix.runtime-label || 'Wheel + Contracts' }}
         strategy:
             fail-fast: false
             matrix:
-                python-version: ["3.11", "3.12", "3.13"]
-                target: [linux-x86_64, macos-arm64, macos-x86_64]
+                python-version: ${{ fromJSON(inputs.python-versions) }}
+                target: [linux-x64, macos-arm64, macos-x64]
                 include:
-                    - target: linux-x86_64
-                      label: Linux x86_64
-                      runtime-label: Package + Contracts + Native Vulkan
+                    - target: linux-x64
+                      label: Linux x64
+                      runtime-label: Wheel + Contracts + Vulkan
                       os: ubuntu-22.04
                       platform: linux
                       qt-host: linux
                       qt-arch: linux_gcc_64
                     - target: macos-arm64
                       label: macOS arm64
-                      runtime-label: Package + Contracts + Native Metal
+                      runtime-label: Wheel + Contracts + Metal
                       os: macos-14
                       platform: macos
                       qt-host: mac
                       qt-arch: clang_64
-                    - target: macos-x86_64
+                    - target: macos-x64
                       label: macOS x86_64
-                      runtime-label: Package + Contracts + Native Metal
+                      runtime-label: Wheel + Contracts + Metal
                       os: macos-15-intel
                       platform: macos
                       qt-host: mac
@@ -336,28 +385,38 @@ jobs:
                   rm wheelhouse/*.whl
                   mv repaired/*.whl wheelhouse/
 
-            - name: Verify wheel in a fresh environment
+            - name: Verify wheel artifact
+              id: package
               shell: bash
-              env:
-                  QT_QPA_PLATFORM: offscreen
               run: |
                   expected="cp${{ matrix.python-version }}"
                   expected="${expected/.}"
                   wheel="$(echo wheelhouse/*.whl)"
                   [[ "$(basename "$wheel")" == *"$expected"* ]]
                   python ci/wheelzip.py inspect "$wheel"
+
+            - name: Verify wheel in a fresh environment
+              id: installed
+              shell: bash
+              env:
+                  QT_QPA_PLATFORM: offscreen
+                  SLANG_ROOT: ""
+              run: |
+                  wheel="$(echo wheelhouse/*.whl)"
                   python -m venv "${RUNNER_TEMP}/wheel-check"
                   "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install "$wheel"
                   "${RUNNER_TEMP}/wheel-check/bin/python" -c \
                     "import miskeyed.workbench as w; assert w.WorkbenchWindow"
 
             - name: Run Python contracts from the fresh wheel environment
+              id: contracts
               shell: bash
               env:
                   QT_QPA_PLATFORM: offscreen
+                  SLANG_ROOT: ""
               run: |
                   "${RUNNER_TEMP}/wheel-check/bin/python" -m pip install pytest
-                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pytest tests -v
+                  "${RUNNER_TEMP}/wheel-check/bin/python" -m pytest tests/installed -v
 
             - name: Build canonical native contract and RHI smoke harness
               if: matrix.python-version == '3.11'
@@ -374,6 +433,7 @@ jobs:
                   cmake --build build-native --parallel 2
 
             - name: Run native contracts
+              id: native-contracts
               if: matrix.python-version == '3.11'
               shell: bash
               env:
@@ -381,6 +441,7 @@ jobs:
               run: ctest --test-dir build-native --output-on-failure
 
             - name: Run Linux Vulkan RHI smoke with Mesa lavapipe
+              id: vulkan
               if: matrix.python-version == '3.11' && matrix.platform == 'linux'
               shell: bash
               env:
@@ -388,13 +449,18 @@ jobs:
                   MESA_VK_DEVICE_SELECT: lavapipe
                   QT_LOGGING_RULES: qt.rhi.*=true
               run: |
-                  icd=$(find /usr/share/vulkan/icd.d -name '*lvp*json' -print -quit)
-                  test -n "$icd"
+                  set -euo pipefail
+                  icd=$(find /usr/share/vulkan/icd.d -type f -name '*lvp*.json' -print -quit)
+                  test -f "$icd"
+                  driver=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["ICD"]["library_path"])' "$icd")
+                  echo "Vulkan ICD: $icd"
+                  echo "Vulkan driver: $driver"
                   export VK_DRIVER_FILES="$icd"
                   export VK_ICD_FILENAMES="$icd"
                   xvfb-run -a ./build-native/miskeyed-workbench --rhi vulkan --rhi-smoke-test
 
             - name: Run macOS Metal RHI smoke
+              id: metal
               if: matrix.python-version == '3.11' && matrix.platform == 'macos'
               shell: bash
               env:
@@ -402,13 +468,43 @@ jobs:
                   QT_LOGGING_RULES: qt.rhi.*=true
               run: ./build-native/miskeyed-workbench --rhi metal --rhi-smoke-test
 
+            - name: Record validation result
+              if: always()
+              shell: bash
+              run: |
+                  if [[ '${{ matrix.python-version }}' != 3.11 ]]; then
+                    runtime='Platform runtime covered by Py3.11'
+                    runtime_result=not-run
+                    native=not-run
+                  elif [[ '${{ matrix.platform }}' == linux ]]; then
+                    runtime='Vulkan/lavapipe'
+                    runtime_result='${{ steps.vulkan.outcome }}'
+                    native='${{ steps.native-contracts.outcome }}'
+                  else
+                    runtime=Metal
+                    runtime_result='${{ steps.metal.outcome }}'
+                    native='${{ steps.native-contracts.outcome }}'
+                  fi
+                  python ci/validation_summary.py lane --platform '${{ matrix.label }}' \
+                    --python '${{ matrix.python-version }}' --wheel '${{ steps.package.outcome }}' \
+                    --installed '${{ steps.installed.outcome }}' \
+                    --installed-contracts '${{ steps.contracts.outcome }}' --native-contracts "$native" \
+                    --runtime "$runtime" --runtime-result "$runtime_result" --output validation.json
+
+            - name: Upload validation result
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: validation-${{ matrix.target }}-py${{ matrix.python-version }}
+                  path: validation.json
+
             - name: Bundle wheel for transport
               shell: bash
               run: tar -czf "wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz" -C wheelhouse .
 
             - uses: actions/upload-artifact@v7
               with:
-                  name: dist-wheels-${{ matrix.target }}-${{ matrix.python-version }}
+                  name: wheel-${{ matrix.target }}-py${{ matrix.python-version }}
                   path: wheels-${{ matrix.platform }}-${{ matrix.python-version }}.tgz
 
     build-sdist:
@@ -433,5 +529,24 @@ jobs:
                   python -c "import scikit_build_core.build as b; print(b.build_sdist('dist'))"
             - uses: actions/upload-artifact@v7
               with:
-                  name: dist-sdist
+                  name: sdist
                   path: ./dist/*.tar.gz
+
+    validation-summary:
+        name: Workbench validation summary
+        if: always()
+        needs: [build-wheels, build-portable-wheels]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/download-artifact@v8
+              continue-on-error: true
+              with:
+                  pattern: validation-*
+                  path: validation-results
+            - name: Publish validation table
+              run: |
+                  python ci/validation_summary.py summary \
+                    --input validation-results --output validation-summary.md \
+                    --python-versions '${{ inputs.python-versions }}'
+                  cat validation-summary.md >> "$GITHUB_STEP_SUMMARY"
