@@ -344,7 +344,7 @@
 <h1>Render Toy contract<a class="headerlink" href="#render-toy-contract" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">miskeyed.render_toy;</span></code> provides the pass contract for authored Render Toy
 programs. <code class="docutils literal notranslate"><span class="pre">SceneSample</span></code> carries the scene color target. Post programs receive
-<code class="docutils literal notranslate"><span class="pre">sceneColor</span></code>, <code class="docutils literal notranslate"><span class="pre">sceneSampler</span></code>, and the <code class="docutils literal notranslate"><span class="pre">sampleScene(float2</span> <span class="pre">uv)</span></code> helper.</p>
+the host-bound combined <code class="docutils literal notranslate"><span class="pre">sceneColor</span></code> sampler and the <code class="docutils literal notranslate"><span class="pre">sampleScene(float2</span> <span class="pre">uv)</span></code> helper.</p>
 <p>A Render Toy session chooses compatible vertex and fragment entry points for each
 binding. The module does not own documents, focus, time, or QRhi resources.</p>
 <section id="implementation">
