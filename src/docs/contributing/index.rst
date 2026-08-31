@@ -94,9 +94,11 @@ retained for 60 days. Publication consumes that envelope through
 
 If TestPyPI, PyPI, or tag creation fails after the candidate was sealed, dispatch the
 **release** workflow from the Actions page. Supply the failed source run ID and expected
-version. The workflow accepts only a release run whose candidate-sealing job succeeded
-from ``main`` or ``release/*``, verifies that the source commit and version exist, then
-checks the manifest, all digests, tar safety, wheel identities, and wheel CRCs before it
+version and source SHA. GitHub's artifact action retrieves the named candidate directly
+from that run; no custom run-discovery layer sits in front of it. The candidate manifest
+must identify this repository and ``release.yml`` on ``main`` or ``release/*``. The
+Workbench assembler checks those identities, all digests, tar safety, wheel identities,
+and wheel CRCs before it
 promotes anything. The manifest must contain all 12 Windows, Linux, macOS arm64, and
 macOS x64 wheels for Python 3.11--3.13. Resume invokes no compiler, Qt SDK, Slang SDK,
 or native matrix job and retains the existing ``release.yml`` trusted-publisher identity.

@@ -33,7 +33,14 @@ def _safe_members(archive: tarfile.TarFile, source: Path) -> list[tarfile.TarInf
 
 
 def create_candidate(
-    source: Path, output: Path, version: str, source_sha: str, python_versions: list[str]
+    source: Path,
+    output: Path,
+    version: str,
+    source_sha: str,
+    source_ref: str,
+    repository: str,
+    workflow_ref: str,
+    python_versions: list[str],
 ) -> None:
     artifact_dirs = sorted(path for path in source.glob("wheel-*") if path.is_dir())
     targets = ("windows-x64", "linux-x64", "macos-arm64", "macos-x64")
@@ -107,6 +114,9 @@ def create_candidate(
         "schema": 1,
         "version": version,
         "source_sha": source_sha,
+        "source_ref": source_ref,
+        "repository": repository,
+        "workflow_ref": workflow_ref,
         "python_versions": python_versions,
         "platforms": list(targets),
         "wheels": transports,
@@ -118,7 +128,15 @@ def create_candidate(
     )
 
 
-def assemble(candidate: Path, output: Path, source_sha: str | None, version: str | None) -> None:
+def assemble(
+    candidate: Path,
+    output: Path,
+    source_sha: str | None,
+    version: str | None,
+    repository: str | None = None,
+    workflow_ref_prefix: str | None = None,
+    require_release_matrix: bool = False,
+) -> None:
     manifest = json.loads((candidate / "candidate-manifest.json").read_text())
     if source_sha and manifest["source_sha"] != source_sha:
         raise CandidateError(
@@ -126,6 +144,38 @@ def assemble(candidate: Path, output: Path, source_sha: str | None, version: str
         )
     if version and manifest["version"] != version:
         raise CandidateError(f"candidate version {manifest['version']} does not match {version}")
+    if repository and manifest.get("repository") != repository:
+        raise CandidateError(
+            f"candidate repository {manifest.get('repository')} does not match {repository}"
+        )
+    if workflow_ref_prefix and not manifest.get("workflow_ref", "").startswith(workflow_ref_prefix):
+        raise CandidateError(
+            f"candidate workflow {manifest.get('workflow_ref')} is not {workflow_ref_prefix}*"
+        )
+    if require_release_matrix:
+        expected_versions = ["3.11", "3.12", "3.13"]
+        expected_platforms = ["windows-x64", "linux-x64", "macos-arm64", "macos-x64"]
+        if (
+            manifest.get("python_versions") != expected_versions
+            or manifest.get("platforms") != expected_platforms
+        ):
+            raise CandidateError("candidate does not contain the supported release matrix")
+        source_ref = manifest.get("source_ref", "")
+        if source_ref != "refs/heads/main" and not source_ref.startswith("refs/heads/release/"):
+            raise CandidateError(f"candidate source ref is not trusted: {source_ref}")
+        expected_artifacts = {
+            f"wheel-{platform}-py{python_version}"
+            for platform in expected_platforms
+            for python_version in expected_versions
+        }
+        actual_artifacts = {entry.get("artifact") for entry in manifest.get("wheels", [])}
+        if actual_artifacts != expected_artifacts or len(manifest.get("wheels", [])) != 12:
+            raise CandidateError("candidate does not contain exactly the 12 release wheels")
+        expected_validations = {
+            artifact.replace("wheel-", "validation-", 1) for artifact in expected_artifacts
+        }
+        if set(manifest.get("validation", [])) != expected_validations:
+            raise CandidateError("candidate does not contain all release validation results")
     output.mkdir(parents=True, exist_ok=True)
     seen: set[str] = set()
     for entry in manifest["wheels"]:
@@ -170,12 +220,18 @@ def main() -> None:
     create.add_argument("--output", type=Path, required=True)
     create.add_argument("--version", required=True)
     create.add_argument("--source-sha", required=True)
+    create.add_argument("--source-ref", required=True)
+    create.add_argument("--repository", required=True)
+    create.add_argument("--workflow-ref", required=True)
     create.add_argument("--python-versions", required=True, help="JSON list")
     consume = commands.add_parser("assemble")
     consume.add_argument("--candidate", type=Path, required=True)
     consume.add_argument("--output", type=Path, required=True)
     consume.add_argument("--source-sha")
     consume.add_argument("--version")
+    consume.add_argument("--repository")
+    consume.add_argument("--workflow-ref-prefix")
+    consume.add_argument("--require-release-matrix", action="store_true")
     args = parser.parse_args()
     try:
         if args.command == "create":
@@ -184,10 +240,21 @@ def main() -> None:
                 args.output,
                 args.version,
                 args.source_sha,
+                args.source_ref,
+                args.repository,
+                args.workflow_ref,
                 json.loads(args.python_versions),
             )
         else:
-            assemble(args.candidate, args.output, args.source_sha, args.version)
+            assemble(
+                args.candidate,
+                args.output,
+                args.source_sha,
+                args.version,
+                args.repository,
+                args.workflow_ref_prefix,
+                args.require_release_matrix,
+            )
     except CandidateError as error:
         parser.error(str(error))
 

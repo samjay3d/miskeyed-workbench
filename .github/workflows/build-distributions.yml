@@ -582,6 +582,8 @@ jobs:
                   python3 ci/assemble_release.py create \
                     --input candidate-input --output release-candidate \
                     --version "$version" --source-sha "$GITHUB_SHA" \
+                    --source-ref "$GITHUB_REF" --repository "$GITHUB_REPOSITORY" \
+                    --workflow-ref "${{ github.workflow_ref }}" \
                     --python-versions '${{ inputs.python-versions }}'
             - uses: actions/upload-artifact@v7
               with:
