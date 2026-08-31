@@ -72,15 +72,21 @@ The environment is shared by development and release publication jobs. Only a tr
 pull requests retain their reviewable documentation artifact without publishing the
 repository's live site. The mutable ``/dev/`` gate verifies the build, screenshots,
 generated branch contents, Pages artifact, and explicit deployment. Immutable release
-publication additionally retains the stricter public-URL check before TestPyPI and PyPI.
+publication additionally retains the stricter public-URL check before the final tag and
+GitHub Release.
 
-The release gate runs in this order: detect the release; build distributions; install
-the Windows 3.11 release wheel; capture and verify images; build Sphinx; update and
-verify the ``docs`` history branch; upload and deploy the complete Pages site; retry
-the public URL while Pages propagates; publish TestPyPI; publish PyPI; then create the
-tag and GitHub Release with a link to
-the immutable ``/<version>/`` documentation. A documentation failure therefore blocks
-the package release.
+After candidate validation, documentation and package publication are independent
+branches. The package branch publishes TestPyPI and then PyPI without waiting for Pages.
+In parallel, the documentation branch installs the Windows 3.11 release wheel, captures
+and verifies images, builds Sphinx, updates the ``docs`` history branch, deploys the
+complete Pages site, and verifies the public URL. The final tag and GitHub Release join
+both branches and therefore require successful PyPI and documentation publication.
+
+Published ``/<version>/`` bytes are authoritative and immutable. If a release retry
+builds different documentation for a version that is already present on the ``docs``
+branch, publication preserves the existing version tree, redeploys it, and verifies its
+release marker. This permits an orchestration-only retry without rewriting historical
+documentation from newer teaching sources.
 
 Release work
 ------------

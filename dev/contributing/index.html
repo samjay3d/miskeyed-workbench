@@ -405,14 +405,19 @@ re-release path.</p>
 pull requests retain their reviewable documentation artifact without publishing the
 repository’s live site. The mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span></code> gate verifies the build, screenshots,
 generated branch contents, Pages artifact, and explicit deployment. Immutable release
-publication additionally retains the stricter public-URL check before TestPyPI and PyPI.</p>
-<p>The release gate runs in this order: detect the release; build distributions; install
-the Windows 3.11 release wheel; capture and verify images; build Sphinx; update and
-verify the <code class="docutils literal notranslate"><span class="pre">docs</span></code> history branch; upload and deploy the complete Pages site; retry
-the public URL while Pages propagates; publish TestPyPI; publish PyPI; then create the
-tag and GitHub Release with a link to
-the immutable <code class="docutils literal notranslate"><span class="pre">/&lt;version&gt;/</span></code> documentation. A documentation failure therefore blocks
-the package release.</p>
+publication additionally retains the stricter public-URL check before the final tag and
+GitHub Release.</p>
+<p>After candidate validation, documentation and package publication are independent
+branches. The package branch publishes TestPyPI and then PyPI without waiting for Pages.
+In parallel, the documentation branch installs the Windows 3.11 release wheel, captures
+and verifies images, builds Sphinx, updates the <code class="docutils literal notranslate"><span class="pre">docs</span></code> history branch, deploys the
+complete Pages site, and verifies the public URL. The final tag and GitHub Release join
+both branches and therefore require successful PyPI and documentation publication.</p>
+<p>Published <code class="docutils literal notranslate"><span class="pre">/&lt;version&gt;/</span></code> bytes are authoritative and immutable. If a release retry
+builds different documentation for a version that is already present on the <code class="docutils literal notranslate"><span class="pre">docs</span></code>
+branch, publication preserves the existing version tree, redeploys it, and verifies its
+release marker. This permits an orchestration-only retry without rewriting historical
+documentation from newer teaching sources.</p>
 </section>
 <section id="release-work">
 <h2>Release work<a class="headerlink" href="#release-work" title="Link to this heading">¶</a></h2>
