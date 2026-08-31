@@ -191,5 +191,9 @@ def test_confidence_ladder_labels_focused_ci_by_destination():
     assert "level='Release Stabilization'" in workflow
     assert "level='Development CI'" in workflow
     assert "name: ${{ needs.changes.outputs.confidence }}" in workflow
+    # Branch protection requires this exact aggregate context. Confidence belongs on the
+    # component jobs, not in the stable gate name.
+    assert "    ci:\n        name: CI" in workflow
+    assert "name: ${{ needs.changes.outputs.confidence }} · CI" not in workflow
     assert 'python-version: ["3.11"]' in workflow
     assert "branches-ignore: [docs]" in workflow

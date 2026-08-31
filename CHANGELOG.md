@@ -66,6 +66,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Restored the stable aggregate `CI` check name required by branch protection while
+  retaining confidence labels on the component jobs.
 - Matched Render Toy's post-process scene sampler contract to QRhi's combined image
   sampler binding on Vulkan, and stopped closed documents from retaining live pipelines
   or stale language-server state.

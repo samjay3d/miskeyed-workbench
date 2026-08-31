@@ -419,9 +419,10 @@ jobs:
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having
-    # to re-edit the rule whenever a Python version is added or removed.
+    # to re-edit the rule whenever a Python version or confidence label is added or removed.
+    # Keep this display name stable: branch protection matches the emitted check name.
     ci:
-        name: ${{ needs.changes.outputs.confidence }} · CI
+        name: CI
         if: always()
         needs: [changes, lint, anari-backend, test, publish-dev-docs]
         runs-on: ubuntu-latest
