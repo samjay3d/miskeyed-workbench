@@ -13,6 +13,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Release, including explicit documentation validation for resumed candidates. Release
   workflow fixes now trigger the repaired workflow instead of leaving an unpublished
   version idle after the fix reaches `main`.
+- Made repeated release-documentation publication preserve the already-published
+  immutable version tree when a newer orchestration commit produces different teaching
+  output, allowing the original 0.3.0 documentation to be redeployed and verified.
 - Split validated native release candidates from promotion, with globally unique wheel
   transport names, a checksummed source/version manifest, deterministic archive and wheel
   validation, 60-day retention, and a guarded resume-from-run workflow that can retry
