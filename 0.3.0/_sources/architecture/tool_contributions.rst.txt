@@ -1,0 +1,15 @@
+Tool contribution model
+=======================
+
+A tool session owns runtime state and bindings. ``WorkbenchToolContribution`` exposes
+primary views, local actions, and status. ``WorkbenchToolFactory`` composes shipped
+contributions. ``ToolViewSelector`` changes the visible layout only.
+
+This keeps Render Toy and ShaderToy alive simultaneously and leaves the workspace as
+the document/focus/time owner.
+
+Implementation
+--------------
+
+Relevant source: ``ui/WorkbenchToolFactory.*``, ``ui/ToolViewSelector.*``, and
+``modes/*/*Session.*``.
