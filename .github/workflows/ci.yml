@@ -372,10 +372,12 @@ jobs:
             group: documentation-publication
             cancel-in-progress: false
         environment:
-            name: documentation
-            url: https://samjay3d.github.io/miskeyed-workbench/dev/
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
         permissions:
             contents: write
+            pages: write
+            id-token: write
         steps:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
@@ -408,15 +410,22 @@ jobs:
                       git -C publish commit -m "docs: update development documentation from $GITHUB_REF_NAME"
                       git -C publish push origin docs
                   fi
-            - name: Summarize docs branch publication
+            - name: Upload the complete Pages site
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: publish
+            - name: Deploy the complete Pages site
+              id: deployment
+              uses: actions/deploy-pages@v4
+            - name: Summarize Pages publication
               run: |
                   set -euo pipefail
                   url=$(python3 -m ci.docs_metadata --field development_url)
                   remote=$(git ls-remote --heads origin docs | cut -f1)
                   test -n "$remote"
-                  echo "Docs build, screenshot verification, artifact transfer, generated-tree verification, and docs-branch push succeeded."
+                  echo "Docs build, screenshot verification, generated-tree history update, Pages artifact upload, and explicit Pages deployment succeeded."
                   echo "### [Development Documentation]($url)" >> "$GITHUB_STEP_SUMMARY"
-                  echo "Pages propagation is asynchronous and is not a mutable-preview correctness gate."
+                  echo "The public URL is served by this workflow's Pages deployment."
 
     # Single aggregate check to require in branch protection / rulesets. It depends on every
     # other job, so requiring just "CI" transitively covers the whole matrix without having

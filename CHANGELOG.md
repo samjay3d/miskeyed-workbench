@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Made release and development documentation publication upload and deploy the complete
+  generated site through the official GitHub Pages Actions, rather than relying on a
+  `GITHUB_TOKEN` push to the history branch to trigger a branch-source deployment.
+
 ## [0.3.0] — 2026-08-30
 
 ### Highlights

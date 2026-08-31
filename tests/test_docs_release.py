@@ -130,6 +130,16 @@ def test_release_workflow_gates_package_publication_on_live_docs():
     assert "needs: [detect, build-distributions, publish-documentation]" in workflow
     assert "python -m ci.build_docs --channel release" in workflow
     assert "Verify the public versioned documentation" in workflow
+    assert "actions/upload-pages-artifact@v4" in workflow
+    assert "actions/deploy-pages@v4" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "name: github-pages" in workflow
+    branch_push = workflow.index("git -C publish push origin docs")
+    artifact_upload = workflow.index("actions/upload-pages-artifact@v4")
+    pages_deploy = workflow.index("actions/deploy-pages@v4")
+    public_verification = workflow.index("Verify the public versioned documentation")
+    assert branch_push < artifact_upload < pages_deploy < public_verification
     assert "[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)" in workflow
     assert workflow.count("contents: write") == 2
 
@@ -143,7 +153,11 @@ def test_ci_keeps_builds_read_only_and_publishes_only_trusted_dev_inputs():
     assert workflow.count("contents: write") == 1
     assert "--site documentation-preview/site --publish-tree publish --channel dev" in workflow
     assert "[Development Documentation]($url)" in workflow
-    assert "Pages propagation is asynchronous" in workflow
+    assert "actions/upload-pages-artifact@v4" in workflow
+    assert "actions/deploy-pages@v4" in workflow
+    assert "pages: write" in workflow
+    assert "id-token: write" in workflow
+    assert "name: github-pages" in workflow
     assert 'grep -F "Workbench development documentation"' not in workflow
     assert 'grep -F "Workbench $version documentation"' not in workflow
 

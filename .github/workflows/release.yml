@@ -10,8 +10,8 @@ name: release
 # One-time maintainer setup:
 #   1. PyPI + TestPyPI -> add a GitHub trusted publisher (owner, repo, workflow
 #      `release.yml`, environments `pypi` / `testpypi`).
-#   2. Repo -> Settings -> Environments -> create `documentation`, `pypi`, and `testpypi`.
-#   3. Repo -> Settings -> Pages -> deploy the `docs` branch from `/ (root)`.
+#   2. Repo -> Settings -> Environments -> create `github-pages`, `pypi`, and `testpypi`.
+#   3. Repo -> Settings -> Pages -> set Source to `GitHub Actions`.
 #   4. Keep SLANG_VERSION in build-distributions.yml on the Slang release you build against.
 #
 # Windows wheels default to D3D11, Linux wheels to Vulkan, and macOS wheels to Metal.
@@ -25,7 +25,7 @@ on:
     workflow_dispatch:
 
 # Default to read-only. Publishing opts into OIDC per job; only the trusted documentation
-# and final tag jobs receive the minimal repository write permission they require.
+# and final tag jobs receive the minimal write permissions they require.
 permissions:
     contents: read
 
@@ -126,9 +126,12 @@ jobs:
             group: documentation-publication
             cancel-in-progress: false
         environment:
-            name: documentation
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
         permissions:
             contents: write
+            pages: write
+            id-token: write
         steps:
             - uses: actions/checkout@v7
             - uses: actions/download-artifact@v8
@@ -168,6 +171,15 @@ jobs:
                       git -C publish push origin docs
                   fi
                   git ls-remote --exit-code --heads origin docs
+            # The branch remains the immutable generated history. Pages is deployed
+            # explicitly because GITHUB_TOKEN pushes do not trigger branch-source builds.
+            - name: Upload the complete Pages site
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: publish
+            - name: Deploy the complete Pages site
+              id: deployment
+              uses: actions/deploy-pages@v4
             - name: Verify the public versioned documentation
               env:
                   VERSION: ${{ needs.detect.outputs.version }}
