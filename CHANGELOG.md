@@ -10,7 +10,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Decoupled TestPyPI and PyPI promotion from GitHub Pages deployment while retaining
   successful versioned documentation as a prerequisite for the final tag and GitHub
-  Release, including explicit documentation validation for resumed candidates.
+  Release, including explicit documentation validation for resumed candidates. Release
+  workflow fixes now trigger the repaired workflow instead of leaving an unpublished
+  version idle after the fix reaches `main`.
 - Split validated native release candidates from promotion, with globally unique wheel
   transport names, a checksummed source/version manifest, deterministic archive and wheel
   validation, 60-day retention, and a guarded resume-from-run workflow that can retry

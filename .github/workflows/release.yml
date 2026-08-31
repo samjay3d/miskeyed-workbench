@@ -34,6 +34,9 @@ on:
             - 'CMakeLists.txt'
             - 'pyproject.toml'
             - '.github/workflows/build-distributions.yml'
+            # Orchestration fixes must be able to start a fresh release attempt when a
+            # version is still unpublished; otherwise merging the fix cannot unblock it.
+            - '.github/workflows/release.yml'
     pull_request:
         branches: [main]
         paths:
@@ -47,6 +50,7 @@ on:
             - 'CMakeLists.txt'
             - 'pyproject.toml'
             - '.github/workflows/build-distributions.yml'
+            - '.github/workflows/release.yml'
     workflow_dispatch:
         inputs:
             source_run_id:
