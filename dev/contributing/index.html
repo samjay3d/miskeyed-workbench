@@ -379,8 +379,8 @@ mutable <code class="docutils literal notranslate"><span class="pre">/dev/</span
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">index</span><span class="o">.</span><span class="n">html</span>          <span class="n">stable</span> <span class="n">redirect</span> <span class="n">to</span> <span class="n">the</span> <span class="n">current</span> <span class="n">release</span>
 <span class="o">.</span><span class="n">nojekyll</span>
 <span class="n">dev</span><span class="o">/</span>                <span class="n">mutable</span> <span class="n">trusted</span> <span class="n">development</span> <span class="n">site</span>
-<span class="mf">0.3.0</span><span class="o">/</span>              <span class="n">immutable</span> <span class="mf">0.3.0</span> <span class="n">release</span> <span class="n">site</span>
-<span class="mf">0.4.0</span><span class="o">/</span>              <span class="n">future</span> <span class="n">immutable</span> <span class="n">release</span><span class="p">,</span> <span class="n">without</span> <span class="n">deleting</span> <span class="mf">0.3.0</span>
+<span class="n">X</span><span class="o">.</span><span class="n">Y</span><span class="o">.</span><span class="n">Z</span><span class="o">/</span>              <span class="n">immutable</span> <span class="n">release</span> <span class="n">site</span>
+<span class="nb">next</span><span class="o">-</span><span class="n">version</span><span class="o">/</span>       <span class="n">future</span> <span class="n">immutable</span> <span class="n">release</span><span class="p">,</span> <span class="n">without</span> <span class="n">deleting</span> <span class="n">X</span><span class="o">.</span><span class="n">Y</span><span class="o">.</span><span class="n">Z</span>
 <span class="n">previews</span><span class="o">/</span>           <span class="n">reserved</span> <span class="k">for</span> <span class="n">a</span> <span class="n">future</span> <span class="n">explicit</span> <span class="n">trusted</span><span class="o">-</span><span class="n">preview</span> <span class="n">policy</span>
 </pre></div>
 </div>
@@ -402,11 +402,11 @@ artifact, generated branch contents, and successful <code class="docutils litera
 GitHub Pages propagation is asynchronous and is reported, but a CDN delay does not
 invalidate an otherwise correct development publication. Immutable release publication
 retains the stricter public-URL check before TestPyPI and PyPI.</p>
-<p>The 0.3.0 gate runs in this order: detect the release; build distributions; install
+<p>The release gate runs in this order: detect the release; build distributions; install
 the Windows 3.11 release wheel; capture and verify images; build Sphinx; publish and
 verify the <code class="docutils literal notranslate"><span class="pre">docs</span></code> branch and retry the public URL while Pages propagates; publish
 TestPyPI; publish PyPI; then create the tag and GitHub Release with a link to
-<code class="docutils literal notranslate"><span class="pre">/0.3.0/</span></code>. A documentation failure therefore blocks
+the immutable <code class="docutils literal notranslate"><span class="pre">/&lt;version&gt;/</span></code> documentation. A documentation failure therefore blocks
 the package release.</p>
 </section>
 <section id="release-work">
