@@ -144,7 +144,8 @@ def test_release_workflow_gates_package_publication_on_live_docs():
     public_verification = workflow.index("Verify the public versioned documentation")
     assert branch_push < artifact_upload < pages_deploy < public_verification
     assert "[PyPI $v]($pypi_url) · [Documentation $v]($docs_url)" in workflow
-    assert workflow.count("contents: write") == 2
+    # Release docs and the two tag/release paths are the only write-enabled jobs.
+    assert workflow.count("contents: write") == 3
 
 
 def test_existing_version_cannot_publish_packages_from_a_main_workflow_change():
@@ -219,7 +220,9 @@ def test_release_merge_gate_names_platform_package_contract_and_runtime_scope():
     assert "wheel-windows-x64-py${{ matrix.python-version }}" in distributions
     assert "validation-${{ matrix.target }}-py${{ matrix.python-version }}" in distributions
     assert "name: sdist" in distributions
-    assert "pattern: wheel-*" in release
+    assert "pattern: wheel-*" in distributions
+    assert "name: release-candidate" in release
+    assert "merge-multiple: true" not in release
     assert "name: docs-release" in release
 
 
