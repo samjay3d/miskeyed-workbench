@@ -402,7 +402,7 @@ jobs:
                   path: publish
             - name: Deploy the complete Pages site
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5
             - name: Summarize Pages publication
               run: |
                   set -euo pipefail

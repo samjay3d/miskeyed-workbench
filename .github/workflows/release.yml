@@ -220,7 +220,7 @@ jobs:
                   path: publish
             - name: Deploy the complete Pages site
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5
             - name: Verify the public versioned documentation
               env:
                   VERSION: ${{ needs.detect.outputs.version }}
