@@ -215,7 +215,7 @@ jobs:
             # The branch remains the immutable generated history. Pages is deployed
             # explicitly because GITHUB_TOKEN pushes do not trigger branch-source builds.
             - name: Upload the complete Pages site
-              uses: actions/upload-pages-artifact@v4
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: publish
             - name: Deploy the complete Pages site

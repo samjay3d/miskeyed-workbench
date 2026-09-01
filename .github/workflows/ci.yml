@@ -397,7 +397,7 @@ jobs:
                       git -C publish push origin docs
                   fi
             - name: Upload the complete Pages site
-              uses: actions/upload-pages-artifact@v4
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: publish
             - name: Deploy the complete Pages site
