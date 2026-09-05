@@ -261,7 +261,7 @@ void WorkbenchWindow::rebuildToolSelector()
 
 void WorkbenchWindow::buildUi()
 {
-    setWindowTitle(QStringLiteral("Workbench"));
+    setWindowTitle(QStringLiteral("Workbench " MISKEYED_WORKBENCH_VERSION));
     resize(1600, 950);
     m_renderToySession = new RenderToySession(this);
     m_shaderToySession = new ShaderToySession(this);

@@ -141,7 +141,9 @@ qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
         shaders/render_toy/post_crt.slang
 )
 
-target_compile_definitions(miskeyed_workbench_slang_rhi PUBLIC MISKEYED_WORKBENCH_SLANG_RHI_STATIC)
+target_compile_definitions(miskeyed_workbench_slang_rhi
+    PUBLIC MISKEYED_WORKBENCH_SLANG_RHI_STATIC
+    PRIVATE MISKEYED_WORKBENCH_VERSION="${PROJECT_VERSION}")
 target_include_directories(miskeyed_workbench_slang_rhi
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/cpp/include>
