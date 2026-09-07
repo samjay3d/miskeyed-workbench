@@ -48,5 +48,11 @@ int main(int argc, char** argv)
     first->setSource(QStringLiteral("// edited"));
     assert(first->dirty());
     assert(!first->dependencyIdentity().isEmpty());
+    first->setReadOnly(true);
+    first->setSource(QStringLiteral("// generated products are immutable"));
+    assert(first->source() == QStringLiteral("// edited"));
+    assert(!first->save());
+    first->setReadOnly(false);
+    assert(!first->readOnly());
     return 0;
 }

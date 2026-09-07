@@ -128,6 +128,12 @@ void SlangRhiWidget::setEntryPoints(const QString& vertex, const QString& fragme
     update();
 }
 
+void SlangRhiWidget::setVertexCount(int count)
+{
+    m_vertexCount = qMax(1, count);
+    update();
+}
+
 void SlangRhiWidget::setScenePass(ShaderDocument* sceneDocument)
 {
     if (m_scenePass == sceneDocument)
@@ -165,6 +171,12 @@ void SlangRhiWidget::setSceneEntryPoints(const QString& vertex, const QString& f
     m_sceneFragmentEntry = fragment;
     d->retire(std::move(d->scene.pipeline));
     d->scene.pipelineDirty = true;
+    update();
+}
+
+void SlangRhiWidget::setSceneVertexCount(int count)
+{
+    m_sceneVertexCount = qMax(1, count);
     update();
 }
 
@@ -450,7 +462,7 @@ void SlangRhiWidget::render(QRhiCommandBuffer* cb)
         cb->setViewport(
             { 0, 0, float(d->offscreenSize.width()), float(d->offscreenSize.height()) });
         cb->setShaderResources(d->scene.srb.get());
-        cb->draw(3);
+        cb->draw(m_sceneVertexCount);
         cb->endPass();
         updates = nullptr;
     }
@@ -462,7 +474,7 @@ void SlangRhiWidget::render(QRhiCommandBuffer* cb)
         cb->setViewport({ 0, 0, float(renderTarget()->pixelSize().width()),
             float(renderTarget()->pixelSize().height()) });
         cb->setShaderResources(d->main.srb.get());
-        cb->draw(3);
+        cb->draw(m_vertexCount);
     }
     cb->endPass();
 

@@ -135,6 +135,7 @@ qt_add_resources(miskeyed_workbench_slang_rhi "render_toy_samples"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/render_toy"
     FILES
         shaders/render_toy/scene_default.slang
+        shaders/render_toy/scene_sdf.slang
         shaders/render_toy/scene_clouds.slang
         shaders/render_toy/post_default.slang
         shaders/render_toy/post_bloom.slang

@@ -6,6 +6,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Evaluated the USD/MaterialX authoring boundary with a reproducible UV-mapped fixture,
+  fail-loud optional generation and persistence probes, explicit edit/invalidation
+  ownership, a provisional pinned toolchain, and an evidence-gated implementation
+  sequence. The full USD/MaterialX authoring workflow remains future work.
+
+### Added
+
+- Replaced Render Toy's default SDF raymarch with a read-only, Slang-owned six-vertex
+  UV material card while preserving the editable Post shader and final viewport. The
+  former SDF studio remains a separate sample, and explicit per-pass draw counts provide
+  the first honest consumer contract for later native USD mesh data.
+- Pinned ``usd-wg/assets`` as a test-only submodule and documented third-party license,
+  packaging, and provenance boundaries.
+
 ### Fixed
 
 - Decoupled TestPyPI and PyPI promotion from GitHub Pages deployment while retaining

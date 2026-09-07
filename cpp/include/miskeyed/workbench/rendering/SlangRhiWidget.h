@@ -33,6 +33,8 @@ public:
     ShaderDocument* document() const { return m_document; }
     void setDocument(ShaderDocument* document);
     void setEntryPoints(const QString& vertex, const QString& fragment);
+    int vertexCount() const { return m_vertexCount; }
+    void setVertexCount(int count);
     float exposure() const { return m_exposure; }
     void setExposure(float value);
     QString backendName() const;
@@ -44,6 +46,8 @@ public:
     ShaderDocument* scenePass() const { return m_scenePass; }
     void setScenePass(ShaderDocument* sceneDocument);
     void setSceneEntryPoints(const QString& vertex, const QString& fragment);
+    int sceneVertexCount() const { return m_sceneVertexCount; }
+    void setSceneVertexCount(int count);
     miskeyed::workbench::core::TimeContext* timeContext() const { return m_timeContext; }
     void setTimeContext(miskeyed::workbench::core::TimeContext* context);
 
@@ -85,6 +89,8 @@ private:
     QString m_fragmentEntry;
     QString m_sceneVertexEntry;
     QString m_sceneFragmentEntry;
+    int m_vertexCount = 3;
+    int m_sceneVertexCount = 3;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     float m_exposure = 1.0f;
     QPointF m_lastDragPos;

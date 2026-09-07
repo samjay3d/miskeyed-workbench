@@ -42,7 +42,8 @@ It currently ships two contributions inside one document-centric shell:
 - **Render Toy** binds open documents to a Scene pass and a Post pass;
 - **Shader Toy** binds one document to a minimal fullscreen shader consumer.
 
-Both share the workspace, editor, reflection-driven Inspector, deterministic time
+Render Toy starts from a real six-vertex material card and keeps its earlier SDF scene
+as a separate sample. Both tools share the workspace, editor, reflection-driven Inspector, deterministic time
 model, and native rendering services. ANARI host work remains opt-in research and is
 not a shipped UI mode.
 
@@ -91,6 +92,7 @@ the base dependencies alone are not enough for a source build.
 - [0.3.0 release history](CHANGELOG.md)
 - [Building, testing, screenshots, and docs](src/docs/contributing/index.rst)
 - [Native source layout](src/docs/architecture/source_layout.rst)
+- [Third-party licenses and test assets](THIRD_PARTY.md)
 
 Canonical screenshots and Sphinx HTML are generated deployment artifacts rather
 than repository inputs. On a built Windows checkout, reproduce the complete site with:

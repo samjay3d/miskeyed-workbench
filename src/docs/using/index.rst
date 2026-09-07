@@ -12,5 +12,6 @@ why the behavior exists.
    timeline
    render_toy
    shader_toy
+   real_geometry
    generated_code
    how_to

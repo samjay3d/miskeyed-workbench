@@ -171,6 +171,11 @@ void WorkspaceEditor::setWorkspace(ShaderWorkspace* workspace)
             refreshTabs();
         });
         connect(document, &ShaderDocument::dirtyChanged, this, &WorkspaceEditor::refreshTabs);
+        connect(document, &ShaderDocument::readOnlyChanged, this, [this, document] {
+            if (document == m_workspace->focusedDocument())
+                m_sourceEditor->setReadOnly(document->readOnly());
+            refreshTabs();
+        });
         connect(document, &ShaderDocument::compiled, this, [this, document] {
             if (document == m_workspace->focusedDocument()) {
                 refreshGeneratedTargets();
@@ -256,6 +261,7 @@ void WorkspaceEditor::saveSession(ShaderDocument* document)
 void WorkspaceEditor::restoreSession(ShaderDocument* document)
 {
     QSignalBlocker sourceBlock(m_sourceEditor);
+    m_sourceEditor->setReadOnly(document && document->readOnly());
     if (!document) {
         m_sourceEditor->clear();
         m_generatedEditor->clear();
@@ -293,6 +299,7 @@ void WorkspaceEditor::refreshTabs()
         ShaderDocument* document = m_workspace->documentAt(i);
         m_tabs->setTabText(i,
             m_workspace->displayName(document)
+                + (document->readOnly() ? QStringLiteral(" [generated]") : QString())
                 + (document->dirty() ? QStringLiteral(" •") : QString()));
         m_tabs->setTabToolTip(i, document->fileUrl().toString());
         if (document == m_workspace->focusedDocument())

@@ -1,0 +1,7 @@
+#usda 1.0
+(
+    defaultPrim = "Fixture"
+    metersPerUnit = 1
+    upAxis = "Y"
+    subLayers = [@look.usda@, @materials/look.mtlx@, @geometry.usda@]
+)

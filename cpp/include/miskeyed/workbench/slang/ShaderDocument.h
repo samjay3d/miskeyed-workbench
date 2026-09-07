@@ -20,6 +20,7 @@ class MISKEYED_WORKBENCH_SLANG_RHI_EXPORT ShaderDocument final : public QObject 
     Q_PROPERTY(bool compiling READ compiling NOTIFY compilingChanged)
     Q_PROPERTY(QString diagnostics READ diagnostics NOTIFY diagnosticsChanged)
     Q_PROPERTY(bool dirty READ dirty NOTIFY dirtyChanged)
+    Q_PROPERTY(bool readOnly READ readOnly WRITE setReadOnly NOTIFY readOnlyChanged)
     Q_PROPERTY(QString dependencyIdentity READ dependencyIdentity NOTIFY compiled)
     Q_PROPERTY(ShaderParameterModel* parameters READ parameters CONSTANT)
     Q_PROPERTY(DependencyGraph* dependencyGraph READ dependencyGraph CONSTANT)
@@ -36,6 +37,8 @@ public:
     bool compiling() const { return m_compiling; }
     QString diagnostics() const { return m_diagnostics; }
     bool dirty() const { return m_dirty; }
+    bool readOnly() const { return m_readOnly; }
+    void setReadOnly(bool readOnly);
     bool compileSucceeded() const { return m_compileSucceeded; }
     QString dependencyIdentity() const { return m_graph.digestHex(m_pipelineNode); }
     QList<SourceDependency> importedDependencies() const { return m_importedDependencies; }
@@ -76,6 +79,7 @@ signals:
     void compileFailed(QString diagnostics);
     void shaderPackageChanged();
     void dirtyChanged();
+    void readOnlyChanged();
 
 private slots:
     void compileNow();
@@ -89,6 +93,7 @@ private:
     bool m_live = true;
     bool m_compiling = false;
     bool m_dirty = false;
+    bool m_readOnly = false;
     bool m_compileSucceeded = false;
     QString m_diagnostics;
     QTimer m_compileTimer;

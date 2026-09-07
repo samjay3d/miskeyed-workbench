@@ -85,7 +85,7 @@ private:
     void setupLanguageServer();
     QString documentUri(ShaderDocument* doc) const;
     void setFocusedDocument(ShaderDocument* document);
-    void loadSample(const QString& name, int target, const QByteArray& source);
+    void loadSample(const QString& name, int target, int vertexCount, const QByteArray& source);
     void updateDocumentTabs();
     void hookDocument(ShaderDocument* document);
     void reloadGeneratedTargets();
