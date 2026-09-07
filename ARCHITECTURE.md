@@ -68,7 +68,10 @@ that sample into host-managed Slang uniforms without changing shader identity. S
 Shader Toy and Render Toy are shipped. The optional ANARI host foundation and probe
 are research; there is no ANARI application mode yet. Future USD/Hydra/hdAnari work
 must preserve their scene-ownership boundary and remain independent of
-`ShaderDocument`. See [ANARI research](src/docs/research/anari.rst).
+`ShaderDocument`. The evaluated authoring boundaries and explicitly provisional
+roadmap are in
+[USD/MaterialX research](src/docs/research/usd_materialx.rst); later device consumption
+remains in [ANARI research](src/docs/research/anari.rst).
 
 Native placement and namespace rules are in the
 [source-layout chapter](src/docs/architecture/source_layout.rst).

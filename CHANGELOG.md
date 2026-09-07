@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Evaluated the USD/MaterialX authoring boundary with a reproducible UV-mapped fixture,
+  fail-loud optional generation and persistence probes, explicit edit/invalidation
+  ownership, a provisional pinned toolchain, and an evidence-gated implementation
+  sequence. No USD or MaterialX workflow is shipped by this change.
+
 ### Fixed
 
 - Decoupled TestPyPI and PyPI promotion from GitHub Pages deployment while retaining

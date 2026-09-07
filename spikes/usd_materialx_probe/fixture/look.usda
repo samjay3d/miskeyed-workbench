@@ -1,0 +1,16 @@
+#usda 1.0
+
+over "Fixture" { over "Mesh" { rel material:binding = </MaterialX/Materials/WorkbenchMaterial> } }
+
+# Stronger asset-local opinions belong here; shared graph edits belong in look.mtlx.
+over "MaterialX"
+{
+    over "Materials"
+    {
+        over "WorkbenchMaterial"
+        {
+            color3f inputs:base_color = (0.8, 0.8, 0.8)
+            float inputs:specular_roughness = 0.35
+        }
+    }
+}
