@@ -11,7 +11,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Evaluated the USD/MaterialX authoring boundary with a reproducible UV-mapped fixture,
   fail-loud optional generation and persistence probes, explicit edit/invalidation
   ownership, a provisional pinned toolchain, and an evidence-gated implementation
-  sequence. No USD or MaterialX workflow is shipped by this change.
+  sequence. The full USD/MaterialX authoring workflow remains future work.
+
+### Added
+
+- Added a Material Preview tool and explicit USD-open action for the first releasable
+  authoring-loop edge. It associates an asset with a derived sibling
+  ``<asset>.preview.slang`` document and previews that shader without parsing USD or
+  treating the preview as authored scene/material state.
 
 ### Fixed
 

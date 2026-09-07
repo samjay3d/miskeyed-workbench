@@ -34,7 +34,24 @@ def check():
     image_file = material.find("./image/input[@name='file']")
     assert image_file is not None
     assert (material_path.parent / image_file.attrib["value"]).resolve() == texture.resolve()
-    assert texture.read_text(encoding="ascii").split()[:4] == ["P3", "2", "2", "255"]
+    assert texture.read_text(encoding="ascii").split() == [
+        "P3",
+        "2",
+        "2",
+        "255",
+        "255",
+        "64",
+        "32",
+        "32",
+        "255",
+        "64",
+        "32",
+        "64",
+        "255",
+        "255",
+        "255",
+        "255",
+    ]
     assert "@materials/look.mtlx@" in root and "@look.usda@" in root
     assert "normal3f[] normals" in geometry and "primvars:st" in geometry
     assert "</MaterialX/Materials/WorkbenchMaterial>" in look
@@ -124,7 +141,7 @@ def generate(output):
     output.mkdir(parents=True, exist_ok=True)
     stages = {}
     for name in ("vertex", "pixel"):
-        source = shader.getStage(name).getSourceCode()
+        source = shader.getStage(name).getSourceCode().rstrip() + "\n"
         path = output / f"WorkbenchMaterial.{name}.slang"
         path.write_text(source, encoding="utf-8")
         stages[name] = {"bytes": len(source.encode()), "path": str(path)}

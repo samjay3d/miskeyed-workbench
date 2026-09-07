@@ -37,12 +37,15 @@ the detailed [installation and platform support](src/docs/reference/portability.
 
 ## What Workbench is
 
-It currently ships two contributions inside one document-centric shell:
+It currently ships three contributions inside one document-centric shell:
 
 - **Render Toy** binds open documents to a Scene pass and a Post pass;
 - **Shader Toy** binds one document to a minimal fullscreen shader consumer.
+- **Material Preview** opens a USD asset together with an explicitly derived
+  ``<asset>.preview.slang`` sidecar and binds that shader to a controlled preview. This
+  starting edge does not yet traverse or edit the USD stage.
 
-Both share the workspace, editor, reflection-driven Inspector, deterministic time
+All three share the workspace, editor, reflection-driven Inspector, deterministic time
 model, and native rendering services. ANARI host work remains opt-in research and is
 not a shipped UI mode.
 

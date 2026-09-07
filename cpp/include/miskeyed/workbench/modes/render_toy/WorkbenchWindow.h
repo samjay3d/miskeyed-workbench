@@ -53,6 +53,8 @@ public:
     ShaderDocument* document() const { return m_document; }
     ShaderDocument* sceneDocument() const { return m_sceneDocument; }
     ShaderDocument* shaderToyDocument() const;
+    ShaderDocument* materialPreviewDocument() const;
+    QString materialPreviewAsset() const { return m_materialPreviewAsset; }
     SlangRhiWidget* viewport() const { return m_viewport; }
     SlangRhiWidget* sceneViewport() const { return m_sceneViewport; }
     SlangRhiWidget* shaderToyViewport() const { return m_shaderToyViewport; }
@@ -63,6 +65,7 @@ public:
     QString activeTool() const { return m_activeTool; }
 
     Q_INVOKABLE void openShader(const QString& path);
+    Q_INVOKABLE bool openUsdPreview(const QString& path);
     Q_INVOKABLE void setActiveTool(const QString& toolId);
     // Tool contributions provide only their mode-specific surface. The stack reparents a
     // registered surface; unregisterTool detaches it without deleting it so its provider
@@ -111,6 +114,7 @@ private:
     SlangRhiWidget* m_viewport = nullptr; // post-process view
     SlangRhiWidget* m_sceneViewport = nullptr; // scene view
     SlangRhiWidget* m_shaderToyViewport = nullptr; // independent fullscreen consumer
+    SlangRhiWidget* m_materialPreviewViewport = nullptr; // derived USD sidecar consumer
     CodeEditor* m_editor = nullptr;
     CodeEditor* m_generatedView = nullptr; // read-only compiled-output viewer
     WorkspaceEditor* m_workspaceEditor = nullptr;
@@ -135,6 +139,7 @@ private:
     QList<ToolContribution> m_toolContributions;
     RenderToySession* m_renderToySession = nullptr;
     ShaderToySession* m_shaderToySession = nullptr;
+    ShaderToySession* m_materialPreviewSession = nullptr;
     miskeyed::workbench::core::TimeContext* m_timeContext = nullptr;
     miskeyed::workbench::core::TimeTransport* m_timeTransport = nullptr;
     bool m_syncing = false; // guards camera mirroring re-entrancy
@@ -150,6 +155,7 @@ private:
     int m_diagTabIndex = -1;
     QString m_openDirectory;
     QString m_activeTool;
+    QString m_materialPreviewAsset;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;
     int m_editorErrors = 0;

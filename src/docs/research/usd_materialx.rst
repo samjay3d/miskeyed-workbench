@@ -4,8 +4,9 @@ USD and MaterialX authoring evaluation
 Status and decision
 -------------------
 
-This record evaluates the next authoring milestone; it does **not** describe a
-shipped feature. The source-review baseline is ``main`` at
+This record evaluates the next authoring milestone. Only the bounded derived-sidecar
+Material Preview entry point described below is shipped; native USD traversal and material
+authoring remain future work. The source-review baseline is ``main`` at
 ``f9f0e9b9f24f166100e18233ea28db7e92817459`` (7 September 2026). The checked-out
 tree matched that revision when the evaluation began.
 
@@ -46,9 +47,9 @@ XML parsing or a Python import as integration proof.
 
 Run from the repository root::
 
-   python3 spikes/usd_materialx_probe/probe.py check
-   python3 spikes/usd_materialx_probe/probe.py usd-roundtrip
-   python3 spikes/usd_materialx_probe/probe.py generate
+   .\.venv\Scripts\python.exe spikes/usd_materialx_probe/probe.py check
+   .\.venv\Scripts\python.exe spikes/usd_materialx_probe/probe.py usd-roundtrip
+   .\.venv\Scripts\python.exe spikes/usd_materialx_probe/probe.py generate
 
 ``check`` is dependency-free. ``usd-roundtrip`` requires OpenUSD Python bindings and
 uses a fresh child process for reopen validation. ``generate`` requires the upstream
@@ -88,7 +89,7 @@ Evidence ledger
    * - Generation / reflection
      - Generation passed; compile blocked
      - The PyPI ``MaterialX==1.39.5`` wheel validated the graph and generated preserved
-       ``vertexMain`` and ``fragmentMain`` sources (7,356 and 89,451 bytes). Inputs include
+       ``vertexMain`` and ``fragmentMain`` sources (7,355 and 89,392 normalized bytes). Inputs include
        position, normal, tangent and UV; resources include vertex/pixel constant buffers,
        environment/light host values and combined texture/samplers. No ``slangc`` or
        Workbench native build is present, so compilation/reflection was not run.
@@ -270,7 +271,8 @@ Each task stops rather than generalizing when its observable fixture contract pa
 Scene-preview strategy
 ----------------------
 
-PR 3 uses a controlled QRhi mesh to establish authoring and generated-Slang behavior.
+The starting Material Preview uses a controlled fullscreen adapter. PR 3 replaces it
+with a controlled QRhi mesh to establish authoring and generated-Slang behavior.
 PR 4 uses USD imaging/Hydra for a general selected surface. Render Toy remains a shader
 test stage, not a USD renderer. PR 5 may add hdAnari as another Hydra consumer, but the
 authoring loop remains useful without it. A baked procedural texture is reported as a

@@ -21,6 +21,7 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -153,6 +154,11 @@ ShaderDocument* WorkbenchWindow::shaderToyDocument() const
     return m_shaderToySession ? m_shaderToySession->shaderDocument() : nullptr;
 }
 
+ShaderDocument* WorkbenchWindow::materialPreviewDocument() const
+{
+    return m_materialPreviewSession ? m_materialPreviewSession->shaderDocument() : nullptr;
+}
+
 void WorkbenchWindow::setActiveTool(const QString& toolId)
 {
     auto it = std::find_if(m_toolContributions.begin(), m_toolContributions.end(),
@@ -265,6 +271,7 @@ void WorkbenchWindow::buildUi()
     resize(1600, 950);
     m_renderToySession = new RenderToySession(this);
     m_shaderToySession = new ShaderToySession(this);
+    m_materialPreviewSession = new ShaderToySession(this);
     m_workspace = new ShaderWorkspace(this);
     m_timeContext = m_workspace->timeContext();
     m_timeTransport = m_workspace->timeTransport();
@@ -300,6 +307,9 @@ void WorkbenchWindow::buildUi()
     m_shaderToyViewport->setObjectName(QStringLiteral("ShaderToyViewport"));
     m_shaderToyViewport->setTimeContext(m_timeContext);
     m_shaderToyViewport->setDocument(shaderToyDocument);
+    m_materialPreviewViewport = new SlangRhiWidget(backend, this);
+    m_materialPreviewViewport->setObjectName(QStringLiteral("MaterialPreviewViewport"));
+    m_materialPreviewViewport->setTimeContext(m_timeContext);
     m_workspaceEditor = new WorkspaceEditor(this);
     m_workspaceEditor->setObjectName(QStringLiteral("WorkspaceEditor"));
     m_workspaceEditor->setWorkspace(m_workspace);
@@ -335,6 +345,8 @@ void WorkbenchWindow::buildUi()
         createRenderToyContribution(
             this, m_workspace, m_renderToySession, m_sceneViewport, m_viewport),
         createShaderToyContribution(this, m_workspace, m_shaderToySession, m_shaderToyViewport),
+        createMaterialPreviewContribution(
+            this, m_workspace, m_materialPreviewSession, m_materialPreviewViewport),
     };
     for (WorkbenchToolContribution* contribution : contributions)
         registerToolContribution(contribution);
@@ -353,6 +365,9 @@ void WorkbenchWindow::buildUi()
     m_shaderToyViewport->setToolTip(QStringLiteral(
         "Fullscreen Shader Toy provider. It consumes a Workspace document directly, with no "
         "scene or post pass, and shares the Workbench time context."));
+    m_materialPreviewViewport->setToolTip(QStringLiteral(
+        "Controlled material preview. Open a USD asset with a sibling <name>.preview.slang "
+        "derived adapter; the shader is preview state and never replaces the USD asset."));
 
     auto* inspector = new QWidget(this);
     inspector->setObjectName(QStringLiteral("InspectorPanel"));
@@ -471,6 +486,7 @@ void WorkbenchWindow::buildUi()
     auto* openScene = openMenu->addAction(QStringLiteral("Open in Render Toy · Scene…"));
     auto* openPost = openMenu->addAction(QStringLiteral("Open in Render Toy · Post…"));
     auto* openShaderToy = openMenu->addAction(QStringLiteral("Open in Shader Toy…"));
+    auto* openUsdPreview = openMenu->addAction(QStringLiteral("Open USD material preview…"));
     openDocument->setShortcut(QKeySequence::Open);
     openButton->setDefaultAction(openDocument);
     openButton->setMenu(openMenu);
@@ -514,6 +530,15 @@ void WorkbenchWindow::buildUi()
         [this] { chooseShader(OpenDestination::RenderToyPost); });
     connect(openShaderToy, &QAction::triggered, this,
         [this] { chooseShader(OpenDestination::ShaderToy); });
+    connect(openUsdPreview, &QAction::triggered, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this,
+            QStringLiteral("Open USD with generated preview sidecar"), m_openDirectory,
+            QStringLiteral("OpenUSD (*.usd *.usda *.usdc)"));
+        if (!path.isEmpty()) {
+            m_openDirectory = QFileInfo(path).absolutePath();
+            openUsdPreview(path);
+        }
+    });
     connect(save, &QAction::triggered, this, [this] {
         if (m_workspace->focusedDocument()) {
             m_workspace->focusedDocument()->setSource(m_editor->toPlainText());
@@ -605,12 +630,18 @@ void WorkbenchWindow::connectUi()
                 setFocusedDocument(m_workspace->focusedDocument());
             updateDocumentTabs();
         });
+    connect(m_materialPreviewSession, &ShaderToySession::bindingChanged, this,
+        [this](ShaderDocument* document) {
+            m_materialPreviewViewport->setDocument(document);
+            updateDocumentTabs();
+        });
     connect(m_workspace, &ShaderWorkspace::documentAboutToClose, this,
         [this](ShaderDocument* document) {
             if (m_lsp)
                 m_lsp->closeDocument(documentUri(document));
             m_renderToySession->removeDocument(document);
             m_shaderToySession->removeDocument(document);
+            m_materialPreviewSession->removeDocument(document);
         });
     connect(m_workspace, &ShaderWorkspace::documentClosed, this, [this] { updateDocumentTabs(); });
     connect(m_workspace, &ShaderWorkspace::documentOrderChanged, this,
@@ -1155,6 +1186,39 @@ void WorkbenchWindow::mirrorParameter(
 void WorkbenchWindow::openShader(const QString& path)
 {
     openShader(path, OpenDestination::Document);
+}
+
+bool WorkbenchWindow::openUsdPreview(const QString& path)
+{
+    const QFileInfo usd(path);
+    if (!usd.isFile()) {
+        statusBar()->showMessage(QStringLiteral("Could not open USD asset %1").arg(path), 3000);
+        return false;
+    }
+    // This first consumer edge is intentionally explicit: OpenUSD integration will own
+    // stage traversal later. Today an upstream adapter writes a derived sibling product;
+    // Workbench never parses USD or treats this shader as authored scene meaning.
+    const QString sidecar
+        = usd.dir().filePath(usd.completeBaseName() + QStringLiteral(".preview.slang"));
+    ShaderDocument* document = m_workspace->openFile(sidecar);
+    if (!document || !document->compileSucceeded()
+        || !m_materialPreviewSession->bindShader(document)) {
+        statusBar()->showMessage(
+            QStringLiteral(
+                "No usable derived preview at %1. Generate the .preview.slang sidecar first.")
+                .arg(sidecar),
+            6000);
+        return false;
+    }
+    setActiveTool(QStringLiteral("material-preview"));
+    m_materialPreviewAsset = usd.absoluteFilePath();
+    setToolStatus(QStringLiteral("material-preview"),
+        QStringLiteral("USD: %1 · Derived preview: %2")
+            .arg(usd.fileName(), QFileInfo(sidecar).fileName()));
+    statusBar()->showMessage(QStringLiteral("Previewing %1 via derived %2")
+                                 .arg(usd.fileName(), QFileInfo(sidecar).fileName()),
+        5000);
+    return true;
 }
 
 void WorkbenchWindow::chooseShader(OpenDestination destination)
