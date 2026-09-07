@@ -53,7 +53,6 @@ public:
     ShaderDocument* document() const { return m_document; }
     ShaderDocument* sceneDocument() const { return m_sceneDocument; }
     ShaderDocument* shaderToyDocument() const;
-    QString usdAsset() const { return m_usdAsset; }
     SlangRhiWidget* viewport() const { return m_viewport; }
     SlangRhiWidget* sceneViewport() const { return m_sceneViewport; }
     SlangRhiWidget* shaderToyViewport() const { return m_shaderToyViewport; }
@@ -64,7 +63,6 @@ public:
     QString activeTool() const { return m_activeTool; }
 
     Q_INVOKABLE void openShader(const QString& path);
-    Q_INVOKABLE bool openUsdAsset(const QString& path);
     Q_INVOKABLE void setActiveTool(const QString& toolId);
     // Tool contributions provide only their mode-specific surface. The stack reparents a
     // registered surface; unregisterTool detaches it without deleting it so its provider
@@ -87,7 +85,7 @@ private:
     void setupLanguageServer();
     QString documentUri(ShaderDocument* doc) const;
     void setFocusedDocument(ShaderDocument* document);
-    void loadSample(const QString& name, int target, const QByteArray& source);
+    void loadSample(const QString& name, int target, int vertexCount, const QByteArray& source);
     void updateDocumentTabs();
     void hookDocument(ShaderDocument* document);
     void reloadGeneratedTargets();
@@ -152,7 +150,6 @@ private:
     int m_diagTabIndex = -1;
     QString m_openDirectory;
     QString m_activeTool;
-    QString m_usdAsset;
     CompileState m_compileState = CompileState::Idle;
     bool m_lastCompileOk = true;
     int m_editorErrors = 0;

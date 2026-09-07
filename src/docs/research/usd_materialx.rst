@@ -4,9 +4,9 @@ USD and MaterialX authoring evaluation
 Status and decision
 -------------------
 
-This record evaluates the next authoring milestone. Only the bounded derived-scene
-Render Toy entry point described below is shipped; native USD traversal and material
-authoring remain future work. The source-review baseline is ``main`` at
+This record evaluates the next authoring milestone. The real-geometry Render Toy base sample described below is shipped; native USD
+traversal and material authoring remain future work. No shader-sidecar USD loader is a
+product contract. The source-review baseline is ``main`` at
 ``f9f0e9b9f24f166100e18233ea28db7e92817459`` (7 September 2026). The checked-out
 tree matched that revision when the evaluation began.
 
@@ -271,8 +271,9 @@ Each task stops rather than generalizing when its observable fixture contract pa
 Scene-preview strategy
 ----------------------
 
-The starting edge binds a controlled, read-only derived scene shader into Render Toy
-and preserves its editable Post pass. PR 3 replaces that adapter with a controlled QRhi mesh to establish authoring and generated-Slang behavior.
+The starting edge is a controlled, read-only six-vertex material card in Render Toy
+and preserves its editable Post pass. PR 3 replaces its fixed Slang geometry with a
+controlled native mesh product to establish authoring and generated-Slang behavior.
 PR 4 uses USD imaging/Hydra for a general selected surface. Render Toy remains a shader
 test stage, not a USD renderer. PR 5 may add hdAnari as another Hydra consumer, but the
 authoring loop remains useful without it. A baked procedural texture is reported as a

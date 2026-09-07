@@ -27,5 +27,10 @@ int main(int argc, char** argv)
     assert(post.backend() == hostPolicy);
     assert(shaderToy.backend() == hostPolicy);
     assert(scene.api() == post.api() && post.api() == shaderToy.api());
+    assert(scene.vertexCount() == 3);
+    scene.setVertexCount(6);
+    post.setSceneVertexCount(6);
+    assert(scene.vertexCount() == 6);
+    assert(post.sceneVertexCount() == 6);
     return 0;
 }

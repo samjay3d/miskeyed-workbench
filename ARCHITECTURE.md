@@ -65,8 +65,9 @@ that sample into host-managed Slang uniforms without changing shader identity. S
 
 ## Scope and status
 
-Shader Toy and Render Toy are shipped. The optional USD-derived Render Toy scene
-adapter does not yet own or traverse a USD stage. The ANARI host foundation and probe
+Shader Toy and Render Toy are shipped. Render Toy now has an explicit host-selected draw
+count for its Slang-owned real-geometry base sample; the SDF path remains a separate
+sample. No USD stage is opened or traversed yet. The ANARI host foundation and probe
 are research; there is no ANARI application mode yet. Future USD/Hydra/hdAnari work
 must preserve their scene-ownership boundary and remain independent of
 `ShaderDocument`. The evaluated authoring boundaries and explicitly provisional

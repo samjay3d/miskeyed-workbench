@@ -15,9 +15,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added an explicit USD-open starting edge that binds a read-only derived scene shader
-  into Render Toy, preserving the editable Post shader and final viewport. Explicit open
-  breaks the whole derived cache for now; native USD traversal remains follow-up work.
+- Replaced Render Toy's default SDF raymarch with a read-only, Slang-owned six-vertex
+  UV material card while preserving the editable Post shader and final viewport. The
+  former SDF studio remains a separate sample, and explicit per-pass draw counts provide
+  the first honest consumer contract for later native USD mesh data.
 - Pinned ``usd-wg/assets`` as a test-only submodule and documented third-party license,
   packaging, and provenance boundaries.
 

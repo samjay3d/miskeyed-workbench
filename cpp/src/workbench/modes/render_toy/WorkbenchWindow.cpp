@@ -21,7 +21,6 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCoreApplication>
-#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -105,20 +104,23 @@ namespace {
     struct SampleShader {
         const char* title;
         int target;
+        int vertexCount;
         const char* resource;
     };
 
     const std::array kSampleShaders = {
         SampleShader {
-            "Scene — Default studio", 0, ":/miskeyed/workbench/render_toy/scene_default.slang" },
+            "Scene — Material card", 0, 6, ":/miskeyed/workbench/render_toy/scene_default.slang" },
         SampleShader {
-            "Scene — Raymarched clouds", 0, ":/miskeyed/workbench/render_toy/scene_clouds.slang" },
+            "Scene — SDF studio", 0, 3, ":/miskeyed/workbench/render_toy/scene_sdf.slang" },
+        SampleShader { "Scene — Raymarched clouds", 0, 3,
+            ":/miskeyed/workbench/render_toy/scene_clouds.slang" },
         SampleShader {
-            "Post — Default grade", 1, ":/miskeyed/workbench/render_toy/post_default.slang" },
-        SampleShader { "Post — Bloom + chromatic aberration", 1,
+            "Post — Default grade", 1, 3, ":/miskeyed/workbench/render_toy/post_default.slang" },
+        SampleShader { "Post — Bloom + chromatic aberration", 1, 3,
             ":/miskeyed/workbench/render_toy/post_bloom.slang" },
         SampleShader {
-            "Post — CRT / scanlines", 1, ":/miskeyed/workbench/render_toy/post_crt.slang" },
+            "Post — CRT / scanlines", 1, 3, ":/miskeyed/workbench/render_toy/post_crt.slang" },
     };
 
 } // namespace
@@ -278,6 +280,7 @@ void WorkbenchWindow::buildUi()
             QStringLiteral("post_default.slang"), QString::fromUtf8(postShaderSource()));
     m_renderToySession->bindScene(m_sceneDocument);
     m_renderToySession->bindPost(m_document);
+    m_sceneDocument->setReadOnly(true);
     auto* shaderToyDocument = m_workspace->openSource(
         QUrl(QStringLiteral("workbench:/samples/shader_toy_default.slang")),
         QStringLiteral("shader_toy_default.slang"), QString::fromUtf8(shaderToySource()));
@@ -290,6 +293,7 @@ void WorkbenchWindow::buildUi()
     m_sceneViewport->setObjectName(QStringLiteral("SceneViewport"));
     m_sceneViewport->setTimeContext(m_timeContext);
     m_sceneViewport->setDocument(m_sceneDocument);
+    m_sceneViewport->setVertexCount(6);
     m_viewport = new SlangRhiWidget(backend, this);
     m_viewport->setObjectName(QStringLiteral("PostViewport"));
     m_viewport->setTimeContext(m_timeContext);
@@ -297,6 +301,7 @@ void WorkbenchWindow::buildUi()
     // The post viewport runs a real two-pass pipeline: it renders the scene document into
     // an offscreen texture (G-buffer), then its own document grades that texture on top.
     m_viewport->setScenePass(m_sceneDocument);
+    m_viewport->setSceneVertexCount(6);
     m_shaderToyViewport = new SlangRhiWidget(backend, this);
     m_shaderToyViewport->setObjectName(QStringLiteral("ShaderToyViewport"));
     m_shaderToyViewport->setTimeContext(m_timeContext);
@@ -472,7 +477,6 @@ void WorkbenchWindow::buildUi()
     auto* openScene = openMenu->addAction(QStringLiteral("Open in Render Toy · Scene…"));
     auto* openPost = openMenu->addAction(QStringLiteral("Open in Render Toy · Post…"));
     auto* openShaderToy = openMenu->addAction(QStringLiteral("Open in Shader Toy…"));
-    auto* openUsdAsset = openMenu->addAction(QStringLiteral("Open USD asset in Render Toy…"));
     openDocument->setShortcut(QKeySequence::Open);
     openButton->setDefaultAction(openDocument);
     openButton->setMenu(openMenu);
@@ -499,10 +503,11 @@ void WorkbenchWindow::buildUi()
     for (const SampleShader& sample : kSampleShaders) {
         QAction* action = samplesMenu->addAction(QString::fromUtf8(sample.title));
         const int target = sample.target;
+        const int vertexCount = sample.vertexCount;
         const auto* resource = sample.resource;
         const QString name = QFileInfo(QString::fromUtf8(resource)).fileName();
-        connect(action, &QAction::triggered, this, [this, name, target, resource] {
-            loadSample(name, target, renderToySource(resource));
+        connect(action, &QAction::triggered, this, [this, name, target, vertexCount, resource] {
+            loadSample(name, target, vertexCount, renderToySource(resource));
         });
     }
     samplesBtn->setMenu(samplesMenu);
@@ -516,15 +521,6 @@ void WorkbenchWindow::buildUi()
         [this] { chooseShader(OpenDestination::RenderToyPost); });
     connect(openShaderToy, &QAction::triggered, this,
         [this] { chooseShader(OpenDestination::ShaderToy); });
-    connect(openUsdAsset, &QAction::triggered, this, [this] {
-        const QString path = QFileDialog::getOpenFileName(this,
-            QStringLiteral("Open USD with generated preview sidecar"), m_openDirectory,
-            QStringLiteral("OpenUSD (*.usd *.usda *.usdc)"));
-        if (!path.isEmpty()) {
-            m_openDirectory = QFileInfo(path).absolutePath();
-            this->openUsdAsset(path);
-        }
-    });
     connect(save, &QAction::triggered, this, [this] {
         if (m_workspace->focusedDocument()) {
             m_workspace->focusedDocument()->setSource(m_editor->toPlainText());
@@ -808,14 +804,18 @@ void WorkbenchWindow::updateDocumentTabs()
     }
 }
 
-void WorkbenchWindow::loadSample(const QString& name, int target, const QByteArray& source)
+void WorkbenchWindow::loadSample(
+    const QString& name, int target, int vertexCount, const QByteArray& source)
 {
     ShaderDocument* doc = m_workspace->openSource(
         QUrl(QStringLiteral("workbench:/samples/") + name), name, QString::fromUtf8(source));
-    if (target == 0)
+    if (target == 0) {
+        m_sceneViewport->setVertexCount(vertexCount);
+        m_viewport->setSceneVertexCount(vertexCount);
         m_renderToySession->bindScene(doc);
-    else
+    } else {
         m_renderToySession->bindPost(doc);
+    }
     doc->compile();
     statusBar()->showMessage(QStringLiteral("Opened %1").arg(name), 1600);
 }
@@ -1168,46 +1168,6 @@ void WorkbenchWindow::openShader(const QString& path)
     openShader(path, OpenDestination::Document);
 }
 
-bool WorkbenchWindow::openUsdAsset(const QString& path)
-{
-    const QFileInfo usd(path);
-    if (!usd.isFile()) {
-        statusBar()->showMessage(QStringLiteral("Could not open USD asset %1").arg(path), 3000);
-        return false;
-    }
-    // This first consumer edge is intentionally explicit: OpenUSD integration will own
-    // stage traversal later. Today an upstream adapter writes a derived sibling product;
-    // Workbench never parses USD or treats this shader as authored scene meaning.
-    const QString sidecar
-        = usd.dir().filePath(usd.completeBaseName() + QStringLiteral(".preview.slang"));
-    ShaderDocument* document = m_workspace->openFile(sidecar);
-    if (document) {
-        // Deliberately break the whole derived-product cache on every explicit USD open.
-        // Fine-grained USD/MaterialX notices belong to the native stage integration.
-        document->setReadOnly(false);
-        document->load();
-        document->compile();
-        document->setReadOnly(true);
-    }
-    if (!document || !document->compileSucceeded() || !m_renderToySession->bindScene(document)) {
-        statusBar()->showMessage(
-            QStringLiteral(
-                "No usable derived preview at %1. Generate the .preview.slang sidecar first.")
-                .arg(sidecar),
-            6000);
-        return false;
-    }
-    setActiveTool(QStringLiteral("render-toy"));
-    m_usdAsset = usd.absoluteFilePath();
-    setToolStatus(QStringLiteral("render-toy"),
-        QStringLiteral("USD: %1 · Generated scene: %2 · Post remains editable")
-            .arg(usd.fileName(), QFileInfo(sidecar).fileName()));
-    statusBar()->showMessage(QStringLiteral("Previewing %1 via derived %2")
-                                 .arg(usd.fileName(), QFileInfo(sidecar).fileName()),
-        5000);
-    return true;
-}
-
 void WorkbenchWindow::chooseShader(OpenDestination destination)
 {
     QString destinationName;
@@ -1268,6 +1228,8 @@ bool WorkbenchWindow::openShader(const QString& path, OpenDestination destinatio
     case OpenDestination::Document:
         break;
     case OpenDestination::RenderToyScene:
+        m_sceneViewport->setVertexCount(3);
+        m_viewport->setSceneVertexCount(3);
         m_renderToySession->bindScene(document);
         setActiveTool(QStringLiteral("render-toy"));
         result = QStringLiteral("Opened %1 in Render Toy · Scene").arg(QFileInfo(path).fileName());
