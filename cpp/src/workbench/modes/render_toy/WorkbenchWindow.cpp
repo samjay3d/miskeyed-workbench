@@ -21,6 +21,7 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -471,6 +472,7 @@ void WorkbenchWindow::buildUi()
     auto* openScene = openMenu->addAction(QStringLiteral("Open in Render Toy · Scene…"));
     auto* openPost = openMenu->addAction(QStringLiteral("Open in Render Toy · Post…"));
     auto* openShaderToy = openMenu->addAction(QStringLiteral("Open in Shader Toy…"));
+    auto* openUsdAsset = openMenu->addAction(QStringLiteral("Open USD asset in Render Toy…"));
     openDocument->setShortcut(QKeySequence::Open);
     openButton->setDefaultAction(openDocument);
     openButton->setMenu(openMenu);
@@ -514,6 +516,15 @@ void WorkbenchWindow::buildUi()
         [this] { chooseShader(OpenDestination::RenderToyPost); });
     connect(openShaderToy, &QAction::triggered, this,
         [this] { chooseShader(OpenDestination::ShaderToy); });
+    connect(openUsdAsset, &QAction::triggered, this, [this] {
+        const QString path = QFileDialog::getOpenFileName(this,
+            QStringLiteral("Open USD with generated preview sidecar"), m_openDirectory,
+            QStringLiteral("OpenUSD (*.usd *.usda *.usdc)"));
+        if (!path.isEmpty()) {
+            m_openDirectory = QFileInfo(path).absolutePath();
+            this->openUsdAsset(path);
+        }
+    });
     connect(save, &QAction::triggered, this, [this] {
         if (m_workspace->focusedDocument()) {
             m_workspace->focusedDocument()->setSource(m_editor->toPlainText());
@@ -1155,6 +1166,46 @@ void WorkbenchWindow::mirrorParameter(
 void WorkbenchWindow::openShader(const QString& path)
 {
     openShader(path, OpenDestination::Document);
+}
+
+bool WorkbenchWindow::openUsdAsset(const QString& path)
+{
+    const QFileInfo usd(path);
+    if (!usd.isFile()) {
+        statusBar()->showMessage(QStringLiteral("Could not open USD asset %1").arg(path), 3000);
+        return false;
+    }
+    // This first consumer edge is intentionally explicit: OpenUSD integration will own
+    // stage traversal later. Today an upstream adapter writes a derived sibling product;
+    // Workbench never parses USD or treats this shader as authored scene meaning.
+    const QString sidecar
+        = usd.dir().filePath(usd.completeBaseName() + QStringLiteral(".preview.slang"));
+    ShaderDocument* document = m_workspace->openFile(sidecar);
+    if (document) {
+        // Deliberately break the whole derived-product cache on every explicit USD open.
+        // Fine-grained USD/MaterialX notices belong to the native stage integration.
+        document->setReadOnly(false);
+        document->load();
+        document->compile();
+        document->setReadOnly(true);
+    }
+    if (!document || !document->compileSucceeded() || !m_renderToySession->bindScene(document)) {
+        statusBar()->showMessage(
+            QStringLiteral(
+                "No usable derived preview at %1. Generate the .preview.slang sidecar first.")
+                .arg(sidecar),
+            6000);
+        return false;
+    }
+    setActiveTool(QStringLiteral("render-toy"));
+    m_usdAsset = usd.absoluteFilePath();
+    setToolStatus(QStringLiteral("render-toy"),
+        QStringLiteral("USD: %1 · Generated scene: %2 · Post remains editable")
+            .arg(usd.fileName(), QFileInfo(sidecar).fileName()));
+    statusBar()->showMessage(QStringLiteral("Previewing %1 via derived %2")
+                                 .arg(usd.fileName(), QFileInfo(sidecar).fileName()),
+        5000);
+    return true;
 }
 
 void WorkbenchWindow::chooseShader(OpenDestination destination)

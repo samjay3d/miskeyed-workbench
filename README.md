@@ -91,6 +91,7 @@ the base dependencies alone are not enough for a source build.
 - [0.3.0 release history](CHANGELOG.md)
 - [Building, testing, screenshots, and docs](src/docs/contributing/index.rst)
 - [Native source layout](src/docs/architecture/source_layout.rst)
+- [Third-party licenses and test assets](THIRD_PARTY.md)
 
 Canonical screenshots and Sphinx HTML are generated deployment artifacts rather
 than repository inputs. On a built Windows checkout, reproduce the complete site with:

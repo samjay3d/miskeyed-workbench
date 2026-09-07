@@ -9,11 +9,14 @@ also legible to tools and graphics engineers learning modern DCC architecture.
 
 ## Direction
 
-The near-term product is a small shell in which Shader Toy and Render Toy demonstrate
+The shipped product is a small shell in which Shader Toy and Render Toy demonstrate
 coexisting tool sessions over shared documents, reflection, time, and QRhi services.
-Longer-term work may add Lookdev, rendering, USD/MaterialX, and device-neutral ANARI
-workflows, but research does not become shipped architecture until its ownership and
-runtime evidence are proven.
+The next product priority is an evidence-led USD/MaterialX authoring loop: open an
+asset, select a material, make an intentional shared-graph or look-override edit,
+preview it, save it, and recover it on reopen. Generated Slang is a derived preview
+product, not authored material state. Device-neutral ANARI consumers follow that
+authoring proof. Product direction does not become shipped architecture until its
+ownership and runtime evidence are proven.
 
 ## Principles
 

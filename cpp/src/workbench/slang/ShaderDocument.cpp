@@ -6,6 +6,14 @@
 
 namespace miskeyed::workbench::slang_rhi {
 
+void ShaderDocument::setReadOnly(bool readOnly)
+{
+    if (m_readOnly == readOnly)
+        return;
+    m_readOnly = readOnly;
+    emit readOnlyChanged();
+}
+
 const CompiledEntryPoint* ShaderDocument::findEntryPoint(
     ShaderStage stage, const QString& name) const
 {
@@ -89,6 +97,8 @@ void ShaderDocument::setFileUrl(const QUrl& url)
 
 void ShaderDocument::setSource(const QString& source)
 {
+    if (m_readOnly)
+        return;
     if (m_source == source)
         return;
     m_source = source;
@@ -128,7 +138,7 @@ bool ShaderDocument::load()
 
 bool ShaderDocument::save()
 {
-    if (!m_fileUrl.isLocalFile())
+    if (m_readOnly || !m_fileUrl.isLocalFile())
         return false;
     QSaveFile f(m_fileUrl.toLocalFile());
     if (!f.open(QIODevice::WriteOnly)) {

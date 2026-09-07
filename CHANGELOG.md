@@ -6,6 +6,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Documentation
+
+- Evaluated the USD/MaterialX authoring boundary with a reproducible UV-mapped fixture,
+  fail-loud optional generation and persistence probes, explicit edit/invalidation
+  ownership, a provisional pinned toolchain, and an evidence-gated implementation
+  sequence. The full USD/MaterialX authoring workflow remains future work.
+
+### Added
+
+- Added an explicit USD-open starting edge that binds a read-only derived scene shader
+  into Render Toy, preserving the editable Post shader and final viewport. Explicit open
+  breaks the whole derived cache for now; native USD traversal remains follow-up work.
+- Pinned ``usd-wg/assets`` as a test-only submodule and documented third-party license,
+  packaging, and provenance boundaries.
+
 ### Fixed
 
 - Decoupled TestPyPI and PyPI promotion from GitHub Pages deployment while retaining

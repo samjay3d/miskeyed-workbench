@@ -14,6 +14,8 @@ def test_installed_public_api_and_packaged_slang_modules() -> None:
     app = QApplication.instance() or QApplication([])
     assert app is not None
     assert workbench.WorkbenchWindow
+    assert hasattr(workbench.WorkbenchWindow, "openUsdAsset")
+    assert hasattr(workbench.WorkbenchWindow, "usdAsset")
 
     document = workbench.ShaderDocument()
     document.setSource(
@@ -37,3 +39,7 @@ float4 psMain() : SV_Target0 { return float4(workbenchTime.time, 0.0, 0.0, 1.0);
     dependency_ids = [dependency.identity for dependency in document.importedDependencies()]
     assert "miskeyed.time" in dependency_ids
     assert "HLSL" in document.generatedTargets()
+    original_source = document.source
+    document.readOnly = True
+    document.source = "this generated product must remain immutable"
+    assert document.source == original_source
