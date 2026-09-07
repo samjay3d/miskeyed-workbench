@@ -43,7 +43,9 @@ SceneSample psMain(VSOut input)
     float2 cell = floor(input.uv * 10.0);
     float weave = lerp(0.82, 1.0, fmod(cell.x + cell.y, 2.0));
     float3 n = normalize(input.normal);
-    float3 light = normalize(float3(-0.45, 0.7, 0.8));
+    float lightOrbit = workbenchTime.time * 0.25;
+    float3 light = normalize(float3(-0.45 + sin(lightOrbit) * 0.15, 0.7,
+        0.8 + cos(lightOrbit) * 0.15));
     float diffuse = saturate(dot(n, light));
     float specularPower = lerp(96.0, 4.0, roughness);
     float specular = pow(saturate(dot(n, normalize(light + float3(0.0, 0.0, 1.0)))), specularPower);

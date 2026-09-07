@@ -91,6 +91,7 @@ float4 psMain(VSOut input) : SV_Target0 { return sampleScene(input.uv); }
     Q_INIT_RESOURCE(render_toy_samples);
     constexpr std::array samplePaths {
         ":/miskeyed/workbench/render_toy/scene_default.slang",
+        ":/miskeyed/workbench/render_toy/scene_sdf.slang",
         ":/miskeyed/workbench/render_toy/scene_clouds.slang",
         ":/miskeyed/workbench/render_toy/post_default.slang",
         ":/miskeyed/workbench/render_toy/post_bloom.slang",
