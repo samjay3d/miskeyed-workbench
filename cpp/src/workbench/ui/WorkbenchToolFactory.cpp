@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QSignalBlocker>
 #include <QVBoxLayout>
+#include <utility>
 #include <QWidget>
 
 namespace miskeyed::workbench::slang_rhi {
@@ -180,13 +181,16 @@ namespace {
     class ShaderToyContribution final : public WorkbenchToolContribution {
     public:
         ShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
-            ShaderToySession* session, SlangRhiWidget* viewport)
+            ShaderToySession* session, SlangRhiWidget* viewport, QString toolId, QString title,
+            QString panelName)
             : WorkbenchToolContribution(parent)
             , m_workspace(workspace)
             , m_session(session)
+            , m_toolId(std::move(toolId))
+            , m_title(std::move(title))
         {
-            const Panel p = panel(parent, QStringLiteral("ShaderToy"), viewport);
-            p.surface->setObjectName(QStringLiteral("ShaderToyView"));
+            const Panel p = panel(parent, panelName, viewport);
+            p.surface->setObjectName(m_toolId + QStringLiteral("View"));
             m_views = { p.surface };
             m_binding = p.binding;
             m_panel = p;
@@ -240,8 +244,8 @@ namespace {
             refresh();
             viewport->setEntryPoints(session->vertexEntry(), session->fragmentEntry());
         }
-        QString toolId() const override { return QStringLiteral("shader-toy"); }
-        QString title() const override { return QStringLiteral("ShaderToy"); }
+        QString toolId() const override { return m_toolId; }
+        QString title() const override { return m_title; }
         QObject* session() const override { return m_session; }
         QList<QWidget*> primaryViews() const override { return m_views; }
         QString statusSummary() const override
@@ -256,6 +260,8 @@ namespace {
         QList<QWidget*> m_views;
         QComboBox* m_binding;
         Panel m_panel;
+        QString m_toolId;
+        QString m_title;
     };
 } // namespace
 
@@ -268,6 +274,15 @@ WorkbenchToolContribution* createRenderToyContribution(QWidget* parent, ShaderWo
 WorkbenchToolContribution* createShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace,
     ShaderToySession* session, SlangRhiWidget* viewport)
 {
-    return new ShaderToyContribution(parent, workspace, session, viewport);
+    return new ShaderToyContribution(parent, workspace, session, viewport,
+        QStringLiteral("shader-toy"), QStringLiteral("Shader Toy"), QStringLiteral("Shader Toy"));
+}
+
+WorkbenchToolContribution* createMaterialPreviewContribution(QWidget* parent,
+    ShaderWorkspace* workspace, ShaderToySession* session, SlangRhiWidget* viewport)
+{
+    return new ShaderToyContribution(parent, workspace, session, viewport,
+        QStringLiteral("material-preview"), QStringLiteral("Material Preview"),
+        QStringLiteral("USD preview adapter"));
 }
 } // namespace miskeyed::workbench::slang_rhi

@@ -35,4 +35,7 @@ createRenderToyContribution(QWidget* parent, ShaderWorkspace* workspace, RenderT
 [[nodiscard]] MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchToolContribution*
 createShaderToyContribution(QWidget* parent, ShaderWorkspace* workspace, ShaderToySession* session,
     SlangRhiWidget* viewport);
+[[nodiscard]] MISKEYED_WORKBENCH_SLANG_RHI_EXPORT WorkbenchToolContribution*
+createMaterialPreviewContribution(QWidget* parent, ShaderWorkspace* workspace,
+    ShaderToySession* session, SlangRhiWidget* viewport);
 } // namespace miskeyed::workbench::slang_rhi

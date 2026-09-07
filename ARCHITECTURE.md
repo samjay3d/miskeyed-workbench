@@ -14,6 +14,7 @@ Workbench shell
 ├── tool contributions / persistent sessions
 │   ├── RenderToySession  (Scene/Post bindings)
 │   └── ShaderToySession  (one shader binding)
+│   └── Material Preview  (USD identity + derived shader-sidecar binding)
 ├── in-process Slang modules, compilation, reflection, and entry points
 └── QRhi consumers selected by one RhiBackendPolicy
 ```
@@ -65,10 +66,14 @@ that sample into host-managed Slang uniforms without changing shader identity. S
 
 ## Scope and status
 
-Shader Toy and Render Toy are shipped. The optional ANARI host foundation and probe
+Shader Toy, Render Toy, and the bounded Material Preview sidecar entry point are shipped.
+Material Preview does not yet own or traverse a USD stage. The optional ANARI host foundation and probe
 are research; there is no ANARI application mode yet. Future USD/Hydra/hdAnari work
 must preserve their scene-ownership boundary and remain independent of
-`ShaderDocument`. See [ANARI research](src/docs/research/anari.rst).
+`ShaderDocument`. The evaluated authoring boundaries and explicitly provisional
+roadmap are in
+[USD/MaterialX research](src/docs/research/usd_materialx.rst); later device consumption
+remains in [ANARI research](src/docs/research/anari.rst).
 
 Native placement and namespace rules are in the
 [source-layout chapter](src/docs/architecture/source_layout.rst).

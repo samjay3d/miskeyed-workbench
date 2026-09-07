@@ -14,6 +14,9 @@ def test_installed_public_api_and_packaged_slang_modules() -> None:
     app = QApplication.instance() or QApplication([])
     assert app is not None
     assert workbench.WorkbenchWindow
+    assert hasattr(workbench.WorkbenchWindow, "openUsdPreview")
+    assert hasattr(workbench.WorkbenchWindow, "materialPreviewDocument")
+    assert hasattr(workbench.WorkbenchWindow, "materialPreviewAsset")
 
     document = workbench.ShaderDocument()
     document.setSource(
