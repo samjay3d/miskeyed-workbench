@@ -71,6 +71,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Made the main window title report the running build version, for example:
+  `Workbench 0.3.0`, instead of a bare product name. The version is compiled from the 
+  project version already read from `pyproject.toml`, so the native application and the
+  Python entry point report the same value and release bumps require no second edit
 - Reorganized native code by core, editor, Slang, rendering, UI, mode, and optional
   ANARI responsibilities. Device-neutral code uses `miskeyed::workbench`; the shipped
   Slang/QRhi surface retains `miskeyed::workbench::slang_rhi`.
